@@ -142,7 +142,7 @@ export function Home() {
       {(user.roles.includes('approver') || user.roles.includes('audit')) && (
         <Card>
           <CardHeader
-            title={user.roles.includes('audit') ? 'Awaiting Gate 2 verification' : 'Pending Gate 1 approval'}
+            title={user.roles.includes('audit') ? 'Awaiting Gate 2 verification' : 'Pending approval'}
             icon={<FileSearch />}
           />
           {(user.roles.includes('audit') ? data.pendingGate2 : data.pendingApproval).length ? (
