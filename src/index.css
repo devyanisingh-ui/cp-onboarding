@@ -1,0 +1,337 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+
+/*
+ * ─────────────────────────────────────────────────────────────────────────────
+ *  CP Onboarding design tokens
+ *
+ *  Colour balance (60 / 30 / 10):
+ *    60  cool neutral canvas, lit by a very soft ambient mesh
+ *    30  frosted white surfaces (glass levels 1–3)
+ *    10  one accent — Petrol Blue — for primary actions, focus and selection
+ *  Secondary hues are restrained: steel-grey in the ambient light, amber as the brand dot.
+ *  Status colours follow PRD §8; status pills keep their dot and tinted fill so the blue
+ *  "Approved for signing" status stays distinct from the petrol accent.
+ * ─────────────────────────────────────────────────────────────────────────────
+ */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  /* Accent — Petrol Blue (white text AA from 500 up; 400 is for fills and borders only) */
+  --color-primary-50: #eff8fb;
+  --color-primary-100: #d6eef5;
+  --color-primary-200: #addbe9;
+  --color-primary-300: #76c0d6;
+  --color-primary-400: #3a9dbb;
+  --color-primary-500: #127a99;
+  --color-primary-600: #0b6480;
+  --color-primary-700: #0a5269;
+  --color-primary-800: #0b4356;
+  --color-primary-900: #0c3646;
+
+  /* Secondary — muted indigo, used sparingly */
+  --color-accent-50: #f0f1fe;
+  --color-accent-100: #e1e3fd;
+  --color-accent-500: #6366f1;
+  --color-accent-600: #4f52d8;
+
+  /* Neutrals — navy-tinted for warmth-balanced, calm text */
+  --color-ink: #161c38;
+  --color-ink-soft: #383f62;
+  --color-muted: #586080;
+  --color-subtle: #676e8c; /* 5.0:1 on white — AA for small text */
+  --color-canvas: #eef2f6;
+  --color-surface: #ffffff;
+  --color-sunken: #eceff7;
+  --color-line: #e1e5f0;
+  --color-line-strong: #c9cee0;
+
+  /* Semantic */
+  --color-success-50: #ecfdf3;
+  --color-success-600: #15803d;
+  --color-success-700: #166534;
+  --color-warning-50: #fffbeb;
+  --color-warning-600: #b45309;
+  --color-warning-700: #92400e;
+  --color-danger-50: #fef2f2;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+  --color-info-50: #eff4ff;
+  --color-info-600: #2f5bd8;
+  --color-info-700: #1f45b5;
+
+  /* Radius scale */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* Elevation — layered, low-contrast shadows */
+  --shadow-xs: 0 1px 2px rgb(22 28 56 / 0.05);
+  --shadow-card: 0 0 0 1px rgb(22 28 56 / 0.04), 0 1px 2px rgb(22 28 56 / 0.04), 0 6px 20px -10px rgb(22 28 56 / 0.12);
+  --shadow-raised: 0 0 0 1px rgb(22 28 56 / 0.05), 0 2px 4px rgb(22 28 56 / 0.05), 0 14px 32px -12px rgb(22 28 56 / 0.18);
+  --shadow-pop: 0 0 0 1px rgb(22 28 56 / 0.06), 0 12px 40px -8px rgb(22 28 56 / 0.24), 0 4px 10px rgb(22 28 56 / 0.06);
+  --shadow-cta: 0 1px 2px rgb(11 100 128 / 0.25), 0 6px 16px -6px rgb(11 100 128 / 0.45);
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  --ease-out: cubic-bezier(0.22, 0.8, 0.24, 1);
+
+  --animate-fade-in: fade-in 160ms var(--ease-out);
+  --animate-slide-up: slide-up 220ms var(--ease-out);
+  --animate-slide-in-right: slide-in-right 240ms var(--ease-out);
+  --animate-toast-in: toast-in 240ms cubic-bezier(0.2, 0.9, 0.3, 1.15);
+  --animate-page-in: page-in 220ms var(--ease-out);
+  --animate-pop-in: pop-in 160ms var(--ease-out);
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slide-up {
+    from { opacity: 0; transform: translateY(14px) scale(0.985); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes slide-in-right {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes page-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes pop-in {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+/* Non-colour tokens: glass levels, blur, motion, layering */
+:root {
+  --blur-sm: 10px;
+  --blur-md: 18px;
+  --blur-lg: 28px;
+
+  /* Glass levels: 1 = navigation, 2 = cards/panels, 3 = floating (menus, modals, toasts) */
+  --glass-1: rgb(255 255 255 / 0.64);
+  --glass-2: rgb(255 255 255 / 0.76);
+  --glass-3: rgb(255 255 255 / 0.88);
+  --glass-edge: rgb(255 255 255 / 0.75);
+  --glass-hairline: rgb(22 28 56 / 0.07);
+  --glass-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.85);
+
+  --surface-hover: rgb(11 100 128 / 0.05);
+  --surface-selected: rgb(11 100 128 / 0.09);
+
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+
+  --z-sidebar: 30;
+  --z-header: 20;
+  --z-overlay: 50;
+  --z-toast: 60;
+}
+
+/* ───────────────────────── Glass & surface utilities ───────────────────────── */
+
+@utility glass-1 {
+  background-color: var(--glass-1);
+  backdrop-filter: blur(var(--blur-md)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(160%);
+}
+@utility glass-2 {
+  background-color: var(--glass-2);
+  backdrop-filter: blur(var(--blur-md)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(150%);
+}
+@utility glass-3 {
+  background-color: var(--glass-3);
+  backdrop-filter: blur(var(--blur-lg)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(170%);
+}
+
+/* Card surface: glass level 2 + hairline + inner highlight. The default content container. */
+@utility surface {
+  background-color: var(--glass-2);
+  backdrop-filter: blur(var(--blur-md)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(150%);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-card);
+}
+/* Floating surface: glass level 3, for menus, dialogs, popovers, toasts. */
+@utility surface-raised {
+  background-color: var(--glass-3);
+  backdrop-filter: blur(var(--blur-lg)) saturate(170%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(170%);
+  border: 1px solid var(--glass-edge);
+  box-shadow: var(--glass-highlight), var(--shadow-pop);
+}
+/* Interactive card: lifts gently on hover. */
+@utility surface-interactive {
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--glass-highlight), var(--shadow-raised);
+    border-color: var(--color-primary-200);
+  }
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+/*
+ * Touch target: on coarse pointers (phones/tablets) extend a small control's tappable area to
+ * at least 44×44px with an invisible pseudo-element, without changing its visual size.
+ */
+@utility hit-area {
+  position: relative;
+  @media (pointer: coarse) {
+    &::after {
+      content: '';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: max(100%, 44px);
+      height: max(100%, 44px);
+      transform: translate(-50%, -50%);
+    }
+  }
+}
+
+/* Where backdrop-filter isn't available, make glass surfaces nearly opaque for legibility. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root {
+    --glass-1: rgb(255 255 255 / 0.94);
+    --glass-2: rgb(255 255 255 / 0.97);
+    --glass-3: rgb(255 255 255 / 0.99);
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply text-ink font-sans antialiased;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    background-color: var(--color-canvas);
+    min-height: 100dvh;
+  }
+  /* Ambient background: soft light from three corners + very fine grain. Fixed so it never scrolls. */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60rem 42rem at -6% -14%, rgb(18 122 153 / 0.2), transparent 62%),
+      radial-gradient(52rem 38rem at 106% -8%, rgb(120 140 165 / 0.18), transparent 60%),
+      radial-gradient(46rem 34rem at 80% 112%, rgb(18 122 153 / 0.1), transparent 62%),
+      radial-gradient(42rem 32rem at 10% 106%, rgb(120 140 165 / 0.1), transparent 60%),
+      var(--color-canvas);
+  }
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Type scale */
+  h1, h2, h3, h4 {
+    @apply text-ink;
+    letter-spacing: -0.015em;
+  }
+  h1 {
+    font-weight: 650;
+    letter-spacing: -0.022em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  ::selection {
+    background: var(--color-primary-100);
+  }
+  input[type='date']::-webkit-calendar-picker-indicator {
+    opacity: 0.55;
+    cursor: pointer;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(22 28 56 / 0.18) transparent;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  .text-display {
+    font-size: clamp(1.5rem, 1.1rem + 1.2vw, 1.875rem);
+    line-height: 1.15;
+    font-weight: 650;
+    letter-spacing: -0.025em;
+  }
+  .text-eyebrow {
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .skeleton {
+    @apply rounded-md;
+    background-color: rgb(22 28 56 / 0.06);
+    background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.65), transparent);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+  }
+  @keyframes shimmer {
+    from { background-position: 200% 0; }
+    to { background-position: -200% 0; }
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  /* Shadows at the left/right edges of a horizontal scroller, shown only while more content is hidden. */
+  .scroll-shadows {
+    background:
+      linear-gradient(to right, rgb(255 255 255 / 0.95) 30%, transparent) left / 32px 100%,
+      linear-gradient(to left, rgb(255 255 255 / 0.95) 30%, transparent) right / 32px 100%,
+      radial-gradient(farthest-side at 0 50%, rgb(22 28 56 / 0.14), transparent) left / 12px 100%,
+      radial-gradient(farthest-side at 100% 50%, rgb(22 28 56 / 0.14), transparent) right / 12px 100%;
+    background-repeat: no-repeat;
+    background-attachment: local, local, scroll, scroll;
+  }
+}
+
+/* Printing the draft preview produces the PDF for stamp paper. */
+@media print {
+  body { background: #fff; }
+  body::before, body::after { display: none; }
+  .no-print { display: none !important; }
+  .print-area { box-shadow: none !important; border: 0 !important; padding: 0 !important; margin: 0 !important; max-width: none !important; }
+  .agreement-doc .mf { background: none !important; border: 0 !important; }
+}

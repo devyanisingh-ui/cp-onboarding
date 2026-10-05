@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Build output (regenerate with npm run build / build:mobile / build:share)
+dist/
+dist-mobile/
+cp-onboarding-mobile.html
+cp-onboarding-share.html
+*.tsbuildinfo
+
+# Local tooling and editor files
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
