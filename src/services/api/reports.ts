@@ -16,7 +16,7 @@ export type ReportId =
 export const REPORTS: { id: ReportId; title: string; description: string }[] = [
   { id: 'by_status', title: 'Agreements by status', description: 'Count and list per status, per institution.' },
   { id: 'stuck', title: 'Stuck / overdue items', description: 'Items past SLA, days overdue, owner and who it was escalated to.' },
-  { id: 'expiring', title: 'Expiring in 60 days', description: 'Agreements nearing expiry and their renewal decision status.' },
+  { id: 'expiring', title: 'To be expired in 60 days', description: 'Agreements nearing expiry and their renewal decision status.' },
   { id: 'non_standard', title: 'Non-standard CPs', description: 'Agreements with deviations: what changed and who approved it.' },
   { id: 'register', title: 'Active CP register', description: 'All active CPs with institution, dates and rate card version.' },
   { id: 'reasons', title: 'Non-renewal & termination reasons', description: 'Counts by reason and institution.' },
