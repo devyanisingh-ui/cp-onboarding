@@ -130,7 +130,7 @@ export function ReportView() {
         <>
           <div className="mb-4 flex flex-wrap gap-2">
             {data.summary.map((s) => (
-              <div key={s.label} className={`surface rounded-xl px-4 py-3${id === 'expiring' ? ' min-w-48' : ''}`}>
+              <div key={s.label} className="surface rounded-xl px-4 py-3">
                 <p className="text-xl font-bold tabular-nums">{s.value}</p>
                 <p className="text-xs text-muted">
                   {s.tone && s.tone in STATUS_META ? <Badge tone={STATUS_META[s.tone as keyof typeof STATUS_META].tone}>{s.label}</Badge> : s.label}
