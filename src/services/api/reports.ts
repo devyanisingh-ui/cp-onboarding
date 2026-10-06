@@ -98,7 +98,7 @@ export async function runReport(id: ReportId, f: ReportFilters = {}): Promise<Re
         id, title,
         columns: [{ key: 'agreement', label: 'Agreement' }, { key: 'cp', label: 'CP' }, { key: 'institution', label: 'Institution' }, { key: 'expiry', label: 'Expiry' }, { key: 'days', label: 'Days left', align: 'right' }, { key: 'decision', label: 'Renewal decision' }, { key: 'owner', label: 'Owner' }],
         rows: list.map((a) => ({ ...base(a), expiry: formatShortDate(a.endDate), days: daysUntil(a.endDate!), decision: decision(a), owner: userName(a.ownerId) })),
-        summary: [{ label: 'Expiring', value: list.length }, { label: 'No decision', value: list.filter((a) => !a.renewal).length }],
+        summary: [{ label: 'To be expired', value: list.length }, { label: 'No decision', value: list.filter((a) => !a.renewal).length }],
         links: list.map((a) => `/agreements/${a.id}`),
       };
     }
