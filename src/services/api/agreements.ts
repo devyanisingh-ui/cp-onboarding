@@ -88,7 +88,7 @@ export function kycGaps(cpId: string): string[] {
   return need.filter((t) => !docs.some((x) => x.type === t)).map((t) => labels[t]!);
 }
 
-/** Everything that blocks Gate 1 submission. */
+/** Everything that blocks submission. */
 export function submissionBlockers(a: Agreement): string[] {
   const d = getDb();
   const blockers: string[] = [];
@@ -118,8 +118,8 @@ function actionsFor(user: User, a: Agreement): AgreementActions {
     approveGate1:
       a.status === 'pending_approval' &&
       a.ownerId !== user.id &&
-      ((user.roles.includes('approver') && (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId))) ||
-        (user.roles.includes('legal') && a.nonStandard)),
+      can(user, 'gate1.approve') &&
+      (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId)),
     uploadSigned:
       (a.status === 'approved_for_signing' || (a.source === 'legacy' && a.status === 'signed_copy_uploaded' && !hasSignedCopy(a.id))) &&
       can(user, 'signed.upload') &&
@@ -411,29 +411,45 @@ export async function saveAgreementFields(
   commit();
 }
 
-// ---------------- Gate 1 ----------------
+// ---------------- Submission and Legal approval (Gate 1) ----------------
 
-export async function submitForApproval(id: string): Promise<void> {
+/**
+ * Standard agreements (published template and rate card, no deviations) need no approval and go
+ * straight to signing. Non-standard agreements are sent to Legal (Gate 1).
+ */
+export async function submitForApproval(id: string): Promise<{ sentToLegal: boolean }> {
   await delay('write');
   const user = ctx();
-  assertCan(user, 'agreement.edit', 'Only BD Executives can submit drafts.');
+  assertCan(user, 'agreement.edit', 'Only BD Executives or Admin can submit drafts.');
   const a = load(id, user);
   if (a.status !== 'draft') throw conflict('Only drafts can be submitted.');
   const blockers = submissionBlockers(a);
   if (blockers.length) throw invalid(`Cannot submit yet: ${blockers.join('; ')}.`);
   const d = getDb();
-  const route = routeFor(a.institutionId, a.nonStandard);
-  const approverId = route?.approverId ?? firstUserWithRole('approver', a.institutionId)?.id;
-  if (!approverId) throw conflict('No approval routing rule is set for this institution. Ask Admin to add one.');
   const before = { status: a.status };
+  if (!a.nonStandard) {
+    a.status = 'approved_for_signing';
+    a.submittedAt = now();
+    a.lastRejection = undefined;
+    touch(a);
+    closeTasks({ agreementId: id, types: ['fix_rejected'] }, user);
+    createTask({ type: 'signing_upload', title: `Get signed & upload: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: d.settings.sla.signingDays, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    audit(user, 'submit', 'agreement', id, 'Finalised on standard terms — no Legal approval needed; approved for signing', before, { status: a.status });
+    commit();
+    return { sentToLegal: false };
+  }
+  const route = routeFor(a.institutionId, true);
+  const legalId = route?.approverId ?? firstUserWithRole('legal', a.institutionId)?.id;
+  if (!legalId) throw conflict('No Legal approver is set for this institution. Ask Admin to add one under Routing.');
   a.status = 'pending_approval';
   a.submittedAt = now();
   a.lastRejection = undefined;
   touch(a);
   closeTasks({ agreementId: id, types: ['fix_rejected'] }, user);
-  createTask({ type: 'gate1_approval', title: `Gate 1 approval: ${cpName(a)}`, assigneeId: approverId, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-  audit(user, 'submit', 'agreement', id, `Submitted for Gate 1 approval${a.nonStandard ? ' (Non-standard)' : ''}`, before, { status: a.status });
+  createTask({ type: 'gate1_approval', title: `Legal approval: ${cpName(a)}`, assigneeId: legalId, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+  audit(user, 'submit', 'agreement', id, 'Sent to Legal for approval (Non-standard)', before, { status: a.status });
   commit();
+  return { sentToLegal: true };
 }
 
 export async function decideGate1(id: string, decision: 'approve' | 'reject', comment?: string): Promise<void> {
@@ -441,7 +457,7 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
   const user = ctx();
   assertCan(user, 'gate1.approve');
   const a = load(id, user);
-  if (a.status !== 'pending_approval') throw conflict('This agreement is not waiting for Gate 1 approval.');
+  if (a.status !== 'pending_approval') throw conflict('This agreement is not waiting for Legal approval.');
   if (!actionsFor(user, a).approveGate1) throw forbidden(a.ownerId === user.id ? 'You cannot approve a draft you created.' : 'This approval is routed to someone else.');
   const d = getDb();
   const before = { status: a.status };
@@ -451,15 +467,15 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
     touch(a);
     createTask({ type: 'signing_upload', title: `Get signed & upload: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: d.settings.sla.signingDays, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
     notify([a.ownerId], { title: 'Final agreement ready to print', body: `${cpName(a)} · ${a.id} was approved. Download the PDF and print two copies on stamp paper.`, link: `/agreements/${id}` });
-    audit(user, 'approve', 'agreement', id, `Gate 1 approved${comment ? `: ${comment}` : ''}`, before, { status: a.status });
+    audit(user, 'approve', 'agreement', id, `Legal approved${comment ? `: ${comment}` : ''}`, before, { status: a.status });
   } else {
     const c = requireComment(comment);
     a.status = 'draft';
     a.lastRejection = { gate: 1, byId: user.id, at: now(), comment: c };
     touch(a);
     createTask({ type: 'fix_rejected', title: `Rework rejected draft: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: 2, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-    notify([a.ownerId], { title: 'Draft rejected at Gate 1', body: `${cpName(a)} · ${a.id} was returned with comments.`, link: `/agreements/${id}` });
-    audit(user, 'reject', 'agreement', id, `Rejected at Gate 1: ${c}`, before, { status: a.status });
+    notify([a.ownerId], { title: 'Draft returned by Legal', body: `${cpName(a)} · ${a.id} was returned by Legal with comments.`, link: `/agreements/${id}` });
+    audit(user, 'reject', 'agreement', id, `Rejected by Legal: ${c}`, before, { status: a.status });
   }
   commit();
 }
@@ -604,9 +620,9 @@ export async function uploadSignedCopy(
   a.verification = undefined;
   touch(a);
   closeTasks({ agreementId: id, types: ['signing_upload', 'legacy_scan_upload'] }, user);
-  const auditor = firstUserWithRole('audit');
-  if (auditor)
-    createTask({ type: 'gate2_verification', title: `Gate 2 verification${a.source === 'legacy' ? ' (Legacy)' : ''}: ${cpName(a)}`, assigneeId: auditor.id, slaDays: d.settings.sla.gate2Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+  const admin = firstUserWithRole('admin');
+  if (admin)
+    createTask({ type: 'gate2_verification', title: `Gate 2 verification${a.source === 'legacy' ? ' (Legacy)' : ''}: ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate2Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
   audit(user, 'upload', 'agreement', id, `Uploaded signed copy and stamp paper ${input.stampPaper.number}${input.signedById ? `; signed by ${userName(input.signedById)}` : ''}`, before, { status: a.status, stampPaper: a.stampPaper });
   commit();
 }
@@ -614,7 +630,7 @@ export async function uploadSignedCopy(
 export async function decideGate2(id: string, decision: 'approve' | 'reject', checks: Agreement['verification'], comment?: string): Promise<void> {
   await delay('write');
   const user = ctx();
-  assertCan(user, 'gate2.verify', 'Only Audit can verify signed copies.');
+  assertCan(user, 'gate2.verify', 'Only Admin can verify signed copies.');
   const a = load(id, user);
   if (a.status !== 'signed_copy_uploaded') throw conflict('This agreement is not waiting for Gate 2 verification.');
   const d = getDb();
@@ -651,7 +667,7 @@ export async function decideGate2(id: string, decision: 'approve' | 'reject', ch
       createTask({ type: 'signing_upload', title: `Fix & re-upload signed copy: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: d.settings.sla.signingDays, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
     }
     touch(a);
-    notify([a.ownerId], { title: 'Signed copy rejected at Gate 2', body: `${cpName(a)} · ${a.id} was returned by Audit with comments.`, link: `/agreements/${id}` });
+    notify([a.ownerId], { title: 'Signed copy rejected at Gate 2', body: `${cpName(a)} · ${a.id} was returned by Admin with comments.`, link: `/agreements/${id}` });
     audit(user, 'reject', 'agreement', id, `Rejected at Gate 2: ${c}`, before, { status: a.status });
   }
   commit();
@@ -662,7 +678,7 @@ export async function decideGate2(id: string, decision: 'approve' | 'reject', ch
 export async function decideRenewal(id: string, decision: 'renew' | 'renew_with_changes' | 'do_not_renew', reason?: string): Promise<{ newAgreementId?: string }> {
   await delay('write');
   const user = ctx();
-  assertCan(user, 'renewal.decide', 'Only BD Executives make renewal decisions.');
+  assertCan(user, 'renewal.decide', 'Only BD Executives or Admin make renewal decisions.');
   const a = load(id, user);
   const d = getDb();
   if (a.status !== 'active') throw conflict('Only active agreements can be renewed.');
@@ -672,10 +688,9 @@ export async function decideRenewal(id: string, decision: 'renew' | 'renew_with_
     const why = requireComment(reason, 'a reason');
     a.renewal = { decision, reason: why, decidedById: user.id, decidedAt: now(), confirmation: 'pending' };
     touch(a);
-    const route = routeFor(a.institutionId, false);
-    const approver = route?.approverId ?? firstUserWithRole('approver', a.institutionId)?.id;
-    if (approver)
-      createTask({ type: 'non_renewal_confirm', title: `Confirm "Do not renew": ${cpName(a)}`, assigneeId: approver, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    const admin = firstUserWithRole('admin');
+    if (admin)
+      createTask({ type: 'non_renewal_confirm', title: `Confirm "Do not renew": ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
     audit(user, 'renewal_decision', 'agreement', id, `Decided: Do not renew — ${why}`);
     commit();
     return {};
@@ -729,7 +744,7 @@ export async function decideRenewal(id: string, decision: 'renew' | 'renew_with_
 export async function confirmNonRenewal(id: string, decision: 'confirm' | 'reject', comment?: string): Promise<void> {
   await delay('write');
   const user = ctx();
-  assertCan(user, 'renewal.confirm', 'Only Approvers confirm non-renewal.');
+  assertCan(user, 'renewal.confirm', 'Only Admin confirms non-renewal.');
   const a = load(id, user);
   if (a.renewal?.decision !== 'do_not_renew' || a.renewal.confirmation !== 'pending') throw conflict('Nothing to confirm.');
   closeTasks({ agreementId: id, types: ['non_renewal_confirm'] }, user);
@@ -741,7 +756,7 @@ export async function confirmNonRenewal(id: string, decision: 'confirm' | 'rejec
     const c = requireComment(comment);
     Object.assign(a.renewal, { confirmation: 'rejected', confirmedById: user.id, confirmedAt: now() });
     createTask({ type: 'renewal_decision', title: `Renewal decision (re-decide): ${cpName(a)}`, assigneeId: a.ownerId, dueDate: shiftDays(a.endDate!, -getDb().settings.sla.renewalEscalationDays) > today() ? shiftDays(a.endDate!, -getDb().settings.sla.renewalEscalationDays) : addWorkingDays(today(), 2), agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-    notify([a.ownerId], { title: 'Non-renewal not confirmed', body: `${cpName(a)} · ${a.id}: the Approver asked you to reconsider.`, link: `/agreements/${id}/renewal` });
+    notify([a.ownerId], { title: 'Non-renewal not confirmed', body: `${cpName(a)} · ${a.id}: Admin asked you to reconsider.`, link: `/agreements/${id}/renewal` });
     audit(user, 'reject', 'agreement', id, `Did not confirm "Do not renew": ${c}`);
   }
   touch(a);
@@ -777,14 +792,13 @@ export async function startTermination(
   touch(a);
   audit(user, 'terminate_start', 'agreement', id, `Started termination (${input.type}): ${input.reason}`, undefined, { noticeDate: input.noticeDate, effectiveDate: input.effectiveDate });
   const others = [a.ownerId];
-  if (user.roles.includes('approver')) {
+  if (can(user, 'termination.confirm')) {
     applyTerminationConfirm(a, user);
   } else {
-    const route = routeFor(a.institutionId, false);
-    const approver = route?.approverId ?? firstUserWithRole('approver', a.institutionId)?.id;
-    if (approver)
-      createTask({ type: 'termination_confirm', title: `Confirm termination: ${cpName(a)}`, assigneeId: approver, slaDays: getDb().settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-    notify(others.filter((o) => o !== user.id), { title: 'Termination started', body: `${cpName(a)} · ${a.id}: termination is waiting for Approver confirmation.`, link: `/agreements/${id}` });
+    const admin = firstUserWithRole('admin');
+    if (admin)
+      createTask({ type: 'termination_confirm', title: `Confirm termination: ${cpName(a)}`, assigneeId: admin.id, slaDays: getDb().settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    notify(others.filter((o) => o !== user.id), { title: 'Termination started', body: `${cpName(a)} · ${a.id}: termination is waiting for Admin confirmation.`, link: `/agreements/${id}` });
   }
   commit();
 }
@@ -810,7 +824,7 @@ function applyTerminationConfirm(a: Agreement, user: User) {
 export async function confirmTermination(id: string, decision: 'confirm' | 'reject', comment?: string): Promise<void> {
   await delay('write');
   const user = ctx();
-  assertCan(user, 'termination.confirm', 'Only Approvers confirm terminations.');
+  assertCan(user, 'termination.confirm', 'Only Admin confirms terminations.');
   const a = load(id, user);
   if (a.termination?.confirmation !== 'pending') throw conflict('No termination is waiting for confirmation.');
   if (decision === 'confirm') applyTerminationConfirm(a, user);
@@ -818,7 +832,7 @@ export async function confirmTermination(id: string, decision: 'confirm' | 'reje
     const c = requireComment(comment);
     Object.assign(a.termination, { confirmation: 'rejected', confirmedById: user.id, confirmedAt: now(), rejectComment: c });
     closeTasks({ agreementId: id, types: ['termination_confirm'] }, user);
-    notify([a.termination.startedById], { title: 'Termination not confirmed', body: `${cpName(a)} · ${a.id}: the Approver did not confirm the termination.`, link: `/agreements/${id}` });
+    notify([a.termination.startedById], { title: 'Termination not confirmed', body: `${cpName(a)} · ${a.id}: Admin did not confirm the termination.`, link: `/agreements/${id}` });
     audit(user, 'reject', 'agreement', id, `Termination not confirmed: ${c}`);
   }
   touch(a);

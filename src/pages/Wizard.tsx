@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useForm, type UseFormReturn } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, ArrowRight, Building2, CheckCircle2, FileSearch, History, Save, Search, Send, Trash2, UserPlus } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Building2, CheckCircle2, FileSearch, History, Save, Scale, Search, Send, Trash2, UserPlus } from 'lucide-react';
 import type { CpType, DocumentType } from '@/types';
 import { api, CP_STATUS_META, type AgreementDetail } from '@/services/mockApi';
 import type { PanCheckResult } from '@/services/api/cps';
@@ -94,7 +94,7 @@ export function Wizard() {
     return (
       <ErrorState
         title="This agreement can’t be edited"
-        error={new Error(existing.data.agreement.status === 'draft' ? 'You don’t have permission to edit this draft.' : 'Only drafts can be edited. Once submitted, changes go through rejection at Gate 1.')}
+        error={new Error(existing.data.agreement.status === 'draft' ? 'You don’t have permission to edit this draft.' : 'Only drafts can be edited. Once submitted, it can no longer be edited.')}
       />
     );
   return (
@@ -317,8 +317,9 @@ function WizardInner({
   const submit = async () => {
     setBusy('submit');
     try {
-      await api.agreements.submit(agreementId!);
-      toast.success('Submitted for Gate 1 approval', 'The approver has been notified.');
+      const res = await api.agreements.submit(agreementId!);
+      if (res.sentToLegal) toast.success('Sent to Legal for approval', 'Legal has been notified.');
+      else toast.success('Approved for signing', 'Standard terms need no Legal approval. Print it on stamp paper and get it signed.');
       navigate(`/agreements/${agreementId}`);
     } catch (e) {
       toast.error('Cannot submit yet', errorMessage(e));
@@ -387,7 +388,7 @@ function WizardInner({
           </Button>
         ) : (
           <Button icon={<Send className="size-4" />} loading={busy === 'submit'} onClick={() => void submit()}>
-            Submit for approval
+            Submit
           </Button>
         )}
       </ActionBar>
@@ -789,10 +790,21 @@ function StepReview({ agreementId, onEdit }: { agreementId: string; onEdit: (ste
           <h2 className="text-lg font-semibold">Review and preview</h2>
           <p className="mt-1 text-sm text-muted">Check the merged agreement. Missing fields are highlighted and block submission.</p>
         </div>
-        <ButtonLink to={`/agreements/${agreementId}/preview`} variant="secondary" icon={<FileSearch className="size-4" />}>
-          Open full preview
-        </ButtonLink>
+        <div className="flex flex-wrap gap-2">
+          {d.actions.requestDeviation && (
+            <ButtonLink to={`/agreements/${agreementId}/deviation`} variant="secondary" icon={<Scale className="size-4" />}>
+              Request deviation
+            </ButtonLink>
+          )}
+          <ButtonLink to={`/agreements/${agreementId}/preview`} variant="secondary" icon={<FileSearch className="size-4" />}>
+            Open full preview
+          </ButtonLink>
+        </div>
       </div>
+      <p className="text-sm text-muted">
+        Need different rates or clause wording for this partner? Request a deviation before submitting. Once Legal agrees it, the agreement
+        becomes non-standard and goes to Legal for approval when you submit.
+      </p>
       {r.blockers.length ? (
         <Alert tone="warning" title="Before you can submit">
           <ul className="mt-1 list-disc space-y-0.5 pl-4">
@@ -803,7 +815,7 @@ function StepReview({ agreementId, onEdit }: { agreementId: string; onEdit: (ste
         </Alert>
       ) : (
         <Alert tone="success" title="Ready to submit">
-          All merge fields are filled and KYC is uploaded. Submitting sends it to the approver for Gate 1.
+          All merge fields are filled and KYC is uploaded. {a.nonStandard ? 'It has approved deviations, so submitting sends it to Legal for approval.' : 'It uses standard terms, so it goes straight to signing — no Legal approval needed.'}
         </Alert>
       )}
       <div className="grid gap-4 md:grid-cols-3">

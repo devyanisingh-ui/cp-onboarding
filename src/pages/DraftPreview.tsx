@@ -19,7 +19,7 @@ export function DraftPreview() {
   const [mobileView, setMobileView] = useState<'document' | 'details'>('document');
   useDocumentTitle(`Preview ${id}`);
 
-  const submit = useAction(() => api.agreements.submit(id), { success: 'Submitted for Gate 1 approval', onSuccess: () => navigate(`/agreements/${id}`) });
+  const submit = useAction(() => api.agreements.submit(id), { success: (res) => (res.sentToLegal ? 'Sent to Legal for approval' : 'Approved for signing — no Legal approval needed'), onSuccess: () => navigate(`/agreements/${id}`) });
   const approve = useAction(() => api.agreements.decideGate1(id, 'approve'), { success: 'Approved for signing', onSuccess: () => navigate(`/agreements/${id}`) });
   const reject = useAction((c: string) => api.agreements.decideGate1(id, 'reject', c), { success: 'Returned to the BD Executive', onSuccess: () => navigate('/tasks') });
 
@@ -57,7 +57,7 @@ export function DraftPreview() {
             )}
             {act.submit && (
               <Button className="max-md:hidden" icon={<Send className="size-4" />} loading={submit.loading} disabled={r.blockers.length > 0} onClick={() => void submit.run()}>
-                Submit for approval
+                {a.nonStandard ? 'Send to Legal for approval' : 'Finalise for signing'}
               </Button>
             )}
             <DownloadMenu agreementId={a.id} html={r.html} />
@@ -77,12 +77,12 @@ export function DraftPreview() {
 
       <div className="mb-5 space-y-3">
         {a.lastRejection && a.status === 'draft' && (
-          <Alert tone="error" title={`Returned at Gate ${a.lastRejection.gate} by ${d.names[a.lastRejection.byId]}`}>
+          <Alert tone="error" title={a.lastRejection.gate === 1 ? `Returned by Legal (${d.names[a.lastRejection.byId]})` : `Returned at Gate 2 by ${d.names[a.lastRejection.byId]}`}>
             {a.lastRejection.comment}
           </Alert>
         )}
         {act.approveGate1 && (
-          <Alert tone="info" title="Gate 1 review">
+          <Alert tone="info" title="Legal review">
             Check the merged terms, the KYC entries and any deviations{a.nonStandard ? ' (shown side by side)' : ''}. Approving releases the final PDF for printing on stamp paper.
           </Alert>
         )}
@@ -161,7 +161,7 @@ export function DraftPreview() {
         <ActionBar className="md:hidden">
           {act.submit && (
             <Button icon={<Send className="size-4" />} loading={submit.loading} disabled={r.blockers.length > 0} onClick={() => void submit.run()}>
-              Submit for approval
+              {a.nonStandard ? 'Send to Legal for approval' : 'Finalise for signing'}
             </Button>
           )}
           {act.approveGate1 && (
@@ -180,7 +180,7 @@ export function DraftPreview() {
       <CommentDialog
         open={rejecting}
         onClose={() => setRejecting(false)}
-        title="Reject at Gate 1"
+        title="Reject and return to BD Executive"
         description="The draft goes back to the BD Executive with your comment. A comment is mandatory."
         confirmLabel="Reject and return"
         onConfirm={async (c) => (await reject.run(c)).ok}

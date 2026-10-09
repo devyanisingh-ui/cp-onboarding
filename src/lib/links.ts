@@ -31,7 +31,7 @@ export function taskLink(t: Pick<Task, 'type' | 'agreementId' | 'refId'>): strin
 }
 
 export const TASK_TYPE_LABELS: Record<Task['type'], string> = {
-  gate1_approval: 'Gate 1 approval',
+  gate1_approval: 'Legal approval',
   deviation_review: 'Deviation review',
   fix_rejected: 'Rework draft',
   signing_upload: 'Signing & upload',

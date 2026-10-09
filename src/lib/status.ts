@@ -5,7 +5,7 @@ import { daysUntil } from './dates';
 export const STATUS_META: Record<DisplayStatus, { label: string; tone: StatusTone }> = {
   draft: { label: 'Draft', tone: 'grey' },
   rejected: { label: 'Rejected', tone: 'red' },
-  pending_approval: { label: 'Pending approval', tone: 'amber' },
+  pending_approval: { label: 'Pending Legal approval', tone: 'amber' },
   approved_for_signing: { label: 'Approved for signing', tone: 'blue' },
   signed_copy_uploaded: { label: 'Signed copy uploaded', tone: 'purple' },
   active: { label: 'Active', tone: 'green' },
@@ -50,7 +50,7 @@ export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRej
 /** Main path shown in the Agreement detail stepper. */
 export const STEPPER: { status: AgreementStatus; label: string }[] = [
   { status: 'draft', label: 'Draft' },
-  { status: 'pending_approval', label: 'Pending approval' },
+  { status: 'pending_approval', label: 'Legal approval' },
   { status: 'approved_for_signing', label: 'Approved for signing' },
   { status: 'signed_copy_uploaded', label: 'Signed copy uploaded' },
   { status: 'active', label: 'Active' },

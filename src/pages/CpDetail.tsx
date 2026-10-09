@@ -113,7 +113,7 @@ export function CpDetail() {
         )}
         {cp.reverificationRequired && (
           <Alert tone="warning" title="Re-verification required">
-            The CP’s name or bank details changed. Audit must re-verify the PAN copy and cancelled cheque.
+            The CP’s name or bank details changed. Admin must re-verify the PAN copy and cancelled cheque.
           </Alert>
         )}
       </div>
@@ -135,7 +135,7 @@ export function CpDetail() {
       {tab === 'details' && <CpDetails cp={cp} names={names} />}
       {tab === 'kyc' && (
         <Card>
-          <CardHeader title="KYC documents" description="Manual verification by Audit: verified by, on, method and remarks are recorded." icon={<ShieldCheck />} />
+          <CardHeader title="KYC documents" description="Manual verification by Admin: verified by, on, method and remarks are recorded." icon={<ShieldCheck />} />
           <DocumentList docs={documents} names={names} onVerify={can('gate2.verify') ? setVerifying : undefined} empty="No KYC documents yet. They’re uploaded in step 5 of the new agreement wizard." />
         </Card>
       )}
@@ -261,7 +261,7 @@ function EditCpModal({ cp, onClose }: { cp: CpDTO; onClose: () => void }) {
       onClose={onClose}
       size="lg"
       title="Edit CP details"
-      description="Name or bank changes send the CP’s KYC back to Audit for re-verification."
+      description="Name or bank changes send the CP’s KYC back to Admin for re-verification."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>

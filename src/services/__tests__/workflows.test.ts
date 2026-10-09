@@ -8,10 +8,7 @@ import type { CpFormValues } from '@/lib/schemas';
 
 const as = (email: string) => api.auth.signIn('google', email);
 const NEHA = 'neha.kapoor@apeejay.edu';
-const RAJIV = 'rajiv.malhotra@apeejay.edu';
-const MEERA = 'meera.iyer@apeejay.edu';
 const PRIYA = 'priya.sharma@apeejay.edu';
-const ROHAN = 'rohan.desai@apeejay.edu';
 const ARJUN = 'arjun.mehta@apeejay.edu';
 
 const newCp: CpFormValues = {
@@ -42,6 +39,16 @@ async function createReadyDraft() {
   return { agreementId, cpId };
 }
 
+/** A ready draft with a Legal-approved rate deviation, signed back in as the BD Executive. */
+async function createNonStandardDraft() {
+  const ids = await createReadyDraft();
+  await api.agreements.requestDeviation(ids.agreementId, [{ type: 'rate', ref: 'r-eng:1-10', proposedValue: '20000' }], 'Competitive market in Gurugram');
+  await as(PRIYA);
+  await api.agreements.decideDeviation(getDb().deviations.find((d) => d.agreementId === ids.agreementId)!.id, 'approve', {});
+  await as(NEHA);
+  return ids;
+}
+
 beforeEach(async () => {
   setLatency(0, 0);
   sessionStorage.clear();
@@ -58,14 +65,11 @@ describe('authentication', () => {
 });
 
 describe('new CP onboarding (PRD 6.1)', () => {
-  it('runs draft → Gate 1 → signing → Gate 2 → Active', async () => {
+  it('runs a standard draft straight to signing → Gate 2 → Active (no Legal approval)', async () => {
     const { agreementId } = await createReadyDraft();
-    await api.agreements.submit(agreementId);
-    expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('pending_approval');
-
-    await as(RAJIV);
-    await api.agreements.decideGate1(agreementId, 'approve');
+    await expect(api.agreements.submit(agreementId)).resolves.toEqual({ sentToLegal: false });
     expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('approved_for_signing');
+    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'gate1_approval')).toBe(false);
 
     // Time passes: the execution date arrives and the copies are signed.
     getDb().agreements.find((a) => a.id === agreementId)!.executionDate = today();
@@ -73,7 +77,6 @@ describe('new CP onboarding (PRD 6.1)', () => {
     await api.agreements.uploadSigned(agreementId, {
       stampPaper: { number: 'IN-HR99887766', valueInr: 100, purchaseDate: today(), state: 'Haryana', vendor: 'Tehsil vendor' },
       signedOn: today(),
-      signedById: 'u-alok',
       signedFile: new Blob(['x'], { type: 'application/pdf' }),
       signedFileName: 'signed.pdf',
       stampFile: new Blob(['x'], { type: 'application/pdf' }),
@@ -82,7 +85,7 @@ describe('new CP onboarding (PRD 6.1)', () => {
     });
     expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('signed_copy_uploaded');
 
-    await as(MEERA);
+    await as(ARJUN);
     await expect(api.agreements.decideGate2(agreementId, 'approve', { stamp: { status: 'mismatch' } })).rejects.toThrow(/Verified/);
     await api.agreements.decideGate2(agreementId, 'approve', { pages: { status: 'verified' }, stamp: { status: 'verified' } });
     const a = getDb().agreements.find((x) => x.id === agreementId)!;
@@ -112,10 +115,20 @@ describe('new CP onboarding (PRD 6.1)', () => {
     ).rejects.toThrow(/already has an active agreement/);
   });
 
+  it('sends a non-standard draft to Legal, who approves it for signing', async () => {
+    const { agreementId } = await createNonStandardDraft();
+    await expect(api.agreements.submit(agreementId)).resolves.toEqual({ sentToLegal: true });
+    expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('pending_approval');
+    expect(getDb().tasks.find((t) => t.agreementId === agreementId && t.type === 'gate1_approval' && t.status === 'open')!.assigneeId).toBe('u-priya');
+    await as(PRIYA);
+    await api.agreements.decideGate1(agreementId, 'approve');
+    expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('approved_for_signing');
+  });
+
   it('requires a comment to reject and returns the draft to the BD Executive', async () => {
-    const { agreementId } = await createReadyDraft();
+    const { agreementId } = await createNonStandardDraft();
     await api.agreements.submit(agreementId);
-    await as(RAJIV);
+    await as(PRIYA);
     await expect(api.agreements.decideGate1(agreementId, 'reject', '')).rejects.toThrow(/comment/);
     await api.agreements.decideGate1(agreementId, 'reject', 'Please fix the address');
     const a = getDb().agreements.find((x) => x.id === agreementId)!;
@@ -125,9 +138,13 @@ describe('new CP onboarding (PRD 6.1)', () => {
   });
 
   it('does not let the creator approve their own draft', async () => {
-    const { agreementId } = await createReadyDraft();
+    const { agreementId } = await createNonStandardDraft();
     await api.agreements.submit(agreementId);
     await expect(api.agreements.decideGate1(agreementId, 'approve')).rejects.toThrow();
+  });
+
+  it('has exactly three users: BD Executive, Legal and Admin', () => {
+    expect(getDb().users.map((u) => u.roles.join())).toEqual(['bd_exec', 'legal', 'admin']);
   });
 
   it('requires an Admin override for a warning-flagged CP', async () => {
@@ -145,7 +162,9 @@ describe('new CP onboarding (PRD 6.1)', () => {
 
 describe('scope rules (PRD 3)', () => {
   it('hides out-of-scope agreements and limits CP details', async () => {
-    await as(NEHA);
+    // The seed BD Executive covers both institutions; add one limited to ASU.
+    getDb().users.push({ id: 'u-test', name: 'Test BD', email: 'test.bd@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: ['inst-asu'], active: true });
+    await as('test.bd@apeejay.edu');
     const list = await api.agreements.list();
     expect(list.every((a) => a.institutionCode === 'ASU')).toBe(true);
     await expect(api.agreements.get('AGR-AKS-2025-0011')).rejects.toThrow(/not found/);
@@ -165,8 +184,8 @@ describe('scope rules (PRD 3)', () => {
     expect(getDb().audit.length).toBe(before + 1);
   });
 
-  it('Audit sees all institutions', async () => {
-    await as(MEERA);
+  it('Legal and Admin see all institutions', async () => {
+    await as(ARJUN);
     const codes = new Set((await api.agreements.list()).map((a) => a.institutionCode));
     expect(codes).toEqual(new Set(['ASU', 'AKS']));
   });
@@ -200,17 +219,17 @@ describe('renewal (PRD 6.4) and termination (PRD 6.5)', () => {
     expect(old.status).toBe('active');
   });
 
-  it('Do not renew needs a reason and Approver confirmation', async () => {
+  it('Do not renew needs a reason and Admin confirmation', async () => {
     await as(NEHA);
     await expect(api.agreements.decideRenewal('AGR-ASU-2025-0002', 'do_not_renew', '')).rejects.toThrow();
     await api.agreements.decideRenewal('AGR-ASU-2025-0002', 'do_not_renew', 'Low conversions this cycle');
-    await as(RAJIV);
+    await as(ARJUN);
     await api.agreements.confirmNonRenewal('AGR-ASU-2025-0002', 'confirm');
     expect(getDb().agreements.find((a) => a.id === 'AGR-ASU-2025-0002')!.renewal?.confirmation).toBe('confirmed');
   });
 
   it('termination for breach sets a warning flag on the CP', async () => {
-    await as(RAJIV);
+    await as(ARJUN);
     await api.agreements.startTermination('AGR-ASU-2026-0001', {
       type: 'breach',
       reason: 'Breach: fees collected from applicants',
@@ -235,7 +254,7 @@ describe('scheduler (PRD 9)', () => {
   it('escalates overdue tasks to the routing escalation contact', () => {
     runScheduledJobs();
     const t = getDb().tasks.find((x) => x.agreementId === 'AGR-ASU-2026-0004' && x.type === 'gate1_approval')!;
-    expect(t.escalatedToId).toBe('u-kiran');
+    expect(t.escalatedToId).toBe('u-arjun');
   });
 
   it('keeps personal data out of notifications', () => {
@@ -259,7 +278,7 @@ describe('maker-checker (PRD 3)', () => {
 
 describe('legacy import (PRD 6.6)', () => {
   it('validates rows and imports valid ones at Signed copy uploaded', async () => {
-    await as(ROHAN);
+    await as(NEHA);
     const batch = await api.legacy.import('test.xlsx', [
       { institution_code: 'AKS', cp_type: 'Individual', legal_name: 'Test Person', pan: 'ABCPT1234Z', execution_date: '2025-06-01', start_date: '2025-06-02', end_date: shiftDays(today(), 200) },
       { institution_code: 'AKS', cp_type: 'Individual', legal_name: 'Bad', pan: 'BAD', execution_date: 'x', start_date: '2025-06-02', end_date: '2020-01-01' },

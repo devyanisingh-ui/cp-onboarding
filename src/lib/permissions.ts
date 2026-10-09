@@ -34,6 +34,41 @@ export type Capability =
   | 'legacy.import'
   | 'scope.all';
 
+const ALL_CAPABILITIES: Capability[] = [
+  'cp.create',
+  'cp.edit',
+  'agreement.create',
+  'agreement.edit',
+  'deviation.request',
+  'deviation.decide',
+  'gate1.approve',
+  'signed.upload',
+  'gate2.verify',
+  'kyc.upload',
+  'template.view',
+  'template.manage',
+  'template.approve',
+  'ratecard.view',
+  'ratecard.manage',
+  'ratecard.approve',
+  'config.view',
+  'config.manage',
+  'audit.view',
+  'reports.view',
+  'renewal.decide',
+  'renewal.confirm',
+  'termination.start',
+  'termination.confirm',
+  'override.decide',
+  'legacy.import',
+  'scope.all',
+];
+
+/**
+ * Three roles. BD Executives create CPs and agreements; Legal approves non-standard agreements
+ * (deviations), templates and rate cards; Admin can do everything, including Gate 2 verification
+ * and confirming non-renewals and terminations.
+ */
 const MATRIX: Record<Role, Capability[]> = {
   bd_exec: [
     'cp.create',
@@ -47,24 +82,8 @@ const MATRIX: Record<Role, Capability[]> = {
     'termination.start',
     'legacy.import',
   ],
-  approver: ['gate1.approve', 'ratecard.view', 'reports.view', 'renewal.confirm', 'termination.start', 'termination.confirm'],
-  legal: ['deviation.decide', 'gate1.approve', 'template.view', 'template.approve', 'ratecard.view', 'ratecard.approve'],
-  signatory: [],
-  audit: ['gate2.verify', 'template.view', 'ratecard.view', 'config.view', 'audit.view', 'reports.view', 'scope.all'],
-  admin: [
-    'cp.edit',
-    'template.view',
-    'template.manage',
-    'ratecard.view',
-    'ratecard.manage',
-    'config.view',
-    'config.manage',
-    'audit.view',
-    'reports.view',
-    'override.decide',
-    'legacy.import',
-    'scope.all',
-  ],
+  legal: ['deviation.decide', 'gate1.approve', 'template.view', 'template.approve', 'ratecard.view', 'ratecard.approve', 'reports.view', 'scope.all'],
+  admin: ALL_CAPABILITIES,
 };
 
 export function capabilitiesFor(roles: Role[]): Set<Capability> {

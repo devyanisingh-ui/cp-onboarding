@@ -164,6 +164,6 @@ export async function importLegacy(fileName: string, rows: LegacyRow[]): Promise
 export async function listLegacyBatches(): Promise<LegacyBatch[]> {
   await delay();
   const user = ctx();
-  if (!user.roles.includes('admin') && !user.roles.includes('bd_exec') && !user.roles.includes('audit')) throw forbidden();
+  if (!user.roles.includes('admin') && !user.roles.includes('bd_exec')) throw forbidden();
   return getDb().legacyBatches.slice().reverse();
 }

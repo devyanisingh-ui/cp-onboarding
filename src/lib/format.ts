@@ -2,10 +2,7 @@ import type { CpType, Role } from '@/types';
 
 export const ROLE_LABELS: Record<Role, string> = {
   bd_exec: 'BD Executive',
-  approver: 'Approver',
   legal: 'Legal',
-  signatory: 'Authorised Signatory',
-  audit: 'Audit / Compliance',
   admin: 'Admin',
 };
 

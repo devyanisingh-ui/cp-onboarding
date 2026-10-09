@@ -3,7 +3,7 @@ import { buildSeed, SCHEMA_VERSION } from '@/data/seed';
 
 /**
  * In-memory "database" persisted to localStorage so the prototype survives reloads and
- * several tabs (e.g. BD Executive in one, Approver in another) stay in sync.
+ * several tabs (e.g. BD Executive in one, Legal in another) stay in sync.
  */
 const KEY = 'cp-onboarding-db';
 let db: Database | null = null;

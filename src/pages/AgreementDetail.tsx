@@ -58,6 +58,11 @@ export function AgreementDetail() {
                 Continue editing
               </ButtonLink>
             )}
+            {act.requestDeviation && (
+              <ButtonLink to={`/agreements/${a.id}/deviation`} variant="secondary" icon={<Scale className="size-4" />}>
+                Request deviation
+              </ButtonLink>
+            )}
             {act.uploadSigned && (
               <ButtonLink to={`/agreements/${a.id}/upload`} icon={<Upload className="size-4" />}>
                 {a.source === 'legacy' ? 'Upload scan' : 'Upload signed copy'}
@@ -70,7 +75,7 @@ export function AgreementDetail() {
             )}
             {act.approveGate1 && (
               <ButtonLink to={`/agreements/${a.id}/preview`} icon={<ShieldCheck className="size-4" />}>
-                Review (Gate 1)
+                Legal review
               </ButtonLink>
             )}
             {(act.renewalDecision || act.confirmNonRenewal) && (
@@ -90,7 +95,7 @@ export function AgreementDetail() {
       <div className="mb-5 space-y-3">
         {d.cp.warning && <WarningBanner reason={d.cp.warning.reason} />}
         {a.lastRejection && (
-          <Alert tone="error" title={`Returned at Gate ${a.lastRejection.gate} by ${d.names[a.lastRejection.byId]} · ${formatDateTime(a.lastRejection.at)}`}>
+          <Alert tone="error" title={`${a.lastRejection.gate === 1 ? "Returned by Legal" : "Returned at Gate 2"} (${d.names[a.lastRejection.byId]}) · ${formatDateTime(a.lastRejection.at)}`}>
             {a.lastRejection.comment}
           </Alert>
         )}
@@ -121,7 +126,7 @@ export function AgreementDetail() {
           </Alert>
         )}
         {a.termination && a.termination.confirmation !== 'rejected' && (
-          <Alert tone={a.status === 'terminated' ? 'error' : 'warning'} title={a.termination.confirmation === 'pending' ? 'Termination awaiting Approver confirmation' : a.status === 'terminated' ? 'Terminated' : 'In notice period'}>
+          <Alert tone={a.status === 'terminated' ? 'error' : 'warning'} title={a.termination.confirmation === 'pending' ? 'Termination awaiting Admin confirmation' : a.status === 'terminated' ? 'Terminated' : 'In notice period'}>
             {a.termination.type === 'breach' ? 'For breach' : 'For convenience'}: {a.termination.reason}. Notice {formatDate(a.termination.noticeDate)}, effective {formatDate(a.termination.effectiveDate)}.
           </Alert>
         )}
@@ -129,7 +134,7 @@ export function AgreementDetail() {
           <Alert tone="info" title="Renewal decision">
             {a.renewal.decision === 'do_not_renew' ? (
               <>
-                Do not renew — “{a.renewal.reason}” ({a.renewal.confirmation === 'confirmed' ? 'confirmed by the Approver' : a.renewal.confirmation === 'rejected' ? 'not confirmed; re-decision requested' : 'awaiting Approver confirmation'}).
+                Do not renew — “{a.renewal.reason}” ({a.renewal.confirmation === 'confirmed' ? 'confirmed by Admin' : a.renewal.confirmation === 'rejected' ? 'not confirmed; re-decision requested' : 'awaiting Admin confirmation'}).
               </>
             ) : (
               <>
@@ -153,7 +158,7 @@ export function AgreementDetail() {
       {!terminal && (
         <Card className="mb-5">
           <CardBody>
-            <StatusStepper status={a.status} />
+            <StatusStepper status={a.status} nonStandard={a.nonStandard} />
           </CardBody>
         </Card>
       )}

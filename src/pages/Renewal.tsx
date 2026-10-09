@@ -26,7 +26,7 @@ export function Renewal() {
       if (res.newAgreementId) navigate(`/agreements/${res.newAgreementId}/${pending === 'renew' ? 'preview' : 'edit?step=3'}`);
       else navigate(`/agreements/${id}`);
     },
-    success: (res) => (res.newAgreementId ? `Renewal draft ${res.newAgreementId} created` : 'Sent to the Approver to confirm'),
+    success: (res) => (res.newAgreementId ? `Renewal draft ${res.newAgreementId} created` : 'Sent to Admin to confirm'),
   });
   const [pending, setPending] = useState<'renew' | 'renew_with_changes' | null>(null);
   const confirm = useAction((dec: 'confirm' | 'reject', c?: string) => api.agreements.confirmNonRenewal(id, dec, c), { success: 'Decision recorded', onSuccess: () => navigate(`/agreements/${id}`) });
@@ -57,7 +57,7 @@ export function Renewal() {
           <div className="text-sm">
             <p className="text-base font-semibold">Expires {formatDate(a.endDate)}</p>
             <p className="mt-1 text-muted">
-              Decide by {formatDate(a.endDate ? shiftDays(a.endDate, -sla.renewalEscalationDays) : '')}. After that it escalates to the Approver, and with no decision at expiry it closes as “Expired without decision”.
+              Decide by {formatDate(a.endDate ? shiftDays(a.endDate, -sla.renewalEscalationDays) : '')}. After that it escalates to Admin, and with no decision at expiry it closes as “Expired without decision”.
             </p>
           </div>
         </CardBody>
@@ -102,7 +102,7 @@ export function Renewal() {
         <div className="grid gap-3 sm:grid-cols-3">
           <DecisionCard icon={<RefreshCw />} title="Renew" body="Same terms on the current template and rate card. Starts the day after expiry." onClick={() => renew('renew')} loading={decide.loading && pending === 'renew'} primary />
           <DecisionCard icon={<Pencil />} title="Renew with changes" body="Opens the renewal draft so you can edit details before submitting." onClick={() => renew('renew_with_changes')} loading={decide.loading && pending === 'renew_with_changes'} />
-          <DecisionCard icon={<CalendarX />} title="Do not renew" body="Needs a reason and the Approver’s confirmation." onClick={() => setDnr(true)} />
+          <DecisionCard icon={<CalendarX />} title="Do not renew" body="Needs a reason and Admin’s confirmation." onClick={() => setDnr(true)} />
         </div>
       )}
 
@@ -116,7 +116,7 @@ export function Renewal() {
         open={dnr}
         onClose={() => setDnr(false)}
         title="Do not renew"
-        description="The Approver must confirm. The agreement stays active until its expiry date."
+        description="Admin must confirm. The agreement stays active until its expiry date."
         footer={
           <>
             <Button variant="secondary" onClick={() => setDnr(false)}>

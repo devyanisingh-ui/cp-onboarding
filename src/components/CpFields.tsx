@@ -124,7 +124,7 @@ export function CpFields({
         </div>
       </FormSection>
 
-      <FormSection title="Tax and bank details" description="Changing the name or bank details later requires re-verification by Audit.">
+      <FormSection title="Tax and bank details" description="Changing the name or bank details later requires re-verification by Admin.">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
             <Toggle checked={gst} onChange={(v) => setValue('gstRegistered', v, { shouldValidate: formState.isSubmitted })} label="GST registered" description="A GST certificate upload becomes mandatory." />

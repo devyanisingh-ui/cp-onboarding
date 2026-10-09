@@ -57,10 +57,7 @@ export function demoAccounts(): Pick<User, 'id' | 'name' | 'email' | 'designatio
 /** Primary persona per role for the reviewer role switcher (PRD Appendix A). */
 export const PERSONAS: Record<Role, string> = {
   bd_exec: 'u-neha',
-  approver: 'u-rajiv',
   legal: 'u-priya',
-  signatory: 'u-alok',
-  audit: 'u-meera',
   admin: 'u-arjun',
 };
 

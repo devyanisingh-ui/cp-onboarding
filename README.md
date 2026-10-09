@@ -31,18 +31,16 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 
 ## Demo personas
 
-| Role | Account | Scope |
+| Role | Account | What they do |
 | --- | --- | --- |
-| BD Executive | Neha Kapoor | ASU |
-| Approver | Rajiv Malhotra | ASU |
-| Legal | Priya Sharma | All |
-| Authorised Signatory | Prof. Alok Verma | ASU |
-| Audit / Compliance | Meera Iyer | All |
-| Admin | Arjun Mehta | All |
+| BD Executive | Neha Kapoor | Creates CPs and agreements, requests deviations, uploads signed copies, renewals and terminations |
+| Legal | Priya Sharma | Decides deviations and approves non-standard agreements; approves template and rate card versions |
+| Admin | Arjun Mehta | Everything, including Gate 2 verification and confirming non-renewals and terminations |
 
-More accounts (Rohan Desai, Sunita Kulkarni, Kiran Sethi) cover the second institution and
-escalations. All people, partners and agreements are fictional. Data is stored in your browser;
-**Admin → System → Reset demo data** restores the seed.
+Standard agreements (published template and rate card, no deviations) need no approval: submitting
+sends them straight to signing. Agreements with Legal-approved deviations are non-standard and go
+to Legal for approval first. All people, partners and agreements are fictional. Data is stored in
+your browser; **Admin → System → Reset demo data** restores the seed.
 
 ## What's included
 
@@ -50,7 +48,8 @@ All 16 screens in PRD section 8: sign in, home, my tasks, CP list and detail, th
 agreement wizard, draft preview, deviation panel, agreement detail, signed copy upload, Gate 2
 verification, renewal, termination, reports, admin console and audit log. Also:
 
-- Two-gate lifecycle with mandatory comments on rejection, SLA due dates, reminders, escalations,
+- Lifecycle with Legal approval for non-standard agreements (Gate 1) and Admin verification of the
+  signed copy (Gate 2), mandatory comments on rejection, SLA due dates, reminders, escalations,
   renewal tasks at 60 days and auto-expiry (a scheduler runs in the browser)
 - Role permissions and institution scope enforced in the mock API on every call
 - Masked PAN, GSTIN and bank account with logged "Reveal"; nothing sensitive in notifications

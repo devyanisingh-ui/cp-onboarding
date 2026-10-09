@@ -58,7 +58,6 @@ export function SignedUpload() {
   if (!d.actions.uploadSigned)
     return <ErrorState title="Nothing to upload" error={new Error('This agreement is not waiting for a signed copy, or your role cannot upload it.')} />;
 
-  const signatories = getDb().users.filter((u) => u.roles.includes('signatory') && u.institutionIds.includes(d.institution.id));
   const e = form.formState.errors;
 
   const submit = form.handleSubmit(async (v) => {
@@ -82,7 +81,7 @@ export function SignedUpload() {
         stampFileName: st.fileName,
         checklist: checks,
       });
-      toast.success('Signed copy uploaded', 'Sent to Audit for Gate 2 verification.');
+      toast.success('Signed copy uploaded', 'Sent to Admin for Gate 2 verification.');
       navigate(`/agreements/${d.agreement.id}`);
     } catch (err) {
       toast.error('Upload failed', errorMessage(err));
@@ -99,7 +98,7 @@ export function SignedUpload() {
         subtitle={`${d.cp.legalName} · ${d.institution.shortCode}`}
       />
       {d.agreement.lastRejection?.gate === 2 && (
-        <Alert tone="error" className="mb-5" title="Audit returned the previous upload">
+        <Alert tone="error" className="mb-5" title="Admin returned the previous upload">
           {d.agreement.lastRejection.comment}
         </Alert>
       )}
@@ -135,16 +134,13 @@ export function SignedUpload() {
             <Field label="Date signed" required error={e.signedOn?.message}>
               <Input type="date" max={today()} {...form.register('signedOn')} />
             </Field>
-            <Field label="Authorised Signatory" optional>
-              <Select {...form.register('signedById')} value={form.watch('signedById') ?? ''}>
-                <option value="">{d.agreement.signatoryName} (not a user)</option>
-                {signatories.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name} — {u.designation}
-                  </option>
-                ))}
-              </Select>
-            </Field>
+            <div>
+              <p className="text-sm font-medium text-ink">Signed for the institution by</p>
+              <p className="mt-2 text-sm text-ink-soft">
+                {d.agreement.signatoryName}
+                {d.agreement.signatoryDesignation ? `, ${d.agreement.signatoryDesignation}` : ''}
+              </p>
+            </div>
           </CardBody>
         </Card>
         <Card>
@@ -186,7 +182,7 @@ export function SignedUpload() {
         </Card>
         <ActionBar>
           <Button type="submit" icon={<UploadCloud className="size-4" />} loading={busy}>
-            Upload and send to Audit
+            Upload and send for verification
           </Button>
         </ActionBar>
       </form>

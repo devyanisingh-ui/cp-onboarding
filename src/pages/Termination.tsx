@@ -8,6 +8,7 @@ import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { formatDate, shiftDays, today } from '@/lib/dates';
 import { useSession } from '@/context/SessionContext';
+import { can } from '@/lib/permissions';
 import { Alert, Button, Card, CardBody, CardHeader, DL, ErrorState, Field, Input, PageSkeleton, RadioGroup, Select, useToast } from '@/components/ui';
 import { ActionBar, CommentDialog, FileDrop, PageHeader } from '@/components/common';
 
@@ -34,7 +35,7 @@ export function Termination() {
   const d = data!;
   const a = d.agreement;
   const reasons = getDb().masterLists.terminationReasons;
-  const isApprover = user?.roles.includes('approver');
+  const canConfirm = !!user && can(user, 'termination.confirm');
 
   const start = async () => {
     const e: Record<string, string> = {};
@@ -47,7 +48,7 @@ export function Termination() {
     setBusy(true);
     try {
       await api.agreements.startTermination(id, { type, reason, noticeDate, effectiveDate: effective, noticeFile: file[0]!, noticeFileName: file[0]!.name });
-      toast.success(isApprover ? 'Termination confirmed' : 'Sent to the Approver to confirm');
+      toast.success(canConfirm ? 'Termination confirmed' : 'Sent to Admin to confirm');
       navigate(`/agreements/${id}`);
     } catch (err) {
       toast.error('Could not start termination', errorMessage(err));
@@ -124,17 +125,17 @@ export function Termination() {
               </div>
               <FileDrop label="Termination notice letter" required files={file} error={errs.file} onFiles={(f) => setFile(f.slice(0, 1))} onRemove={() => setFile([])} />
               {type === 'breach' && <Alert tone="warning">A breach termination flags this CP everywhere. Make sure the notice letter states the breach.</Alert>}
-              <p className="text-sm text-muted">{isApprover ? 'As an Approver, submitting confirms the termination immediately.' : 'The Approver confirms before it takes effect. The agreement then moves to Notice period and becomes Terminated on the effective date.'}</p>
+              <p className="text-sm text-muted">{canConfirm ? 'As Admin, submitting confirms the termination immediately.' : 'Admin confirms before it takes effect. The agreement then moves to Notice period and becomes Terminated on the effective date.'}</p>
             </CardBody>
           </Card>
           <ActionBar>
             <Button variant="danger" icon={<Ban className="size-4" />} loading={busy} onClick={() => void start()}>
-              {isApprover ? 'Terminate' : 'Send for confirmation'}
+              {canConfirm ? 'Terminate' : 'Send for confirmation'}
             </Button>
           </ActionBar>
         </>
       ) : (
-        <Alert tone="info">{a.termination?.confirmation === 'pending' ? 'This termination is waiting for Approver confirmation.' : 'Only active agreements can be terminated, by a BD Executive or Approver in scope.'}</Alert>
+        <Alert tone="info">{a.termination?.confirmation === 'pending' ? 'This termination is waiting for Admin confirmation.' : 'Only active agreements can be terminated, by a BD Executive or Admin.'}</Alert>
       )}
       <CommentDialog open={rejecting} onClose={() => setRejecting(false)} title="Don’t confirm termination" confirmLabel="Send back" onConfirm={async (c) => (await confirm.run('reject', c)).ok} />
     </div>

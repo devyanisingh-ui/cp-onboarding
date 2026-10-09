@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Seed data is generated relative to today so SLAs, expiries and overdue items always look live. */
 export function buildSeed(): Database {
@@ -74,15 +74,9 @@ export function buildSeed(): Database {
   ];
 
   const users: User[] = [
-    { id: 'u-neha', name: 'Neha Kapoor', email: 'neha.kapoor@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: ['inst-asu'], managerId: 'u-rajiv', active: true },
-    { id: 'u-rajiv', name: 'Rajiv Malhotra', email: 'rajiv.malhotra@apeejay.edu', designation: 'Region Head – North', roles: ['approver'], regionId: 'north', institutionIds: ['inst-asu'], managerId: 'u-kiran', active: true },
-    { id: 'u-priya', name: 'Priya Sharma', email: 'priya.sharma@apeejay.edu', designation: 'Legal Counsel', roles: ['legal'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-kiran', active: true },
-    { id: 'u-alok', name: 'Prof. Alok Verma', email: 'alok.verma@apeejay.edu', designation: 'Registrar, ASU', roles: ['signatory'], regionId: 'north', institutionIds: ['inst-asu'], managerId: 'u-kiran', active: true },
-    { id: 'u-meera', name: 'Meera Iyer', email: 'meera.iyer@apeejay.edu', designation: 'Internal Audit', roles: ['audit'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-kiran', active: true },
-    { id: 'u-arjun', name: 'Arjun Mehta', email: 'arjun.mehta@apeejay.edu', designation: 'Central Admin', roles: ['admin'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-kiran', active: true },
-    { id: 'u-rohan', name: 'Rohan Desai', email: 'rohan.desai@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'west', institutionIds: ['inst-aks'], managerId: 'u-sunita', active: true },
-    { id: 'u-sunita', name: 'Sunita Kulkarni', email: 'sunita.kulkarni@apeejay.edu', designation: 'Institution Head – AKS', roles: ['approver'], regionId: 'west', institutionIds: ['inst-aks'], managerId: 'u-kiran', active: true },
-    { id: 'u-kiran', name: 'Kiran Sethi', email: 'kiran.sethi@apeejay.edu', designation: 'Director, Admissions', roles: ['approver'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], active: true },
+    { id: 'u-neha', name: 'Neha Kapoor', email: 'neha.kapoor@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
+    { id: 'u-priya', name: 'Priya Sharma', email: 'priya.sharma@apeejay.edu', designation: 'Legal Counsel', roles: ['legal'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
+    { id: 'u-arjun', name: 'Arjun Mehta', email: 'arjun.mehta@apeejay.edu', designation: 'Central Admin', roles: ['admin'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], active: true },
   ];
 
   // ---------------- Rate cards ----------------
@@ -145,11 +139,11 @@ export function buildSeed(): Database {
     cp({ id: 'CP-0005', type: 'pvt_ltd', legalName: 'Scholars Gateway India Pvt. Ltd', pan: 'AAFCS9012L', contactPerson: 'Pooja Arora', mobile: '9910987654', email: 'pooja@scholarsgateway.in', residenceAddress: '', businessAddress: '3rd Floor, Vipul Plaza, Sohna Road, Gurugram 122018', gstRegistered: true, gstin: '06AAFCS9012L1ZQ', bank: bank('Scholars Gateway India Pvt. Ltd', '001234567890', 'ICIC0000456', 'ICICI Bank', 'Sohna Road'), aadhaarLast4: '9012', typeFields: { cin: 'U85300HR2020PTC089012', registeredOffice: '3rd Floor, Vipul Plaza, Sohna Road, Gurugram 122018', authorisedSignatory: 'Pooja Arora, Director', boardResolutionDate: d(-15) }, at: -10 }),
     cp({ id: 'CP-0006', type: 'pvt_ltd', legalName: 'NextStep Learning Pvt. Ltd', pan: 'AAGCN3456M', contactPerson: 'Harpreet Singh', mobile: '9876012345', email: 'harpreet@nextstep.co.in', residenceAddress: '', businessAddress: 'SCO 118, Sector 17-C, Chandigarh 160017', gstRegistered: true, gstin: '04AAGCN3456M1Z2', bank: bank('NextStep Learning Pvt. Ltd', '60234567123', 'KKBK0000789', 'Kotak Mahindra Bank', 'Sector 17'), aadhaarLast4: '3456', typeFields: { cin: 'U80301CH2019PTC043456', registeredOffice: 'SCO 118, Sector 17-C, Chandigarh 160017', authorisedSignatory: 'Harpreet Singh, Director', boardResolutionDate: d(-12) }, at: -8 }),
     cp({ id: 'CP-0007', type: 'partnership', legalName: 'Sharma & Gill Associates', pan: 'AAQFS2345B', contactPerson: 'Manpreet Gill', mobile: '9815098150', email: 'contact@sharmagill.in', residenceAddress: '', businessAddress: '22 Mall Road, Ludhiana, Punjab 141001', gstRegistered: false, bank: bank('Sharma & Gill Associates', '12340056789', 'HDFC0000555', 'HDFC Bank', 'Mall Road, Ludhiana'), aadhaarLast4: '2345', typeFields: { partners: 'Amit Sharma, Manpreet Gill', deedDate: d(-900), authorisedPartner: 'Manpreet Gill' }, at: -14 }),
-    cp({ id: 'CP-0008', type: 'partnership', legalName: 'Vidya Partners', pan: 'AAKFV6789C', contactPerson: 'Suresh Rao', mobile: '9822012345', email: 'suresh@vidyapartners.in', residenceAddress: '', businessAddress: 'Office 7, Palm Beach Road, Vashi, Navi Mumbai 400703', gstRegistered: true, gstin: '27AAKFV6789C1Z1', bank: bank('Vidya Partners', '44556677889', 'SBIN0004455', 'State Bank of India', 'Vashi'), aadhaarLast4: '6789', typeFields: { partners: 'Suresh Rao, Lata Rao', deedDate: d(-1200), authorisedPartner: 'Suresh Rao' }, by: 'u-rohan', at: -380 }),
-    cp({ id: 'CP-0009', type: 'partnership', legalName: 'Horizon Admission Consultants', pan: 'AAJFH1122E', contactPerson: 'Deepak Jain', mobile: '9867012345', email: 'deepak@horizonadm.in', residenceAddress: '', businessAddress: 'B-14, Sector 8, Kharghar, Navi Mumbai 410210', gstRegistered: false, bank: bank('Horizon Admission Consultants', '22334455667', 'BARB0KHARGH', 'Bank of Baroda', 'Kharghar'), aadhaarLast4: '1122', typeFields: { partners: 'Deepak Jain, Nitin Jain', deedDate: d(-1500), authorisedPartner: 'Deepak Jain' }, by: 'u-rohan', at: -500,
-      warning: { reason: 'Agreement AGR-AKS-2025-0011 terminated for breach: collected fees from applicants in cash.', setAt: ts(-60), setById: 'u-sunita', sourceAgreementId: 'AGR-AKS-2025-0011' } }),
+    cp({ id: 'CP-0008', type: 'partnership', legalName: 'Vidya Partners', pan: 'AAKFV6789C', contactPerson: 'Suresh Rao', mobile: '9822012345', email: 'suresh@vidyapartners.in', residenceAddress: '', businessAddress: 'Office 7, Palm Beach Road, Vashi, Navi Mumbai 400703', gstRegistered: true, gstin: '27AAKFV6789C1Z1', bank: bank('Vidya Partners', '44556677889', 'SBIN0004455', 'State Bank of India', 'Vashi'), aadhaarLast4: '6789', typeFields: { partners: 'Suresh Rao, Lata Rao', deedDate: d(-1200), authorisedPartner: 'Suresh Rao' }, by: 'u-neha', at: -380 }),
+    cp({ id: 'CP-0009', type: 'partnership', legalName: 'Horizon Admission Consultants', pan: 'AAJFH1122E', contactPerson: 'Deepak Jain', mobile: '9867012345', email: 'deepak@horizonadm.in', residenceAddress: '', businessAddress: 'B-14, Sector 8, Kharghar, Navi Mumbai 410210', gstRegistered: false, bank: bank('Horizon Admission Consultants', '22334455667', 'BARB0KHARGH', 'Bank of Baroda', 'Kharghar'), aadhaarLast4: '1122', typeFields: { partners: 'Deepak Jain, Nitin Jain', deedDate: d(-1500), authorisedPartner: 'Deepak Jain' }, by: 'u-neha', at: -500,
+      warning: { reason: 'Agreement AGR-AKS-2025-0011 terminated for breach: collected fees from applicants in cash.', setAt: ts(-60), setById: 'u-arjun', sourceAgreementId: 'AGR-AKS-2025-0011' } }),
     cp({ id: 'CP-0010', type: 'individual', legalName: 'Ramesh Chandra Yadav', pan: 'AEYPY4455F', contactPerson: 'Ramesh Chandra Yadav', mobile: '9812098120', email: 'ramesh.yadav@gmail.com', residenceAddress: 'Village Dhankot, Tehsil Gurugram, Haryana 122505', businessAddress: '', gstRegistered: false, bank: bank('Ramesh Chandra Yadav', '9900112233', 'CNRB0001234', 'Canara Bank', 'Gurugram'), aadhaarLast4: '4455', typeFields: { fatherName: 'Shri Mahavir Yadav', dob: '1981-06-14' }, at: -40 }),
-    cp({ id: 'CP-0011', type: 'individual', legalName: 'Kavita Joshi', pan: 'BHNPJ6677G', contactPerson: 'Kavita Joshi', mobile: '9820098200', email: 'kavita.joshi@outlook.com', residenceAddress: 'Flat 1203, Sea Breeze, Sector 20, Kharghar, Navi Mumbai 410210', businessAddress: '', gstRegistered: false, bank: bank('Kavita Joshi', '5566778899', 'HDFC0000999', 'HDFC Bank', 'Kharghar'), aadhaarLast4: '6677', typeFields: { fatherName: 'Shri Prakash Joshi', dob: '1986-11-02' }, by: 'u-rohan', at: -700 }),
+    cp({ id: 'CP-0011', type: 'individual', legalName: 'Kavita Joshi', pan: 'BHNPJ6677G', contactPerson: 'Kavita Joshi', mobile: '9820098200', email: 'kavita.joshi@outlook.com', residenceAddress: 'Flat 1203, Sea Breeze, Sector 20, Kharghar, Navi Mumbai 410210', businessAddress: '', gstRegistered: false, bank: bank('Kavita Joshi', '5566778899', 'HDFC0000999', 'HDFC Bank', 'Kharghar'), aadhaarLast4: '6677', typeFields: { fatherName: 'Shri Prakash Joshi', dob: '1986-11-02' }, by: 'u-neha', at: -700 }),
     cp({ id: 'CP-0012', type: 'individual', legalName: 'Mohammed Irfan', pan: 'CQRPI8899H', contactPerson: 'Mohammed Irfan', mobile: '9958099580', email: 'irfan.m@gmail.com', residenceAddress: 'House 9, Old Faridabad, Haryana 121002', businessAddress: '', gstRegistered: false, bank: bank('Mohammed Irfan', '1122334455', 'IDIB000F012', 'Indian Bank', 'Old Faridabad'), aadhaarLast4: '8899', typeFields: { fatherName: 'Shri Abdul Rashid', dob: '1978-03-21' }, at: -800 }),
   ];
   const cpById = Object.fromEntries(cps.map((c) => [c.id, c]));
@@ -171,7 +165,7 @@ export function buildSeed(): Database {
       coordinatorName: institution.coordinatorName,
       nonStandard: false,
       source: 'app',
-      ownerId: i === 'asu' ? 'u-neha' : 'u-rohan',
+      ownerId: 'u-neha',
       createdAt: ts(created),
       updatedAt: ts(created),
       executionPlace: institution.city,
@@ -181,24 +175,24 @@ export function buildSeed(): Database {
   const stamp = (n: number, st: string, created: number) => ({ number: `IN-${st === 'Haryana' ? 'HR' : 'MH'}${String(48213 + n * 97).padStart(8, '0')}`, valueInr: 100, purchaseDate: d(created), state: st, vendor: st === 'Haryana' ? 'Gurugram Stamp Vendor, Tehsil Office' : 'Kharghar Stamp Vendor' });
 
   const agreements: Agreement[] = [
-    ag({ id: 'AGR-ASU-2025-0012', cpId: 'CP-0001', status: 'expired', created: -590, rateCardVersionId: 'rc-asu-1', templateVersionId: 'tpl-sp-1', executionDate: d(-566), startDate: d(-565), endDate: d(-201), activatedAt: ts(-566), successorId: 'AGR-ASU-2026-0001', stampPaper: stamp(12, 'Haryana', -568), signedById: 'u-alok', signedOn: d(-567), closedAt: ts(-200), renewal: { decision: 'renew', decidedById: 'u-neha', decidedAt: ts(-230), successorId: 'AGR-ASU-2026-0001' } }),
-    ag({ id: 'AGR-ASU-2026-0001', cpId: 'CP-0001', status: 'active', created: -230, executionDate: d(-205), startDate: d(-200), endDate: d(165), activatedAt: ts(-204), predecessorId: 'AGR-ASU-2025-0012', submittedAt: ts(-228), stampPaper: stamp(1, 'Haryana', -210), signedById: 'u-alok', signedOn: d(-206) }),
-    ag({ id: 'AGR-ASU-2025-0002', cpId: 'CP-0002', status: 'active', created: -330, executionDate: d(-321), startDate: d(-320), endDate: d(45), activatedAt: ts(-318), submittedAt: ts(-328), stampPaper: stamp(2, 'Haryana', -324), signedById: 'u-alok', signedOn: d(-322) }),
-    ag({ id: 'AGR-ASU-2025-0003', cpId: 'CP-0003', status: 'active', created: -340, executionDate: d(-341), startDate: d(-340), endDate: d(25), activatedAt: ts(-337), submittedAt: ts(-339), stampPaper: stamp(3, 'Haryana', -343), signedById: 'u-alok', signedOn: d(-342), renewal: { decision: 'do_not_renew', reason: 'Low conversions (fewer than 5 admissions this cycle)', decidedById: 'u-neha', decidedAt: ts(-4), confirmation: 'pending' } }),
+    ag({ id: 'AGR-ASU-2025-0012', cpId: 'CP-0001', status: 'expired', created: -590, rateCardVersionId: 'rc-asu-1', templateVersionId: 'tpl-sp-1', executionDate: d(-566), startDate: d(-565), endDate: d(-201), activatedAt: ts(-566), successorId: 'AGR-ASU-2026-0001', stampPaper: stamp(12, 'Haryana', -568), signedOn: d(-567), closedAt: ts(-200), renewal: { decision: 'renew', decidedById: 'u-neha', decidedAt: ts(-230), successorId: 'AGR-ASU-2026-0001' } }),
+    ag({ id: 'AGR-ASU-2026-0001', cpId: 'CP-0001', status: 'active', created: -230, executionDate: d(-205), startDate: d(-200), endDate: d(165), activatedAt: ts(-204), predecessorId: 'AGR-ASU-2025-0012', submittedAt: ts(-228), stampPaper: stamp(1, 'Haryana', -210), signedOn: d(-206) }),
+    ag({ id: 'AGR-ASU-2025-0002', cpId: 'CP-0002', status: 'active', created: -330, executionDate: d(-321), startDate: d(-320), endDate: d(45), activatedAt: ts(-318), submittedAt: ts(-328), stampPaper: stamp(2, 'Haryana', -324), signedOn: d(-322) }),
+    ag({ id: 'AGR-ASU-2025-0003', cpId: 'CP-0003', status: 'active', created: -340, executionDate: d(-341), startDate: d(-340), endDate: d(25), activatedAt: ts(-337), submittedAt: ts(-339), stampPaper: stamp(3, 'Haryana', -343), signedOn: d(-342), renewal: { decision: 'do_not_renew', reason: 'Low conversions (fewer than 5 admissions this cycle)', decidedById: 'u-neha', decidedAt: ts(-4), confirmation: 'pending' } }),
     ag({ id: 'AGR-ASU-2026-0004', cpId: 'CP-0004', status: 'pending_approval', created: -12, nonStandard: true, executionDate: d(10), startDate: d(12), endDate: d(376), submittedAt: ts(-8) }),
-    ag({ id: 'AGR-ASU-2026-0005', cpId: 'CP-0005', status: 'pending_approval', created: -6, executionDate: d(8), startDate: d(10), endDate: d(374), submittedAt: ts(-1), locationId: 'loc-asu-city', executionPlace: 'New Delhi' }),
+    ag({ id: 'AGR-ASU-2026-0005', cpId: 'CP-0005', status: 'approved_for_signing', created: -6, executionDate: d(8), startDate: d(10), endDate: d(374), submittedAt: ts(-1), locationId: 'loc-asu-city', executionPlace: 'New Delhi' }),
     ag({ id: 'AGR-ASU-2026-0006', cpId: 'CP-0006', status: 'draft', created: -4, executionDate: d(14), startDate: d(15), endDate: d(379) }),
-    ag({ id: 'AGR-ASU-2026-0007', cpId: 'CP-0007', status: 'draft', created: -13, executionDate: d(7), startDate: d(9), endDate: d(373), submittedAt: ts(-8), lastRejection: { gate: 1, byId: 'u-rajiv', at: ts(-2), comment: 'Partnership deed date does not match the uploaded deed. Please correct and re-upload the PAN copy, which is illegible.' } }),
+    ag({ id: 'AGR-ASU-2026-0007', cpId: 'CP-0007', status: 'draft', created: -13, nonStandard: true, executionDate: d(7), startDate: d(9), endDate: d(373), submittedAt: ts(-8), lastRejection: { gate: 1, byId: 'u-priya', at: ts(-2), comment: 'Partnership deed date does not match the uploaded deed. Please correct and re-upload the PAN copy, which is illegible.' } }),
     ag({ id: 'AGR-ASU-2026-0008', cpId: 'CP-0010', status: 'approved_for_signing', created: -35, executionDate: d(2), startDate: d(3), endDate: d(367), submittedAt: ts(-30), templateVersionId: tplFor.individual }),
-    ag({ id: 'AGR-ASU-2026-0009', cpId: 'CP-0012', status: 'signed_copy_uploaded', created: -30, executionDate: d(-6), startDate: d(-5), endDate: d(360), submittedAt: ts(-26), stampPaper: stamp(9, 'Haryana', -8), signedById: 'u-alok', signedOn: d(-6) }),
-    ag({ id: 'AGR-ASU-2024-0010', cpId: 'CP-0011', status: 'signed_copy_uploaded', created: -3, source: 'legacy', legacyBatchId: 'LB-0001', executionDate: d(-420), startDate: d(-418), endDate: d(310), stampPaper: stamp(10, 'Haryana', -421), templateVersionId: 'tpl-in-1', rateCardVersionId: 'rc-asu-1', signedById: 'u-alok', signedOn: d(-420) }),
+    ag({ id: 'AGR-ASU-2026-0009', cpId: 'CP-0012', status: 'signed_copy_uploaded', created: -30, executionDate: d(-6), startDate: d(-5), endDate: d(360), submittedAt: ts(-26), stampPaper: stamp(9, 'Haryana', -8), signedOn: d(-6) }),
+    ag({ id: 'AGR-ASU-2024-0010', cpId: 'CP-0011', status: 'signed_copy_uploaded', created: -3, source: 'legacy', legacyBatchId: 'LB-0001', executionDate: d(-420), startDate: d(-418), endDate: d(310), stampPaper: stamp(10, 'Haryana', -421), templateVersionId: 'tpl-in-1', rateCardVersionId: 'rc-asu-1', signedOn: d(-420) }),
     ag({ id: 'AGR-ASU-2025-0016', cpId: 'CP-0002', status: 'signed_copy_uploaded', created: -3, source: 'legacy', legacyBatchId: 'LB-0001', locationId: 'loc-asu-city', executionPlace: 'New Delhi', executionDate: d(-300), startDate: d(-299), endDate: d(430), templateVersionId: 'tpl-sp-1', rateCardVersionId: 'rc-asu-1', stampPaper: stamp(16, 'Haryana', -301) }),
-    ag({ id: 'AGR-AKS-2025-0011', i: 'aks', cpId: 'CP-0009', status: 'terminated', created: -500, executionDate: d(-470), startDate: d(-468), endDate: d(-103), activatedAt: ts(-467), stampPaper: stamp(11, 'Maharashtra', -472), signedById: 'u-sunita', signedOn: d(-470), closedAt: ts(-30),
-      termination: { type: 'breach', reason: 'Collected fees from applicants in cash', noticeDate: d(-60), effectiveDate: d(-30), noticeDocumentId: 'DOC-T-0011', startedById: 'u-sunita', startedAt: ts(-60), confirmation: 'confirmed', confirmedById: 'u-sunita', confirmedAt: ts(-60) } }),
-    ag({ id: 'AGR-AKS-2024-0013', i: 'aks', cpId: 'CP-0008', status: 'not_renewed', created: -780, executionDate: d(-406), startDate: d(-405), endDate: d(-40), activatedAt: ts(-404), stampPaper: stamp(13, 'Maharashtra', -407), closedAt: ts(-39), renewal: { decision: 'do_not_renew', reason: 'Partner exiting the education business', decidedById: 'u-rohan', decidedAt: ts(-95), confirmation: 'confirmed', confirmedById: 'u-sunita', confirmedAt: ts(-94) } }),
+    ag({ id: 'AGR-AKS-2025-0011', i: 'aks', cpId: 'CP-0009', status: 'terminated', created: -500, executionDate: d(-470), startDate: d(-468), endDate: d(-103), activatedAt: ts(-467), stampPaper: stamp(11, 'Maharashtra', -472), signedOn: d(-470), closedAt: ts(-30),
+      termination: { type: 'breach', reason: 'Collected fees from applicants in cash', noticeDate: d(-60), effectiveDate: d(-30), noticeDocumentId: 'DOC-T-0011', startedById: 'u-neha', startedAt: ts(-60), confirmation: 'confirmed', confirmedById: 'u-arjun', confirmedAt: ts(-60) } }),
+    ag({ id: 'AGR-AKS-2024-0013', i: 'aks', cpId: 'CP-0008', status: 'not_renewed', created: -780, executionDate: d(-406), startDate: d(-405), endDate: d(-40), activatedAt: ts(-404), stampPaper: stamp(13, 'Maharashtra', -407), closedAt: ts(-39), renewal: { decision: 'do_not_renew', reason: 'Partner exiting the education business', decidedById: 'u-neha', decidedAt: ts(-95), confirmation: 'confirmed', confirmedById: 'u-arjun', confirmedAt: ts(-94) } }),
     ag({ id: 'AGR-ASU-2024-0014', cpId: 'CP-0012', status: 'expired_no_decision', created: -390, executionDate: d(-376), startDate: d(-375), endDate: d(-10), activatedAt: ts(-373), stampPaper: stamp(14, 'Haryana', -377), closedAt: ts(-9) }),
     ag({ id: 'AGR-AKS-2026-0015', i: 'aks', cpId: 'CP-0011', status: 'notice_period', created: -250, executionDate: d(-221), startDate: d(-220), endDate: d(145), activatedAt: ts(-218), stampPaper: stamp(15, 'Maharashtra', -222),
-      termination: { type: 'convenience', reason: 'Partner relocating out of Navi Mumbai', noticeDate: d(-18), effectiveDate: d(12), noticeDocumentId: 'DOC-T-0015', startedById: 'u-rohan', startedAt: ts(-18), confirmation: 'confirmed', confirmedById: 'u-sunita', confirmedAt: ts(-17) } }),
+      termination: { type: 'convenience', reason: 'Partner relocating out of Navi Mumbai', noticeDate: d(-18), effectiveDate: d(12), noticeDocumentId: 'DOC-T-0015', startedById: 'u-neha', startedAt: ts(-18), confirmation: 'confirmed', confirmedById: 'u-arjun', confirmedAt: ts(-17) } }),
     ag({ id: 'AGR-AKS-2026-0017', i: 'aks', cpId: 'CP-0008', status: 'draft', created: -1, executionDate: d(20), startDate: d(21) }),
   ];
 
@@ -206,6 +200,7 @@ export function buildSeed(): Database {
   const deviations: Deviation[] = [
     { id: 'DEV-0001', agreementId: 'AGR-ASU-2026-0004', type: 'rate', ref: 'r-eng:21+', label: 'Engineering · 21+ admissions', standardValue: '26000', proposedValue: '29000', agreedValue: '28000', reason: 'EduBridge brought 40+ engineering admissions last cycle through another university; matching competitive offer.', requestedById: 'u-neha', requestedAt: ts(-10), status: 'approved', decidedById: 'u-priya', decidedAt: ts(-7), legalComment: 'Agreed at 28,000 — within the 10% band Finance allows for top performers.' },
     { id: 'DEV-0002', agreementId: 'AGR-ASU-2026-0004', type: 'clause', ref: 'c4', label: 'Clause 4 · Consideration and payment', standardValue: 'Payment within 45 days of the close of the admission cycle.', proposedValue: 'For every student admitted through the Channel Partner who has paid the first-year fee in full and has not withdrawn within the refund period, the Institution shall pay the consideration set out in Annexure-B. Payment shall be made within 30 days of the close of each admission month against a valid invoice, subject to deduction of tax at source.', agreedValue: 'For every student admitted through the Channel Partner who has paid the first-year fee in full and has not withdrawn within the refund period, the Institution shall pay the consideration set out in Annexure-B. Payment shall be made within 30 days of the close of each admission month against a valid invoice, subject to deduction of tax at source.', reason: 'Partner requests monthly settlement due to its payroll cycle.', requestedById: 'u-neha', requestedAt: ts(-10), status: 'approved', decidedById: 'u-priya', decidedAt: ts(-7), legalComment: 'Monthly settlement acceptable.' },
+    { id: 'DEV-0004', agreementId: 'AGR-ASU-2026-0007', type: 'rate', ref: 'r-mgmt:1-10', label: 'Management · 1-10 admissions', standardValue: '13000', proposedValue: '14500', agreedValue: '14000', reason: 'Ludhiana market: partner has an established BBA referral base and a competing offer.', requestedById: 'u-neha', requestedAt: ts(-11), status: 'approved', decidedById: 'u-priya', decidedAt: ts(-9), legalComment: 'Agreed at 14,000 for the first slab only.' },
     { id: 'DEV-0003', agreementId: 'AGR-ASU-2026-0006', type: 'rate', ref: 'r-mgmt:11-15', label: 'Management · 11-15 admissions', standardValue: '15000', proposedValue: '16500', reason: 'Chandigarh market: competing universities pay INR 16,000+ for MBA referrals.', requestedById: 'u-neha', requestedAt: ts(-2), status: 'pending' },
   ];
 
@@ -217,7 +212,7 @@ export function buildSeed(): Database {
   };
   for (const c of cps) {
     const verified = !['CP-0006', 'CP-0005', 'CP-0004', 'CP-0007'].includes(c.id);
-    const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-meera', verifiedOn: c.createdAt, verificationMethod: 'manual' as const } : {};
+    const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-arjun', verifiedOn: c.createdAt, verificationMethod: 'manual' as const } : {};
     const days = Math.round((Date.parse(c.createdAt) - Date.parse(T)) / 86400000);
     doc('cp', c.id, 'pan', `PAN_${c.id}.jpg`, c.createdById, days, v);
     doc('cp', c.id, 'aadhaar_masked', `Aadhaar_masked_${c.id}.jpg`, c.createdById, days, v);
@@ -227,33 +222,33 @@ export function buildSeed(): Database {
   for (const a of agreements) {
     if (['active', 'expired', 'not_renewed', 'expired_no_decision', 'terminated', 'notice_period'].includes(a.status) || (a.status === 'signed_copy_uploaded' && a.id !== 'AGR-ASU-2025-0016')) {
       const verified = a.status !== 'signed_copy_uploaded';
-      const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-meera', verifiedOn: a.activatedAt, verificationMethod: 'manual' as const } : {};
+      const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-arjun', verifiedOn: a.activatedAt, verificationMethod: 'manual' as const } : {};
       doc('agreement', a.id, 'signed_copy', `Signed_${a.id}.pdf`, a.ownerId, -6, { ...v, retentionUntil: shiftDays(a.endDate ?? T, 365 * 8) });
       doc('agreement', a.id, 'stamp_paper_scan', `Stamp_${a.id}.pdf`, a.ownerId, -6, { ...v, retentionUntil: shiftDays(a.endDate ?? T, 365 * 8) });
     }
   }
-  doc('agreement', 'AGR-AKS-2025-0011', 'termination_notice', 'Termination_notice_AKS_0011.pdf', 'u-sunita', -60, { id: 'DOC-T-0011', retentionUntil: shiftDays(d(-30), 365 * 8) });
-  doc('agreement', 'AGR-AKS-2026-0015', 'termination_notice', 'Termination_notice_AKS_0015.pdf', 'u-rohan', -18, { id: 'DOC-T-0015', retentionUntil: shiftDays(d(12), 365 * 8) });
+  doc('agreement', 'AGR-AKS-2025-0011', 'termination_notice', 'Termination_notice_AKS_0011.pdf', 'u-neha', -60, { id: 'DOC-T-0011', retentionUntil: shiftDays(d(-30), 365 * 8) });
+  doc('agreement', 'AGR-AKS-2026-0015', 'termination_notice', 'Termination_notice_AKS_0015.pdf', 'u-neha', -18, { id: 'DOC-T-0015', retentionUntil: shiftDays(d(12), 365 * 8) });
 
   // ---------------- Tasks ----------------
   const tasks: Task[] = [];
   let taskN = 1;
   const task = (type: TaskType, title: string, assigneeId: string, created: number, due: string, extra: Partial<Task> = {}) =>
     tasks.push({ id: `T-${String(taskN++).padStart(4, '0')}`, type, title, assigneeId, createdAt: ts(created), dueDate: due, status: 'open', ...extra });
-  task('gate1_approval', 'Gate 1 approval: EduBridge Services Pvt. Ltd', 'u-rajiv', -8, addWorkingDays(d(-8), 2), { agreementId: 'AGR-ASU-2026-0004', cpId: 'CP-0004', institutionId: 'inst-asu', remindedAt: ts(-1) });
-  task('gate1_approval', 'Gate 1 approval: Scholars Gateway India Pvt. Ltd', 'u-rajiv', -1, addWorkingDays(d(-1), 2), { agreementId: 'AGR-ASU-2026-0005', cpId: 'CP-0005', institutionId: 'inst-asu' });
+  task('gate1_approval', 'Legal approval: EduBridge Services Pvt. Ltd', 'u-priya', -8, addWorkingDays(d(-8), 2), { agreementId: 'AGR-ASU-2026-0004', cpId: 'CP-0004', institutionId: 'inst-asu', remindedAt: ts(-1) });
+  task('signing_upload', 'Get signed & upload: Scholars Gateway India Pvt. Ltd', 'u-neha', -1, addWorkingDays(d(-1), 10), { agreementId: 'AGR-ASU-2026-0005', cpId: 'CP-0005', institutionId: 'inst-asu' });
   task('deviation_review', 'Review deviation: NextStep Learning Pvt. Ltd', 'u-priya', -2, addWorkingDays(d(-2), 3), { agreementId: 'AGR-ASU-2026-0006', cpId: 'CP-0006', refId: 'DEV-0003', institutionId: 'inst-asu' });
   task('fix_rejected', 'Rework rejected draft: Sharma & Gill Associates', 'u-neha', -2, addWorkingDays(d(-2), 2), { agreementId: 'AGR-ASU-2026-0007', cpId: 'CP-0007', institutionId: 'inst-asu' });
   task('signing_upload', 'Get signed & upload: Ramesh Chandra Yadav', 'u-neha', -14, addWorkingDays(d(-14), 10), { agreementId: 'AGR-ASU-2026-0008', cpId: 'CP-0010', institutionId: 'inst-asu' });
-  task('gate2_verification', 'Gate 2 verification: Mohammed Irfan', 'u-meera', -4, addWorkingDays(d(-4), 3), { agreementId: 'AGR-ASU-2026-0009', cpId: 'CP-0012', institutionId: 'inst-asu' });
-  task('gate2_verification', 'Gate 2 verification (Legacy): Kavita Joshi', 'u-meera', -2, addWorkingDays(d(-2), 3), { agreementId: 'AGR-ASU-2024-0010', cpId: 'CP-0011', institutionId: 'inst-asu' });
+  task('gate2_verification', 'Gate 2 verification: Mohammed Irfan', 'u-arjun', -4, addWorkingDays(d(-4), 3), { agreementId: 'AGR-ASU-2026-0009', cpId: 'CP-0012', institutionId: 'inst-asu' });
+  task('gate2_verification', 'Gate 2 verification (Legacy): Kavita Joshi', 'u-arjun', -2, addWorkingDays(d(-2), 3), { agreementId: 'AGR-ASU-2024-0010', cpId: 'CP-0011', institutionId: 'inst-asu' });
   task('legacy_scan_upload', 'Upload legacy scan: Pathway Admissions Hub', 'u-neha', -3, addWorkingDays(d(-3), 10), { agreementId: 'AGR-ASU-2025-0016', cpId: 'CP-0002', institutionId: 'inst-asu' });
   task('renewal_decision', 'Renewal decision due: Pathway Admissions Hub', 'u-neha', -15, d(15), { agreementId: 'AGR-ASU-2025-0002', cpId: 'CP-0002', institutionId: 'inst-asu' });
-  task('non_renewal_confirm', 'Confirm "Do not renew": Career Compass', 'u-rajiv', -4, addWorkingDays(d(-4), 2), { agreementId: 'AGR-ASU-2025-0003', cpId: 'CP-0003', institutionId: 'inst-asu', escalatedToId: 'u-kiran', escalatedAt: ts(-1) });
+  task('non_renewal_confirm', 'Confirm "Do not renew": Career Compass', 'u-arjun', -4, addWorkingDays(d(-4), 2), { agreementId: 'AGR-ASU-2025-0003', cpId: 'CP-0003', institutionId: 'inst-asu' });
   task('rate_card_approval', 'Approve rate card: ASU v3', 'u-priya', -2, addWorkingDays(d(-2), 3), { refId: 'rc-asu-3', institutionId: 'inst-asu' });
   task('template_approval', 'Approve template: Partnership v2', 'u-priya', -1, addWorkingDays(d(-1), 3), { refId: 'tpl-pa-2', createdAt: ts(-1) });
   // Mark past ones as done for history.
-  task('gate1_approval', 'Gate 1 approval: Sharma & Gill Associates', 'u-rajiv', -8, addWorkingDays(d(-8), 2), { agreementId: 'AGR-ASU-2026-0007', status: 'done', completedAt: ts(-2), completedById: 'u-rajiv', institutionId: 'inst-asu' });
+  task('gate1_approval', 'Legal approval: Sharma & Gill Associates', 'u-priya', -8, addWorkingDays(d(-8), 2), { agreementId: 'AGR-ASU-2026-0007', status: 'done', completedAt: ts(-2), completedById: 'u-priya', institutionId: 'inst-asu' });
 
   // ---------------- Audit ----------------
   const audit: AuditEvent[] = [];
@@ -263,10 +258,9 @@ export function buildSeed(): Database {
     audit.push({ id: `EV-${String(auditN++).padStart(5, '0')}`, actorId, actorName: nameOf(actorId), action, entityType, entityId, summary, at, before, after, ip: '10.20.4.' + ((auditN * 37) % 250), device: auditN % 3 === 0 ? 'Chrome · Android' : 'Chrome · Windows' });
   for (const a of agreements) {
     ev(a.ownerId, 'create', 'agreement', a.id, a.source === 'legacy' ? 'Imported legacy agreement' : 'Created draft agreement', a.createdAt, undefined, { status: 'draft' });
-    if (a.submittedAt) ev(a.ownerId, 'submit', 'agreement', a.id, 'Submitted for Gate 1 approval', a.submittedAt, { status: 'draft' }, { status: 'pending_approval' });
-    if (a.lastRejection) ev(a.lastRejection.byId, 'reject', 'agreement', a.id, `Rejected at Gate 1: ${a.lastRejection.comment}`, a.lastRejection.at, { status: 'pending_approval' }, { status: 'draft' });
-    if (a.activatedAt) ev('u-meera', 'approve', 'agreement', a.id, 'Gate 2 verified — agreement Active', a.activatedAt, { status: 'signed_copy_uploaded' }, { status: 'active' });
-    if (a.status === 'approved_for_signing') ev('u-rajiv', 'approve', 'agreement', a.id, 'Gate 1 approved — approved for signing', ts(-14), { status: 'pending_approval' }, { status: 'approved_for_signing' });
+    if (a.submittedAt) ev(a.ownerId, 'submit', 'agreement', a.id, a.nonStandard ? 'Sent to Legal for approval (Non-standard)' : 'Finalised on standard terms — no Legal approval needed; approved for signing', a.submittedAt, { status: 'draft' }, { status: a.nonStandard ? 'pending_approval' : 'approved_for_signing' });
+    if (a.lastRejection) ev(a.lastRejection.byId, 'reject', 'agreement', a.id, `Rejected by Legal: ${a.lastRejection.comment}`, a.lastRejection.at, { status: 'pending_approval' }, { status: 'draft' });
+    if (a.activatedAt) ev('u-arjun', 'approve', 'agreement', a.id, 'Gate 2 verified — agreement Active', a.activatedAt, { status: 'signed_copy_uploaded' }, { status: 'active' });
     if (a.closedAt) ev('system', 'status_change', 'agreement', a.id, `Status changed to ${a.status}`, a.closedAt, { status: 'active' }, { status: a.status });
   }
   for (const dv of deviations) {
@@ -275,7 +269,7 @@ export function buildSeed(): Database {
   }
   ev('u-arjun', 'create', 'rate_card', 'rc-asu-3', 'Created rate card ASU v3 and sent to Legal', ts(-2));
   ev('u-arjun', 'login', 'session', 'u-arjun', 'Signed in with Google', ts(-1, 9));
-  ev('u-rajiv', 'reveal', 'cp', 'CP-0004', 'Revealed PAN', ts(-3, 11));
+  ev('u-priya', 'reveal', 'cp', 'CP-0004', 'Revealed PAN', ts(-3, 11));
   audit.sort((a, b) => a.at.localeCompare(b.at));
 
   return {
@@ -291,20 +285,19 @@ export function buildSeed(): Database {
     documents: docs,
     tasks,
     notifications: [
-      { id: 'N-0001', userId: 'u-rajiv', title: 'Gate 1 approval overdue', body: 'EduBridge Services Pvt. Ltd · AGR-ASU-2026-0004 is past its SLA.', link: '/agreements/AGR-ASU-2026-0004/preview', createdAt: ts(-1, 9), read: false },
-      { id: 'N-0002', userId: 'u-neha', title: 'Draft rejected', body: 'Sharma & Gill Associates · AGR-ASU-2026-0007 was returned with comments.', link: '/agreements/AGR-ASU-2026-0007', createdAt: ts(-2), read: false },
+      { id: 'N-0001', userId: 'u-priya', title: 'Legal approval overdue', body: 'EduBridge Services Pvt. Ltd · AGR-ASU-2026-0004 is past its SLA.', link: '/agreements/AGR-ASU-2026-0004/preview', createdAt: ts(-1, 9), read: false },
+      { id: 'N-0002', userId: 'u-neha', title: 'Draft returned by Legal', body: 'Sharma & Gill Associates · AGR-ASU-2026-0007 was returned by Legal with comments.', link: '/agreements/AGR-ASU-2026-0007', createdAt: ts(-2), read: false },
       { id: 'N-0003', userId: 'u-neha', title: 'Renewal decision due', body: 'Pathway Admissions Hub · AGR-ASU-2025-0002 expires in 45 days.', link: '/agreements/AGR-ASU-2025-0002/renewal', createdAt: ts(-15), read: true },
       { id: 'N-0004', userId: 'u-priya', title: 'Deviation requested', body: 'NextStep Learning Pvt. Ltd · AGR-ASU-2026-0006 needs your review.', link: '/agreements/AGR-ASU-2026-0006/deviation', createdAt: ts(-2), read: false },
-      { id: 'N-0005', userId: 'u-meera', title: 'Signed copy uploaded', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is ready for Gate 2.', link: '/agreements/AGR-ASU-2026-0009/verify', createdAt: ts(-4), read: false },
+      { id: 'N-0005', userId: 'u-arjun', title: 'Signed copy uploaded', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is ready for Gate 2.', link: '/agreements/AGR-ASU-2026-0009/verify', createdAt: ts(-4), read: false },
       { id: 'N-0006', userId: 'u-arjun', title: 'Rate card awaiting Legal', body: 'ASU rate card v3 was sent to Legal for approval.', link: '/admin/rate-cards', createdAt: ts(-2), read: true },
     ],
     emails: [],
     audit,
     routing: [
-      { id: 'RR-1', institutionId: 'inst-asu', condition: 'standard', approverId: 'u-rajiv', escalateToId: 'u-kiran' },
-      { id: 'RR-2', institutionId: 'inst-asu', condition: 'non_standard', approverId: 'u-rajiv', escalateToId: 'u-kiran' },
-      { id: 'RR-3', institutionId: 'inst-aks', condition: 'standard', approverId: 'u-sunita', escalateToId: 'u-kiran' },
-      { id: 'RR-4', institutionId: 'inst-aks', condition: 'non_standard', approverId: 'u-sunita', escalateToId: 'u-kiran' },
+      // Only non-standard agreements need approval (standard ones go straight to signing).
+      { id: 'RR-1', institutionId: 'inst-asu', condition: 'non_standard', approverId: 'u-priya', escalateToId: 'u-arjun' },
+      { id: 'RR-2', institutionId: 'inst-aks', condition: 'non_standard', approverId: 'u-priya', escalateToId: 'u-arjun' },
     ],
     masterLists: {
       terminationReasons: ['Breach: fees collected from applicants', 'Breach: misrepresentation to applicants', 'Breach: unauthorised use of brand', 'Partner relocating or closing business', 'Low performance', 'Mutual agreement', 'Other'],
@@ -332,7 +325,7 @@ export function buildSeed(): Database {
       allowedDomains: ['apeejay.edu', 'apeejay.org'],
       simulateErrors: false,
     },
-    counters: { cp: 12, agreement: 17, doc: docN, task: taskN, audit: auditN, dev: 3, notif: 6, email: 0, batch: 1 },
+    counters: { cp: 12, agreement: 17, doc: docN, task: taskN, audit: auditN, dev: 4, notif: 6, email: 0, batch: 1 },
   };
 }
 

@@ -3,7 +3,7 @@
 export type ISODate = string; // YYYY-MM-DD
 export type ISODateTime = string;
 
-export type Role = 'bd_exec' | 'approver' | 'legal' | 'signatory' | 'audit' | 'admin';
+export type Role = 'bd_exec' | 'legal' | 'admin';
 export type CpType = 'sole_prop' | 'pvt_ltd' | 'partnership' | 'individual';
 
 export interface Region {

@@ -148,8 +148,8 @@ export function notify(
     d.notifications.push(n);
     const kind = opts.email ?? 'event';
     if (kind === false) continue;
-    // Approvers, Legal and Audit get the 9 AM digest instead of individual reminder emails.
-    const digestUser = user.roles.some((r) => r === 'approver' || r === 'legal' || r === 'audit');
+    // Legal and Admin get the 9 AM digest instead of individual reminder emails.
+    const digestUser = user.roles.some((r) => r === 'legal' || r === 'admin');
     if (kind === 'reminder' && digestUser) continue;
     deliver(user, { ...msg, kind });
   }

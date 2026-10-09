@@ -230,9 +230,14 @@ function PersonaSwitcher() {
           const a = accounts.find((x) => x.id === personas[r]);
           return { label: `${ROLE_LABELS[r]} — ${a?.name ?? ''}`, onSelect: () => void go(personas[r]), active: user?.id === personas[r] };
         }),
-        'divider',
-        { heading: 'Other accounts' },
-        ...extras.map((a) => ({ label: `${a.name} (${a.designation})`, onSelect: () => void go(a.id), active: user?.id === a.id })),
+        // Accounts added under Admin → Users that aren't the main persona for their role.
+        ...(extras.length
+          ? [
+              'divider' as const,
+              { heading: 'Other accounts' },
+              ...extras.map((a) => ({ label: `${a.name} (${a.designation})`, onSelect: () => void go(a.id), active: user?.id === a.id })),
+            ]
+          : []),
       ]}
     />
   );

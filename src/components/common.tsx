@@ -55,7 +55,7 @@ export function PageHeader({
         </div>
         {actions && (
           // Phones: buttons fill each row evenly, and filled (primary/decision) buttons come first at full width.
-          <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto max-sm:[&>*]:grow max-sm:[&>div>button]:w-full max-sm:[&>.bg-gradient-to-b]:order-first max-sm:[&>.bg-gradient-to-b]:basis-full">
+          <div className="flex w-full shrink-0 flex-wrap gap-2 sm:w-auto sm:max-w-[62%] sm:justify-end max-sm:[&>*]:grow max-sm:[&>div>button]:w-full max-sm:[&>.bg-gradient-to-b]:order-first max-sm:[&>.bg-gradient-to-b]:basis-full">
             {actions}
           </div>
         )}
@@ -286,7 +286,7 @@ export function DocumentList({ docs, names, onVerify, empty = 'No documents uplo
               </p>
               {d.verifiedById && (
                 <p className="text-xs text-muted">
-                  {d.verificationStatus === 'verified' ? 'Verified' : 'Checked'} by {names[d.verifiedById] ?? 'Audit'} on {formatDate(d.verifiedOn?.slice(0, 10))} · {d.verificationMethod ?? 'manual'}
+                  {d.verificationStatus === 'verified' ? 'Verified' : 'Checked'} by {names[d.verifiedById] ?? 'Admin'} on {formatDate(d.verifiedOn?.slice(0, 10))} · {d.verificationMethod ?? 'manual'}
                   {d.remarks ? ` · “${d.remarks}”` : ''}
                 </p>
               )}
@@ -414,30 +414,32 @@ export function Timeline({ events, limit }: { events: AuditEvent[]; limit?: numb
 
 // ---------- Status stepper ----------
 
-export function StatusStepper({ status }: { status: AgreementStatus }) {
-  const idx = STEPPER.findIndex((s) => s.status === status);
+export function StatusStepper({ status, nonStandard }: { status: AgreementStatus; nonStandard?: boolean }) {
+  // Standard agreements skip Legal approval, so that step is only shown for non-standard ones.
+  const steps = nonStandard ? STEPPER : STEPPER.filter((s) => s.status !== 'pending_approval');
+  const idx = steps.findIndex((s) => s.status === status);
   const past = idx === -1; // beyond Active (notice, terminated, expired…)
-  const step = past ? STEPPER.length : idx + 1;
-  const next = !past && idx + 1 < STEPPER.length ? STEPPER[idx + 1]!.label : null;
+  const step = past ? steps.length : idx + 1;
+  const next = !past && idx + 1 < steps.length ? steps[idx + 1]!.label : null;
   return (
     <>
-    {/* Phones: compact segmented progress instead of five stacked rows. */}
+    {/* Phones: compact segmented progress instead of stacked rows. */}
     <div className="sm:hidden" role="group" aria-label="Agreement progress">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="text-sm font-semibold text-ink">{past ? 'Completed' : STEPPER[idx]!.label}</p>
+        <p className="text-sm font-semibold text-ink">{past ? 'Completed' : steps[idx]!.label}</p>
         <p className="shrink-0 text-xs font-medium text-muted">
-          Step {step} of {STEPPER.length}
+          Step {step} of {steps.length}
         </p>
       </div>
-      <div className="mt-2.5 grid grid-cols-5 gap-1.5" aria-hidden>
-        {STEPPER.map((st, i) => (
+      <div className="mt-2.5 grid gap-1.5" style={{ gridTemplateColumns: `repeat(${steps.length}, minmax(0, 1fr))` }} aria-hidden>
+        {steps.map((st, i) => (
           <span key={st.status} className={cn('h-1.5 rounded-full', past || i < idx ? 'bg-primary-600' : i === idx ? 'bg-primary-400' : 'bg-ink/[0.08]')} />
         ))}
       </div>
       {next && <p className="mt-2 text-xs text-muted">Next: {next}</p>}
     </div>
     <ol className="hidden sm:flex sm:flex-row sm:items-center" aria-label="Agreement progress">
-      {STEPPER.map((s, i) => {
+      {steps.map((s, i) => {
         const done = past || i < idx;
         const current = i === idx;
         return (
@@ -458,7 +460,7 @@ export function StatusStepper({ status }: { status: AgreementStatus }) {
                 <span className="sr-only">{done ? ' (done)' : current ? ' (current)' : ''}</span>
               </span>
             </span>
-            {i < STEPPER.length - 1 && <span className={cn('mx-3 hidden h-0.5 flex-1 rounded sm:block', done ? 'bg-primary-600' : 'bg-line')} aria-hidden />}
+            {i < steps.length - 1 && <span className={cn('mx-3 hidden h-0.5 flex-1 rounded sm:block', done ? 'bg-primary-600' : 'bg-line')} aria-hidden />}
           </li>
         );
       })}

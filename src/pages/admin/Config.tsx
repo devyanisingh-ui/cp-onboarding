@@ -200,23 +200,22 @@ export function Routing() {
   if ((loading && !data) || !lookups.data) return <PageSkeleton />;
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
   const list = rules ?? data!;
-  const approvers = lookups.data.users.filter((u) => u.roles.includes('approver'));
+  const approvers = lookups.data.users.filter((u) => u.roles.includes('legal') || u.roles.includes('admin'));
   const edit = can('config.manage');
   const set = (i: number, p: Partial<RoutingRule>) => setRules(list.map((r, j) => (j === i ? { ...r, ...p } : r)));
   return (
     <div>
       <ReadOnlyNote />
       <Card>
-        <CardHeader title="Gate 1 approval routing" description="Who approves drafts per institution, and who receives escalations when the SLA is breached. Legal can also approve non-standard drafts." />
+        <CardHeader title="Legal approval routing" description="Standard agreements need no approval and go straight to signing. Agreements with approved deviations (non-standard) go to this Legal approver; overdue approvals escalate to the second contact." />
         {/* Phones: each rule as a small form instead of a wide table of dropdowns. */}
         <ul className="divide-y divide-line/70 md:hidden" aria-label="Routing rules">
           {list.map((r, i) => (
             <li key={r.id} className="space-y-3 px-4 py-4">
               <p className="text-sm font-semibold">
                 {lookups.data!.institutions.find((x) => x.id === r.institutionId)?.shortCode}
-                <span className="font-normal text-muted"> · {r.condition === 'standard' ? 'Standard' : 'Non-standard'} drafts</span>
               </p>
-              <Field label="Approver">
+              <Field label="Legal approver">
                 <Select disabled={!edit} value={r.approverId} onChange={(e) => set(i, { approverId: e.target.value })}>
                   {approvers.map((u) => (
                     <option key={u.id} value={u.id}>
@@ -241,8 +240,7 @@ export function Routing() {
           <thead>
             <tr>
               <TH>Institution</TH>
-              <TH>Condition</TH>
-              <TH>Approver</TH>
+              <TH>Legal approver</TH>
               <TH>Escalate to</TH>
             </tr>
           </thead>
@@ -250,9 +248,8 @@ export function Routing() {
             {list.map((r, i) => (
               <tr key={r.id}>
                 <TD className="font-medium">{lookups.data!.institutions.find((x) => x.id === r.institutionId)?.shortCode}</TD>
-                <TD>{r.condition === 'standard' ? 'Standard' : 'Non-standard'}</TD>
                 <TD>
-                  <Select aria-label="Approver" disabled={!edit} value={r.approverId} onChange={(e) => set(i, { approverId: e.target.value })}>
+                  <Select aria-label="Legal approver" disabled={!edit} value={r.approverId} onChange={(e) => set(i, { approverId: e.target.value })}>
                     {approvers.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.name}
@@ -293,14 +290,14 @@ export function Routing() {
 // ---------------- SLAs ----------------
 
 const SLA_FIELDS: { key: keyof SlaSettings; label: string; hint: string }[] = [
-  { key: 'gate1Days', label: 'Gate 1 approval (Approver)', hint: 'Working days' },
+  { key: 'gate1Days', label: 'Legal approval of non-standard agreements', hint: 'Working days' },
   { key: 'deviationDays', label: 'Deviation review (Legal)', hint: 'Working days' },
   { key: 'signingDays', label: 'Physical signing & upload (BD Executive)', hint: 'Working days' },
-  { key: 'gate2Days', label: 'Gate 2 verification (Audit)', hint: 'Working days' },
+  { key: 'gate2Days', label: 'Gate 2 verification (Admin)', hint: 'Working days' },
   { key: 'versionApprovalDays', label: 'Rate card / template approval (Legal)', hint: 'Working days' },
   { key: 'graceDays', label: 'Escalation grace period', hint: 'Working days after the due date' },
   { key: 'renewalLeadDays', label: 'Renewal decision task', hint: 'Days before expiry' },
-  { key: 'renewalEscalationDays', label: 'Renewal escalation to Approver', hint: 'Days before expiry' },
+  { key: 'renewalEscalationDays', label: 'Renewal escalation to Admin', hint: 'Days before expiry' },
   { key: 'digestHourIst', label: 'Daily digest time', hint: 'Hour (IST, 0–23)' },
 ];
 

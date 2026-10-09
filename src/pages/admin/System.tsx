@@ -30,9 +30,9 @@ export function System() {
         <CardBody className="space-y-4 text-sm">
           <ul className="list-disc space-y-1 pl-5 text-ink-soft">
             <li>SLA reminders when due, and escalations after the grace period</li>
-            <li>Renewal decision tasks 60 days before expiry; escalation to the Approver at 30 days</li>
+            <li>Renewal decision tasks 60 days before expiry; escalation to Admin at 30 days</li>
             <li>Expiry and end-of-notice status changes</li>
-            <li>Daily digest at 9:00 AM IST for Approvers, Legal and Audit</li>
+            <li>Daily digest at 9:00 AM IST for Legal and Admin</li>
           </ul>
           {manage && (
             <div className="flex flex-wrap gap-2">

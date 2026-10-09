@@ -15,7 +15,10 @@ export function Home() {
   const user = useUser();
   const { institutionId } = useSession();
   const { data, error, loading, reload } = useApi(() => api.inbox.dashboard(institutionId || undefined), [institutionId, user.id]);
-  const isBd = can(user, 'agreement.create');
+  const canCreate = can(user, 'agreement.create');
+  const isBd = user.roles.includes('bd_exec');
+  const isLegal = user.roles.includes('legal');
+  const isAdmin = user.roles.includes('admin');
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
 
@@ -23,20 +26,18 @@ export function Home() {
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
   if (!data) return null;
 
-  const roles = user.roles;
   // Role-specific tiles (after "My pending tasks" and "Overdue").
   const tiles: ReactNode[] = [];
   if (isBd) {
     tiles.push(<StatTile key="d" label="Drafts" value={data.drafts.length} icon={<FilePen />} tone="grey" to="/agreements?status=draft" />);
     tiles.push(<StatTile key="s" label="Awaiting signed copy" value={data.awaitingSigned.length} icon={<FileSignature />} tone="blue" to="/agreements?status=approved_for_signing" />);
   }
-  if (roles.includes('approver')) tiles.push(<StatTile key="p" label="Pending approval" value={data.pendingApproval.length} icon={<CheckCircle2 />} tone="amber" to="/agreements?status=pending_approval" />);
-  if (roles.includes('audit')) tiles.push(<StatTile key="g" label="Awaiting Gate 2" value={data.pendingGate2.length} icon={<ShieldCheck />} tone="purple" to="/agreements?status=signed_copy_uploaded" />);
-  if (roles.includes('legal') || roles.includes('admin')) tiles.push(<StatTile key="n" label="Non-standard (live)" value={data.counts.nonStandard} icon={<Scale />} tone="orange" to="/agreements?nonStandard=1" />);
-  if (roles.includes('signatory')) tiles.push(<StatTile key="sg" label="Ready for signature" value={data.awaitingSigned.length} icon={<FileSignature />} tone="blue" to="/agreements?status=approved_for_signing" />);
+  if (isLegal || isAdmin) tiles.push(<StatTile key="p" label="Pending Legal approval" value={data.pendingApproval.length} icon={<CheckCircle2 />} tone="amber" to="/agreements?status=pending_approval" />);
+  if (isAdmin) tiles.push(<StatTile key="g" label="Awaiting Gate 2" value={data.pendingGate2.length} icon={<ShieldCheck />} tone="purple" to="/agreements?status=signed_copy_uploaded" />);
+  if (isLegal) tiles.push(<StatTile key="n" label="Non-standard (live)" value={data.counts.nonStandard} icon={<Scale />} tone="orange" to="/agreements?nonStandard=1" />);
   tiles.push(<StatTile key="e" label="Expiring in 60 days" value={data.expiring.length} icon={<CalendarClock />} tone="orange" to="/agreements?status=expiring" />);
   const activeTile = <StatTile key="a" label="Active agreements" value={data.counts.active} icon={<Users />} tone="green" to="/agreements?status=active" />;
-  if (roles.includes('admin') || roles.includes('audit')) tiles.push(activeTile);
+  if (isAdmin) tiles.push(activeTile);
 
   /*
    * Tiles are kept to an even count so their edges line up with the two-column cards below
@@ -73,7 +74,7 @@ export function Home() {
             {data.pendingTasks.length ? `You have ${data.pendingTasks.length} task${data.pendingTasks.length === 1 ? '' : 's'} waiting${data.overdueCount ? `, ${data.overdueCount} overdue` : ''}.` : 'Nothing is waiting on you right now.'}
           </p>
         </div>
-        {isBd && (
+        {canCreate && (
           <ButtonLink to="/agreements/new" size="lg" icon={<Plus className="size-5" />} className="w-full sm:w-auto">
             New CP agreement
           </ButtonLink>
@@ -84,7 +85,7 @@ export function Home() {
         {tiles}
       </div>
 
-      {isBd && data.wizardDrafts > 0 && (
+      {canCreate && data.wizardDrafts > 0 && (
         <Link to="/agreements/new" className="flex items-center justify-between rounded-xl border border-primary-200 bg-primary-50 px-5 py-3.5 text-sm hover:bg-primary-100/60">
           <span>
             <span className="font-semibold text-primary-900">You have {data.wizardDrafts} unfinished agreement{data.wizardDrafts === 1 ? '' : 's'}.</span>
@@ -133,20 +134,20 @@ export function Home() {
             {data.awaitingSigned.length ? (
               <AgreementTable items={data.awaitingSigned.slice(0, 5)} caption="Awaiting signed copy" showOwner={false} compact />
             ) : (
-              <EmptyState compact icon={<FileSignature />} title="Nothing to get signed" description="Agreements approved at Gate 1 wait here until you upload the signed copy." />
+              <EmptyState compact icon={<FileSignature />} title="Nothing to get signed" description="Approved agreements wait here until you upload the signed copy." />
             )}
           </Card>
         </div>
       )}
 
-      {(user.roles.includes('approver') || user.roles.includes('audit')) && (
+      {(isLegal || isAdmin) && (
         <Card>
           <CardHeader
-            title={user.roles.includes('audit') ? 'Awaiting Gate 2 verification' : 'Pending Gate 1 approval(s)'}
+            title={isAdmin ? 'Awaiting Gate 2 verification' : 'Pending Legal approval(s)'}
             icon={<FileSearch />}
           />
-          {(user.roles.includes('audit') ? data.pendingGate2 : data.pendingApproval).length ? (
-            <AgreementTable items={(user.roles.includes('audit') ? data.pendingGate2 : data.pendingApproval).slice(0, 6)} caption="Queue" />
+          {(isAdmin ? data.pendingGate2 : data.pendingApproval).length ? (
+            <AgreementTable items={(isAdmin ? data.pendingGate2 : data.pendingApproval).slice(0, 6)} caption="Queue" />
           ) : (
             <EmptyState compact icon={<CheckCircle2 />} title="Queue is empty" description="Nothing is waiting for your review." />
           )}

@@ -62,14 +62,14 @@ export function runScheduledJobs(opts: { forceDigest?: boolean } = {}): JobRepor
         });
         report.renewalTasks++;
       }
-      // 3. No decision by 30 days before expiry: escalate to the Approver.
+      // 3. No decision by 30 days before expiry: escalate to Admin.
       if (open && left <= sla.renewalEscalationDays && !open.escalatedToId) {
-        const approver = routeFor(a.institutionId, false)?.approverId ?? firstUserWithRole('approver', a.institutionId)?.id;
-        if (approver) {
-          open.escalatedToId = approver;
+        const admin = firstUserWithRole('admin')?.id;
+        if (admin) {
+          open.escalatedToId = admin;
           open.escalatedAt = now();
-          notify([approver], { title: `Escalation: ${open.title}`, body: `No renewal decision ${left} days before expiry · ${a.id}`, link: taskLink(open) }, { email: 'escalation' });
-          audit('system', 'escalate', 'task', open.id, `Renewal decision escalated to ${userName(approver)} (${left} days to expiry)`);
+          notify([admin], { title: `Escalation: ${open.title}`, body: `No renewal decision ${left} days before expiry · ${a.id}`, link: taskLink(open) }, { email: 'escalation' });
+          audit('system', 'escalate', 'task', open.id, `Renewal decision escalated to ${userName(admin)} (${left} days to expiry)`);
           report.escalations++;
         }
       }
@@ -109,10 +109,10 @@ export function runScheduledJobs(opts: { forceDigest?: boolean } = {}): JobRepor
     }
   }
 
-  // 7. Daily digest at 09:00 IST for Approvers, Legal and Audit.
+  // 7. Daily digest at 09:00 IST for Legal and Admin.
   const istHour = (new Date().getUTCHours() + 5 + (new Date().getUTCMinutes() + 30 >= 60 ? 1 : 0)) % 24;
   if (opts.forceDigest || (istHour >= sla.digestHourIst && d.settings.lastDigestDate !== t)) {
-    for (const u of d.users.filter((x) => x.active && x.roles.some((r) => r === 'approver' || r === 'legal' || r === 'audit'))) {
+    for (const u of d.users.filter((x) => x.active && x.roles.some((r) => r === 'legal' || r === 'admin'))) {
       const mine = d.tasks.filter((x) => x.status === 'open' && (x.assigneeId === u.id || x.escalatedToId === u.id));
       if (!mine.length) continue;
       const overdue = mine.filter((x) => x.dueDate < t).length;

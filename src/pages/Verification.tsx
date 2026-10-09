@@ -48,7 +48,7 @@ export function Verification() {
 
   if ((detail.loading && !d) || (doc.loading && !doc.data)) return <PageSkeleton />;
   if (detail.error || doc.error) return <ErrorState error={detail.error ?? doc.error} onRetry={() => (detail.reload(), doc.reload())} />;
-  if (!d!.actions.verifyGate2) return <ErrorState title="Not ready for Gate 2" error={new Error('This agreement is not waiting for Gate 2 verification, or you are not in the Audit role.')} />;
+  if (!d!.actions.verifyGate2) return <ErrorState title="Not ready for Gate 2" error={new Error('This agreement is not waiting for Gate 2 verification, or your role cannot verify it.')} />;
   const docs = [...d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan'), ...d!.cpDocuments];
   const current = docs.find((x) => x.id === docTab) ?? docs[0];
   const set = (key: string, v: Partial<FieldCheck>) => setChecks((c) => ({ ...c, [key]: { ...(c[key] ?? { status: 'verified' }), ...v } as FieldCheck }));

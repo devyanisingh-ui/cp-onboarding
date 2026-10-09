@@ -93,7 +93,7 @@ export async function runReport(id: ReportId, f: ReportFilters = {}): Promise<Re
     case 'expiring': {
       const list = scoped.filter((a) => a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60 && inRange(a.endDate)).sort((a, b) => a.endDate!.localeCompare(b.endDate!));
       const decision = (a: Agreement) =>
-        !a.renewal ? 'No decision yet' : a.renewal.decision === 'do_not_renew' ? `Do not renew (${a.renewal.confirmation === 'confirmed' ? 'confirmed' : 'awaiting Approver'})` : `Renewing → ${a.renewal.successorId}`;
+        !a.renewal ? 'No decision yet' : a.renewal.decision === 'do_not_renew' ? `Do not renew (${a.renewal.confirmation === 'confirmed' ? 'confirmed' : 'awaiting Admin'})` : `Renewing → ${a.renewal.successorId}`;
       return {
         id, title,
         columns: [{ key: 'agreement', label: 'Agreement' }, { key: 'cp', label: 'CP' }, { key: 'institution', label: 'Institution' }, { key: 'expiry', label: 'Expiry' }, { key: 'days', label: 'Days left', align: 'right' }, { key: 'decision', label: 'Renewal decision' }, { key: 'owner', label: 'Owner' }],
