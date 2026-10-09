@@ -22,7 +22,7 @@ export function Legacy() {
   const cols = api.legacy.columns;
 
   const downloadTemplate = () =>
-    void exportXlsx('CP_legacy_import_template.xlsx', 'Agreements', [Object.fromEntries(cols.map((c) => [c.key, c.example]))], cols.map((c) => ({ key: c.key, label: c.label })));
+    void exportXlsx('CP_legacy_import_template.xlsx', 'Agreements', [Object.fromEntries(cols.map((c) => [c.key, c.example]))], cols.map((c) => ({ key: c.key, label: c.label }))).catch((e) => toast.error('Download failed', errorMessage(e)));
 
   const load = async (f: File) => {
     setBusy(true);

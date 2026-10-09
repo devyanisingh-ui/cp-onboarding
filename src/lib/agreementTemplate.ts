@@ -255,13 +255,6 @@ function signatoryLine(type: CpType, field: (k: string) => string): string {
   }
 }
 
-/** Standalone HTML file that Word opens; stands in for the docxtemplater DOCX output. */
-export function wordDocument(ctx: MergeContext): string {
-  return `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>${esc(
-    ctx.agreement.id,
-  )}</title><style>${DOC_CSS}</style></head><body>${renderAgreementHtml(ctx)}</body></html>`;
-}
-
 export const DOC_CSS = `
 .agreement-doc{font-family:Georgia,'Times New Roman',serif;color:#111827;line-height:1.6;font-size:14px;overflow-wrap:anywhere}
 .agreement-doc h1{font-size:22px;text-align:center;margin:0;letter-spacing:.02em}

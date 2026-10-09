@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowRight, Download, FileDown, Printer } from 'lucide-react';
 import type { Deviation } from '@/types';
 import { api } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
 import { formatInr } from '@/lib/format';
 import { formatShortDate } from '@/lib/dates';
-import { downloadBlob, printAgreement } from '@/lib/download';
+import { isHostedViewer, printAgreement, saveFile } from '@/lib/download';
+import { buildDocx, buildPdf } from '@/lib/docExport';
 import { cn } from '@/lib/cn';
 import { Badge, Button, Menu, useToast } from '@/components/ui';
 
@@ -55,21 +56,32 @@ export function DeviationCompare({ deviations, names }: { deviations: Deviation[
 export function DownloadMenu({ agreementId, html }: { agreementId: string; html?: string }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [hosted, setHosted] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void isHostedViewer().then((h) => alive && setHosted(h));
+    return () => {
+      alive = false;
+    };
+  }, []);
   const run = async (format: 'docx' | 'pdf') => {
     setBusy(true);
     try {
       const res = await api.agreements.download(agreementId, format);
-      if (format === 'docx') {
-        downloadBlob(res.content, res.fileName, 'application/msword');
-        toast.success('DOCX downloaded', 'Opens in Word for Legal review.');
-      } else {
-        const body = html ?? (await api.agreements.render(agreementId)).html;
-        printAgreement(body, agreementId);
-      }
+      const file = format === 'docx' ? buildDocx(res.html, agreementId) : await buildPdf(res.html, agreementId);
+      if (await saveFile(file, res.fileName))
+        toast.success(format === 'docx' ? 'DOCX downloaded' : 'PDF downloaded', format === 'docx' ? 'Opens in Word for Legal review.' : 'Print two copies on stamp paper.');
     } catch (e) {
       toast.error('Download failed', errorMessage(e));
     } finally {
       setBusy(false);
+    }
+  };
+  const print = async () => {
+    try {
+      printAgreement(html ?? (await api.agreements.render(agreementId)).html, agreementId);
+    } catch (e) {
+      toast.error('Could not print', errorMessage(e));
     }
   };
   return (
@@ -81,8 +93,10 @@ export function DownloadMenu({ agreementId, html }: { agreementId: string; html?
         </Button>
       )}
       items={[
-        { label: 'PDF — for printing on stamp paper', icon: <Printer />, onSelect: () => void run('pdf') },
+        { label: 'PDF — for printing on stamp paper', icon: <FileDown />, onSelect: () => void run('pdf') },
         { label: 'DOCX — for Legal', icon: <FileDown />, onSelect: () => void run('docx') },
+        // The hosted viewer blocks the print dialog; the PDF download covers it there.
+        ...(hosted ? [] : [{ label: 'Print', icon: <Printer />, onSelect: () => void print() }]),
       ]}
     />
   );

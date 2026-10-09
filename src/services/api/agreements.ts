@@ -2,7 +2,7 @@ import type { Agreement, AgreementStatus, CpType, Deviation, RateCard, TemplateV
 import { SLABS } from '@/types';
 import { can } from '@/lib/permissions';
 import { addWorkingDays, daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
-import { missingFields, mergeFields, renderAgreementHtml, wordDocument, clausesFor, type MergeField } from '@/lib/agreementTemplate';
+import { missingFields, mergeFields, renderAgreementHtml, clausesFor, type MergeField } from '@/lib/agreementTemplate';
 import { agreementDateErrors } from '@/lib/validation';
 import { displayStatus, FINAL_STATUSES, LIVE_STATUSES, IN_PROGRESS_STATUSES } from '@/lib/status';
 import type { CpFormValues } from '@/lib/schemas';
@@ -224,7 +224,7 @@ export async function renderDocument(id: string): Promise<RenderedDocument> {
   return { html: renderAgreementHtml(m), fields, missing: missingFields(m), blockers: a.status === 'draft' ? submissionBlockers(a) : [] };
 }
 
-export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Promise<{ fileName: string; content: string }> {
+export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Promise<{ fileName: string; html: string }> {
   await delay();
   const user = ctx();
   const a = load(id, user);
@@ -232,7 +232,7 @@ export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Prom
   if (format === 'docx' && missingFields(m).length && a.status !== 'draft') throw conflict('Document has missing fields.');
   audit(user, 'download', 'agreement', a.id, `Downloaded ${format.toUpperCase()} of ${a.id}`);
   commit();
-  return { fileName: `${a.id}_v${a.version}.${format === 'docx' ? 'doc' : 'html'}`, content: wordDocument(m) };
+  return { fileName: `${a.id}_v${a.version}.${format}`, html: renderAgreementHtml(m) };
 }
 
 // ---------------- Wizard ----------------

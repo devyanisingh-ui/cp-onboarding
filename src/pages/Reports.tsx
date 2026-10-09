@@ -8,6 +8,7 @@ import { useSession } from '@/context/SessionContext';
 import { useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { exportXlsx } from '@/lib/excel';
+import { errorMessage } from '@/services/errors';
 import { CP_TYPE_LABELS, CP_TYPES } from '@/lib/format';
 import { today } from '@/lib/dates';
 import { STATUS_META } from '@/lib/status';
@@ -55,8 +56,11 @@ export function ReportView() {
 
   const exportIt = async () => {
     if (!data) return;
-    await exportXlsx(`${meta.title.replace(/[^a-z0-9]+/gi, '_')}_${today()}.xlsx`, meta.title, data.rows, data.columns);
-    toast.success('Excel file downloaded');
+    try {
+      if (await exportXlsx(`${meta.title.replace(/[^a-z0-9]+/gi, '_')}_${today()}.xlsx`, meta.title, data.rows, data.columns)) toast.success('Excel file downloaded');
+    } catch (e) {
+      toast.error('Download failed', errorMessage(e));
+    }
   };
 
   return (

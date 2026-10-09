@@ -23,6 +23,7 @@ import { cn } from '@/lib/cn';
 import { formatBytes } from '@/lib/format';
 import { formatDate, formatDateTime, timeAgo } from '@/lib/dates';
 import { STEPPER } from '@/lib/status';
+import { saveFile } from '@/lib/download';
 import type { AgreementStatus } from '@/types';
 import { Badge, Breadcrumbs, Button, Field, IconButton, Modal, Spinner, Textarea, useToast } from '@/components/ui';
 import { DOC_CSS } from '@/lib/agreementTemplate';
@@ -255,10 +256,7 @@ export function DocumentList({ docs, names, onVerify, empty = 'No documents uplo
     try {
       const res = await api.documents.open(d.id, 'download');
       if (!res.url) return toast.info('Sample record', 'Seed documents have no file attached in this prototype. The download was still logged.');
-      const a = document.createElement('a');
-      a.href = res.url;
-      a.download = d.fileName;
-      a.click();
+      await saveFile(await (await fetch(res.url)).blob(), d.fileName);
     } catch (e) {
       toast.error('Download failed', errorMessage(e));
     }
@@ -357,10 +355,11 @@ export function DocumentFrame({ doc, specimen }: { doc: DocumentRecord; specimen
     );
   if (doc.mimeType.startsWith('image/')) return <img src={state.url} alt={docLabel(doc.type)} className="mx-auto max-h-[70vh] rounded-md" />;
   if (doc.mimeType === 'application/pdf') return <iframe src={state.url} title={doc.fileName} className="h-[70vh] w-full rounded-md border border-line" />;
+  const url = state.url;
   return (
-    <a href={state.url} download={doc.fileName} className="text-sm font-semibold text-primary-700 underline">
+    <button type="button" onClick={() => void fetch(url).then((r) => r.blob()).then((b) => saveFile(b, doc.fileName))} className="text-sm font-semibold text-primary-700 underline">
       Download {doc.fileName}
-    </a>
+    </button>
   );
 }
 

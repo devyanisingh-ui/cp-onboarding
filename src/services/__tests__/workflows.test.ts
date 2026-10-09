@@ -339,3 +339,32 @@ describe('template editor', () => {
     expect(getDb().templates.some((t) => t.id === d.id)).toBe(false);
   });
 });
+
+describe('document export', () => {
+  it('builds a real DOCX (zip with WordprocessingML) and a PDF from the merged agreement', async () => {
+    const { buildDocx, buildPdf, extractBlocks } = await import('@/lib/docExport');
+    await as(PRIYA);
+    const { html, fileName } = await api.agreements.download('AGR-ASU-2026-0004', 'docx');
+    expect(fileName).toBe('AGR-ASU-2026-0004_v1.docx');
+
+    const blocks = extractBlocks(html);
+    expect(blocks.some((b) => b.kind === 'table' && b.rows.length > 0)).toBe(true);
+    expect(blocks.some((b) => b.kind === 'signatures')).toBe(true);
+
+    const bytes = (b: Blob) => new Promise<Uint8Array>((res) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result as ArrayBuffer)); r.readAsArrayBuffer(b); });
+    const docx = await bytes(buildDocx(html, 'AGR-ASU-2026-0004'));
+    expect([...docx.slice(0, 4)]).toEqual([0x50, 0x4b, 0x03, 0x04]); // "PK\3\4"
+    const text = new TextDecoder().decode(docx);
+    expect(text).toContain('word/document.xml');
+    expect(text).toContain('EduBridge Services Pvt. Ltd');
+
+    const pdf = await bytes(await buildPdf(html, 'AGR-ASU-2026-0004'));
+    expect(new TextDecoder().decode(pdf.slice(0, 5))).toBe('%PDF-');
+
+    if (process.env.EXPORT_SAMPLES) {
+      const fs = await import('node:fs');
+      fs.writeFileSync(`${process.env.EXPORT_SAMPLES}/sample.docx`, docx);
+      fs.writeFileSync(`${process.env.EXPORT_SAMPLES}/sample.pdf`, pdf);
+    }
+  });
+});
