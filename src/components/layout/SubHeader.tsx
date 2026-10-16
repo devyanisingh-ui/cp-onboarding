@@ -123,7 +123,7 @@ export function SubHeader() {
   return (
     <div
       className={cn(
-        'z-[15] border-b px-4 transition-[background-color,box-shadow,border-color] duration-200 ease-out sm:px-6 md:sticky md:top-16 lg:px-8 xl:px-10',
+        'z-[15] border-b px-4 transition-[background-color,box-shadow,border-color] duration-200 ease-out sticky top-16 sm:px-6 lg:px-8 xl:px-10',
         scrolled
           ? 'border-line/80 bg-[rgb(255_255_255/0.94)] shadow-[0_6px_20px_-12px_rgb(22_28_56/0.18)] backdrop-blur-xl backdrop-saturate-150'
           : 'border-white/70 bg-white/45 backdrop-blur-md',
