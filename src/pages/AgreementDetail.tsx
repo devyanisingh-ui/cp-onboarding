@@ -104,6 +104,9 @@ export function AgreementDetail() {
             {a.lastRejection.comment}
           </Alert>
         )}
+        {act.uploadSigned && a.source === 'app' && a.status === 'approved_for_signing' && a.esign?.status !== 'in_progress' && (
+          <SigningChoice agreementId={a.id} signatory={`${a.signatoryName}, ${a.signatoryDesignation}`} cpName={d.cp.legalName} canEsign={act.sendForSignature} />
+        )}
         {a.override && (
           <Alert
             tone={a.override.status === 'approved' ? 'success' : a.override.status === 'rejected' ? 'error' : 'warning'}
@@ -364,6 +367,54 @@ function ESignCard({ d, onChange }: { d: AgreementDetailData; onChange: () => vo
         placeholder="Reason"
         onConfirm={async (c) => (await withdraw.run(c)).ok}
       />
+    </Card>
+  );
+}
+
+/** Approved for signing: the two ways to get it signed, so the paper route isn't missed. */
+function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreementId: string; signatory: string; cpName: string; canEsign: boolean }) {
+  const step = (n: number, text: string) => (
+    <li className="flex gap-3">
+      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-700">{n}</span>
+      <span>{text}</span>
+    </li>
+  );
+  return (
+    <Card>
+      <CardHeader title="How will this be signed?" description="Choose either route. Both end with the agreement Active." />
+      <CardBody className="grid gap-6 md:grid-cols-2">
+        <div className="space-y-4">
+          <h3 className="flex items-center gap-2 font-semibold">
+            <FileSignature className="size-4 text-muted" aria-hidden /> Sign on paper
+          </h3>
+          <ol className="space-y-2.5 text-sm text-ink-soft">
+            {step(1, 'Download the agreement and print two copies on stamp paper.')}
+            {step(2, `Get every page signed by ${cpName} and by ${signatory}.`)}
+            {step(3, 'Upload the scanned signed copy and the stamp paper. Admin verifies it (Gate 2), then it becomes Active.')}
+          </ol>
+          <div className="flex flex-wrap gap-2">
+            <DownloadMenu agreementId={agreementId} />
+            <ButtonLink to={`/agreements/${agreementId}/upload`} variant="secondary" icon={<Upload className="size-4" />}>
+              Upload signed copy
+            </ButtonLink>
+          </div>
+        </div>
+        {canEsign && (
+          <div className="space-y-4 md:border-l md:border-line md:pl-6">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <PenLine className="size-4 text-muted" aria-hidden /> E-signature
+            </h3>
+            <ol className="space-y-2.5 text-sm text-ink-soft">
+              {step(1, `${cpName} gets an email link and signs first.`)}
+              {step(2, `${signatory} gets their link next.`)}
+              {step(3, 'Once both have signed, the signed PDF is filed and the agreement becomes Active.')}
+            </ol>
+            <ButtonLink to={`/agreements/${agreementId}/esign`} icon={<PenLine className="size-4" />}>
+              Send for e-signature
+            </ButtonLink>
+          </div>
+        )}
+      </CardBody>
     </Card>
   );
 }
