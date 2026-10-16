@@ -289,7 +289,7 @@
 
 @layer components {
   .text-display {
-    font-size: clamp(1.5rem, 1.1rem + 1.2vw, 1.875rem);
+    font-size: clamp(1.375rem, 1rem + 1.1vw, 1.625rem);
     line-height: 1.15;
     font-weight: 650;
     letter-spacing: -0.025em;

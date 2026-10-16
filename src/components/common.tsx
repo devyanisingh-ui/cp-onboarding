@@ -49,7 +49,7 @@ export function PageHeader({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2.5">
-            <h1 className="text-[22px] leading-tight sm:text-[26px]">{title}</h1>
+            <h1 className="text-[20px] leading-tight sm:text-[23px]">{title}</h1>
             {badges}
           </div>
           {subtitle && <div className="mt-1 text-sm text-muted">{subtitle}</div>}
