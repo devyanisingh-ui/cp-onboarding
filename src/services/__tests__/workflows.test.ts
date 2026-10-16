@@ -420,7 +420,7 @@ describe('digital signatures (DSC and drawn/typed via email link)', () => {
     await expect(api.signing.sign(tokenOf(id, 'institution'), { kind: 'dsc', certificateId: valid!.id, pin: '123456' })).resolves.toEqual({ completed: true });
 
     const a = getDb().agreements.find((x) => x.id === id)!;
-    expect(a.status).toBe('signed_copy_uploaded');
+    expect(a.status).toBe('active');
     expect(a.esign!.status).toBe('completed');
     expect(a.esign!.documentHash).toMatch(/^[0-9a-f]{64}$/);
     const signed = getDb().documents.find((x) => x.id === a.esign!.signedDocumentId)!;
@@ -432,12 +432,10 @@ describe('digital signatures (DSC and drawn/typed via email link)', () => {
       const buf = await new Promise<Uint8Array>((res) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result as ArrayBuffer)); r.readAsArrayBuffer(blob); });
       (await import('node:fs')).writeFileSync(`${process.env.EXPORT_SAMPLES}/esigned.pdf`, buf);
     }
-    expect(getDb().tasks.some((t) => t.agreementId === id && t.type === 'gate2_verification' && t.status === 'open')).toBe(true);
+    // Signed by both parties: Active straight away, no Gate 2.
+    expect(a.activatedAt).toBeTruthy();
+    expect(getDb().tasks.some((t) => t.agreementId === id && t.type === 'gate2_verification' && t.status === 'open')).toBe(false);
     expect(getDb().tasks.some((t) => t.agreementId === id && t.type === 'signing_upload' && t.status === 'open')).toBe(false);
-
-    await as(ARJUN);
-    await api.agreements.decideGate2(id, 'approve', { pages: { status: 'verified' } });
-    expect(getDb().agreements.find((x) => x.id === id)!.status).toBe('active');
   });
 
   it('typed signature with every page off; decline and withdraw return it to the BD Executive', async () => {

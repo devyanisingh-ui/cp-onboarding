@@ -4,7 +4,8 @@
  * BD Executive sends an approved agreement for signature → the CP's signer gets an email link →
  * after they sign, the institution's signatory (e.g. the Registrar) gets theirs → when both have
  * signed, the app builds the signed PDF (signatures in the signature block, optionally on every
- * page, plus a signature certificate page), files it as the signed copy and sends it to Gate 2.
+ * page, plus a signature certificate page), files it as the signed copy and the agreement becomes
+ * Active. (Paper copies uploaded by hand still go through Gate 2.)
  *
  * Signers have no app account: the signing link's token is their only credential. Methods:
  *  - `electronic`: drawn or typed signature, with consent, from the email link
@@ -20,7 +21,7 @@ import { stampPaperSchema } from '@/lib/schemas';
 import { conflict, invalid, notFound } from '../errors';
 import { sendExternalEmail } from '../notificationChannels';
 import { nextId } from '../db';
-import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, device, firstUserWithRole, getDb, inScope, notify, now } from './core';
+import { assertCan, audit, closeTasks, commit, ctx, delay, device, firstUserWithRole, getDb, inScope, notify, now } from './core';
 import { mergeContext } from './agreements';
 import { storeDocument } from './documents';
 
@@ -331,15 +332,24 @@ async function completeSigning(a: Agreement, req: ESignRequest) {
   req.completedAt = now();
   req.documentHash = hash;
   req.signedDocumentId = document.id;
+  // Signed by both the CP and the institution's signatory: the agreement is Active straight away,
+  // with the same side effects as passing Gate 2 (agreements.decideGate2).
   a.signedOn = today();
-  a.status = 'signed_copy_uploaded';
+  a.status = 'active';
+  a.activatedAt = now();
   a.verification = undefined;
   a.updatedAt = now();
+  document.verificationStatus = 'verified';
+  document.verifiedOn = now();
+  document.retentionUntil = shiftDays(a.endDate ?? today(), 365 * 8 + 2);
+  const cp = d.cps.find((c) => c.id === a.cpId);
+  if (cp) cp.reverificationRequired = false;
+  if (a.predecessorId) {
+    const p = d.agreements.find((x) => x.id === a.predecessorId);
+    if (p) p.successorId = a.id;
+  }
   closeTasks({ agreementId: a.id, types: ['signing_upload'] }, 'system');
-  const admin = firstUserWithRole('admin');
-  if (admin)
-    createTask({ type: 'gate2_verification', title: `Gate 2 verification (e-signed): ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate2Days, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
-  audit('system', 'esign_complete', 'agreement', a.id, `All parties signed — e-signed PDF filed (${document.fileName}) and sent to Gate 2`, { status: 'approved_for_signing' }, { status: a.status });
-  notify([a.ownerId], { title: 'All signatures received', body: `${a.id} (${cpName(a)}) is fully signed and waiting for Gate 2.`, link: `/agreements/${a.id}` });
+  audit('system', 'esign_complete', 'agreement', a.id, `All parties signed — e-signed PDF filed (${document.fileName}); agreement Active`, { status: 'approved_for_signing' }, { status: a.status });
+  notify([a.ownerId], { title: 'Agreement active', body: `${a.id} (${cpName(a)}) is signed by both parties and is now Active.`, link: `/agreements/${a.id}` });
   commit();
 }
