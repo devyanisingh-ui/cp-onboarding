@@ -41,19 +41,6 @@ export function AppShell() {
             </span>
           </NavLink>
         </div>
-        {can(user, 'agreement.create') && (
-          <div className="px-3 pt-4 lg:px-4">
-            <NavLink
-              to="/agreements/new"
-              className="flex h-10 items-center justify-center gap-2 rounded-md bg-gradient-to-b from-primary-600 to-primary-700 text-sm font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.22),var(--shadow-cta)] transition-all duration-150 hover:from-primary-700 hover:to-primary-800 active:translate-y-px"
-              title="New CP agreement"
-            >
-              <Plus className="size-4" aria-hidden />
-              <span className="hidden lg:inline">New CP agreement</span>
-              <span className="sr-only lg:hidden">New CP agreement</span>
-            </NavLink>
-          </div>
-        )}
         <nav className="flex-1 overflow-y-auto px-3 py-5 lg:px-4">
           {[items.slice(0, 4), items.slice(4)].filter((g) => g.length).map((group, gi) => (
           <div key={gi} className={cn(gi > 0 && 'mt-6')}>
