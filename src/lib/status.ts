@@ -6,6 +6,8 @@ export const STATUS_META: Record<DisplayStatus, { label: string; tone: StatusTon
   draft: { label: 'Draft', tone: 'grey' },
   rejected: { label: 'Rejected', tone: 'red' },
   pending_approval: { label: 'Pending Legal approval', tone: 'amber' },
+  docs_requested: { label: 'Documents requested', tone: 'orange' },
+  pending_admin_approval: { label: 'Pending Admin approval', tone: 'amber' },
   approved_for_signing: { label: 'Approved for signing', tone: 'blue' },
   out_for_signature: { label: 'Out for e-signature', tone: 'purple' },
   signed_copy_uploaded: { label: 'Signed copy uploaded', tone: 'purple' },
@@ -36,13 +38,15 @@ export const FINAL_STATUSES: AgreementStatus[] = ['terminated', 'expired', 'not_
 export const IN_PROGRESS_STATUSES: AgreementStatus[] = [
   'draft',
   'pending_approval',
+  'pending_admin_approval',
   'approved_for_signing',
   'signed_copy_uploaded',
 ];
 /** Statuses that count towards "one active agreement per CP per institution". */
 export const LIVE_STATUSES: AgreementStatus[] = ['active', 'notice_period'];
 
-export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRejection' | 'esign'>): DisplayStatus {
+export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRejection' | 'esign' | 'docRequest'>): DisplayStatus {
+  if (a.status === 'draft' && a.docRequest && a.docRequest.status !== 'closed') return 'docs_requested';
   if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') return 'out_for_signature';
   if (a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60) return 'expiring';
   if (a.status === 'draft' && a.lastRejection) return 'rejected';
@@ -53,10 +57,15 @@ export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRej
 export const STEPPER: { status: AgreementStatus; label: string }[] = [
   { status: 'draft', label: 'Draft' },
   { status: 'pending_approval', label: 'Legal approval' },
-  { status: 'approved_for_signing', label: 'Approved for signing' },
-  { status: 'signed_copy_uploaded', label: 'Signed copy uploaded' },
+  { status: 'pending_admin_approval', label: 'Admin approval' },
+  { status: 'approved_for_signing', label: 'Signing' },
   { status: 'active', label: 'Active' },
 ];
+
+/** Title for a "returned" banner, by the step that returned it. */
+export function rejectionTitle(gate: 1 | 2 | 3): string {
+  return gate === 1 ? 'Returned by Legal' : gate === 3 ? 'Returned by Admin' : 'Returned at Gate 2';
+}
 
 export const VERSION_STATUS_META: Record<VersionStatus, { label: string; tone: StatusTone }> = {
   draft: { label: 'Draft', tone: 'grey' },

@@ -1,24 +1,27 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Ban, CalendarClock, FileSearch, FileSignature, Flag, History, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
-import type { ESigner, ESignRequest } from '@/types';
+import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, ThumbsDown, ThumbsUp, Upload } from 'lucide-react';
+import type { DocRequest, DocumentRecord, ESigner, ESignRequest } from '@/types';
 import { api, type AgreementDetail as AgreementDetailData } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { formatDate, formatDateTime, daysUntil } from '@/lib/dates';
 import { CP_TYPE_LABELS, formatInr } from '@/lib/format';
-import { STATUS_META, type StatusTone } from '@/lib/status';
-import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, ErrorState, PageSkeleton, StatusBadge } from '@/components/ui';
-import { AgreementLink, CommentDialog, DocumentList, PageHeader, StatusStepper, Timeline, WarningBanner } from '@/components/common';
+import { rejectionTitle, STATUS_META, type StatusTone } from '@/lib/status';
+import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, ErrorState, Field, Input, PageSkeleton, StatusBadge } from '@/components/ui';
+import { AgreementLink, CommentDialog, DocumentList, PageHeader, StatusStepper, Timeline, WarningBanner, docLabel } from '@/components/common';
 import { DeviationCompare, DownloadMenu } from '@/components/agreement';
 
 export function AgreementDetail() {
   const { id = '' } = useParams();
   const { data, error, loading, reload } = useApi(() => api.agreements.get(id), [id]);
   const [override, setOverride] = useState<'approve' | 'reject' | null>(null);
+  const [returning, setReturning] = useState(false);
   useDocumentTitle(id);
   const decideOverride = useAction((d: 'approve' | 'reject', r: string) => api.agreements.decideOverride(id, d, r), { success: 'Override decision recorded' });
   const clearFlag = useAction(() => api.agreements.clearReviewFlag(id), { success: 'Marked as reviewed' });
+  const finalApprove = useAction(() => api.agreements.decideFinalApproval(id, 'approve'), { success: 'Final approval given — ready for signing' });
+  const finalReturn = useAction((c: string) => api.agreements.decideFinalApproval(id, 'reject', c), { success: 'Returned to the BD Executive' });
 
   if (loading && !data) return <PageSkeleton />;
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
@@ -83,6 +86,16 @@ export function AgreementDetail() {
                 Legal review
               </ButtonLink>
             )}
+            {act.finalApprove && (
+              <>
+                <Button variant="danger" icon={<ThumbsDown className="size-4" />} onClick={() => setReturning(true)}>
+                  Return
+                </Button>
+                <Button variant="success" icon={<ThumbsUp className="size-4" />} loading={finalApprove.loading} onClick={() => void finalApprove.run()}>
+                  Give final approval
+                </Button>
+              </>
+            )}
             {(act.renewalDecision || act.confirmNonRenewal) && (
               <ButtonLink to={`/agreements/${a.id}/renewal`} icon={<RefreshCw className="size-4" />}>
                 {act.confirmNonRenewal ? 'Confirm non-renewal' : 'Renew'}
@@ -100,9 +113,17 @@ export function AgreementDetail() {
       <div className="mb-5 space-y-3">
         {d.cp.warning && <WarningBanner reason={d.cp.warning.reason} />}
         {a.lastRejection && (
-          <Alert tone="error" title={`${a.lastRejection.gate === 1 ? "Returned by Legal" : "Returned at Gate 2"} (${d.names[a.lastRejection.byId]}) · ${formatDateTime(a.lastRejection.at)}`}>
+          <Alert tone="error" title={`${rejectionTitle(a.lastRejection.gate)} (${d.names[a.lastRejection.byId]}) · ${formatDateTime(a.lastRejection.at)}`}>
             {a.lastRejection.comment}
           </Alert>
+        )}
+        {act.finalApprove && (
+          <Alert tone="info" title="Waiting for your final approval">
+            Legal has approved this agreement and its documents. Check the details and give final approval to release it for signing, or return it to the BD Executive with a comment.
+          </Alert>
+        )}
+        {a.docRequest && a.docRequest.status !== 'closed' && (
+          <DocRequestPanel agreementId={a.id} req={a.docRequest} docs={d.cpDocuments} names={d.names} cpEmail={d.cp.email} canSend={act.sendDocLink} canAccept={act.reviewCpDocs} />
         )}
         {act.uploadSigned && a.source === 'app' && a.status === 'approved_for_signing' && a.esign?.status !== 'in_progress' && (
           <SigningChoice agreementId={a.id} signatory={`${a.signatoryName}, ${a.signatoryDesignation}`} cpName={d.cp.legalName} canEsign={act.sendForSignature} />
@@ -271,6 +292,14 @@ export function AgreementDetail() {
         placeholder="Reason"
         onConfirm={async (c) => (await decideOverride.run(override!, c)).ok}
       />
+      <CommentDialog
+        open={returning}
+        onClose={() => setReturning(false)}
+        title="Return to BD Executive"
+        description="The agreement goes back to the BD Executive as a draft with your comment. A comment is mandatory."
+        confirmLabel="Return"
+        onConfirm={async (c) => (await finalReturn.run(c)).ok}
+      />
     </div>
   );
 }
@@ -390,7 +419,7 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
           <ol className="space-y-2.5 text-sm text-ink-soft">
             {step(1, 'Download the agreement and print two copies on stamp paper.')}
             {step(2, `Get every page signed by ${cpName} and by ${signatory}.`)}
-            {step(3, 'Upload the scanned signed copy and the stamp paper. Admin verifies it (Gate 2), then it becomes Active.')}
+            {step(3, 'Upload the scanned signed copy and the stamp paper. The agreement then becomes Active.')}
           </ol>
           <div className="flex flex-wrap gap-2">
             <DownloadMenu agreementId={agreementId} />
@@ -413,6 +442,90 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
               Send for e-signature
             </ButtonLink>
           </div>
+        )}
+      </CardBody>
+    </Card>
+  );
+}
+
+const DOC_REQUEST_STEPS: Record<DocRequest['status'], string> = {
+  with_bd: 'Send the CP their upload link',
+  sent_to_cp: 'Waiting for the CP to upload',
+  cp_submitted: 'CP sent corrected documents — check them',
+  closed: 'Done',
+};
+
+/** Legal → BD → CP → BD: the documents Legal flagged, the CP's link, and the BD's check. */
+function DocRequestPanel({ agreementId, req, docs, names, cpEmail, canSend, canAccept }: { agreementId: string; req: DocRequest; docs: DocumentRecord[]; names: Record<string, string>; cpEmail: string; canSend: boolean; canAccept: boolean }) {
+  const [email, setEmail] = useState(req.cpEmail ?? cpEmail);
+  const send = useAction(() => api.agreements.sendDocRequestLink(agreementId, email), { success: 'Upload link sent to the CP' });
+  const accept = useAction(() => api.agreements.acceptCpDocs(agreementId), { success: 'Documents checked — sent to Legal' });
+  const byId = (docId?: string) => docs.find((x) => x.id === docId);
+  return (
+    <Card>
+      <CardHeader
+        title="Legal asked for corrected documents"
+        description={`${names[req.requestedById] ?? 'Legal'} · ${formatDateTime(req.requestedAt)} · ${DOC_REQUEST_STEPS[req.status]}`}
+        icon={<FileWarning />}
+      />
+      <CardBody className="space-y-4">
+        {req.note && <p className="text-sm text-ink-soft">“{req.note}”</p>}
+        <ul className="divide-y divide-line rounded-lg border border-line">
+          {req.items.map((it) => {
+            const replacement = byId(it.replacementId);
+            return (
+              <li key={it.documentId} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{docLabel(it.documentType)}</p>
+                  <p className="text-sm text-danger-700">{it.remark}</p>
+                </div>
+                <p className="shrink-0 text-xs text-muted">
+                  {replacement ? (
+                    <span className="inline-flex items-center gap-1 text-success-700">
+                      <CheckCircle2 className="size-3.5" aria-hidden /> New file: {replacement.fileName}
+                    </span>
+                  ) : req.status === 'sent_to_cp' ? (
+                    'Waiting for the CP'
+                  ) : (
+                    'Not uploaded yet'
+                  )}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+        {req.status === 'cp_submitted' && req.cpNote && <p className="text-sm text-ink-soft">CP’s note: “{req.cpNote}”</p>}
+        {req.status === 'cp_submitted' && (
+          <p className="text-sm text-muted">Open the new files under CP documents to check them before sending the agreement back to Legal.</p>
+        )}
+        {(canSend || canAccept) && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            {canSend && (
+              <>
+                <Field label="CP’s email" className="sm:w-80">
+                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </Field>
+                <Button variant={canAccept ? 'secondary' : 'primary'} icon={<Send className="size-4" />} loading={send.loading} onClick={() => void send.run()}>
+                  {req.status === 'with_bd' ? 'Send upload link to CP' : req.status === 'cp_submitted' ? 'Ask the CP again' : 'Resend link'}
+                </Button>
+              </>
+            )}
+            {canAccept && (
+              <Button variant="success" icon={<ThumbsUp className="size-4" />} loading={accept.loading} onClick={() => void accept.run()}>
+                Documents are correct — send to Legal
+              </Button>
+            )}
+          </div>
+        )}
+        {req.status === 'sent_to_cp' && req.token && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            <Link2 className="size-4 shrink-0" aria-hidden />
+            Link emailed to {req.cpEmail} on {formatDateTime(req.sentAt)}.
+            {/* Prototype: emails aren't really sent, so open the CP's page from here. */}
+            <Link to={`/cp-documents/${req.token}`} className="hit-area font-medium text-primary-700 hover:underline">
+              Open the CP’s upload page
+            </Link>
+          </p>
         )}
       </CardBody>
     </Card>

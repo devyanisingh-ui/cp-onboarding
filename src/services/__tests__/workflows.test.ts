@@ -50,6 +50,15 @@ async function createNonStandardDraft() {
   return ids;
 }
 
+/** Submitted draft → Legal approves → Admin gives final approval; signed back in as the BD Executive. */
+async function approveForSigning(agreementId: string) {
+  await as(PRIYA);
+  await api.agreements.decideGate1(agreementId, 'approve');
+  await as(ARJUN);
+  await api.agreements.decideFinalApproval(agreementId, 'approve');
+  await as(KAVYA);
+}
+
 beforeEach(async () => {
   setLatency(0, 0);
   sessionStorage.clear();
@@ -68,11 +77,23 @@ describe('authentication', () => {
 });
 
 describe('new CP onboarding (PRD 6.1)', () => {
-  it('runs a standard draft straight to signing → Gate 2 → Active (no Legal approval)', async () => {
-    const { agreementId } = await createReadyDraft();
-    await expect(api.agreements.submit(agreementId)).resolves.toEqual({ sentToLegal: false });
+  it('runs BD → Legal → Admin → paper signing → Active', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await expect(api.agreements.submit(agreementId)).resolves.toEqual({ sentToLegal: true });
+    expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('pending_approval');
+    expect(getDb().tasks.find((t) => t.agreementId === agreementId && t.type === 'gate1_approval' && t.status === 'open')!.assigneeId).toBe('u-priya');
+
+    await as(PRIYA);
+    await api.agreements.decideGate1(agreementId, 'approve');
+    expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('pending_admin_approval');
+    // Legal's review verifies the CP's KYC documents.
+    expect(getDb().documents.filter((x) => x.ownerType === 'cp' && x.ownerId === cpId).every((x) => x.verificationStatus === 'verified')).toBe(true);
+    expect(getDb().tasks.find((t) => t.agreementId === agreementId && t.type === 'admin_approval' && t.status === 'open')!.assigneeId).toBe('u-arjun');
+    await expect(api.agreements.decideFinalApproval(agreementId, 'approve')).rejects.toThrow(/Admin/);
+
+    await as(ARJUN);
+    await api.agreements.decideFinalApproval(agreementId, 'approve');
     expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('approved_for_signing');
-    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'gate1_approval')).toBe(false);
 
     // Time passes: the execution date arrives and the copies are signed.
     getDb().agreements.find((a) => a.id === agreementId)!.executionDate = today();
@@ -86,13 +107,10 @@ describe('new CP onboarding (PRD 6.1)', () => {
       stampFileName: 'stamp.pdf',
       checklist: [true, true, true],
     });
-    expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('signed_copy_uploaded');
-
-    await as(ARJUN);
-    await expect(api.agreements.decideGate2(agreementId, 'approve', { stamp: { status: 'mismatch' } })).rejects.toThrow(/Verified/);
-    await api.agreements.decideGate2(agreementId, 'approve', { pages: { status: 'verified' }, stamp: { status: 'verified' } });
+    // Approved before signing, so the signed paper copy makes it Active (no Gate 2).
     const a = getDb().agreements.find((x) => x.id === agreementId)!;
     expect(a.status).toBe('active');
+    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'gate2_verification')).toBe(false);
     expect(getDb().audit.filter((e) => e.entityId === agreementId).map((e) => e.action)).toEqual(
       expect.arrayContaining(['create', 'submit', 'approve', 'upload']),
     );
@@ -118,13 +136,70 @@ describe('new CP onboarding (PRD 6.1)', () => {
     ).rejects.toThrow(/already has an active agreement/);
   });
 
+  it('Admin can return an agreement after Legal approved it', async () => {
+    const { agreementId } = await createReadyDraft();
+    await api.agreements.submit(agreementId);
+    await as(PRIYA);
+    await api.agreements.decideGate1(agreementId, 'approve');
+    await as(ARJUN);
+    await expect(api.agreements.decideFinalApproval(agreementId, 'reject', '')).rejects.toThrow(/comment/);
+    await api.agreements.decideFinalApproval(agreementId, 'reject', 'Wrong execution place');
+    const a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.status).toBe('draft');
+    expect(a.lastRejection).toMatchObject({ gate: 3, comment: 'Wrong execution place' });
+  });
+
+  it('Legal asks for corrected documents; the CP re-uploads them from a link; BD checks and resubmits', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await api.agreements.submit(agreementId);
+    const pan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === 'pan')!;
+
+    await as(PRIYA);
+    await expect(api.agreements.requestDocChanges(agreementId, [{ documentId: pan.id, remark: ' ' }])).rejects.toThrow(/remark/);
+    await api.agreements.requestDocChanges(agreementId, [{ documentId: pan.id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
+    let a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.status).toBe('draft');
+    expect(a.docRequest?.status).toBe('with_bd');
+    expect(pan.verificationStatus).toBe('mismatch');
+    expect(pan.remarks).toBe('PAN copy is blurred');
+    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open' && t.assigneeId === 'u-neha')).toBe(true);
+
+    await as(KAVYA);
+    await expect(api.agreements.submit(agreementId)).rejects.toThrow(/Documents Legal asked for/);
+    const { link } = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
+    const token = link.split('/').pop()!;
+    expect(getDb().emails.some((m) => m.to === 'ravi@sunrise.in' && m.link === link)).toBe(true);
+
+    // The CP, with no account, opens the link.
+    const session = await api.cpDocs.session(token);
+    expect(session.items).toEqual([expect.objectContaining({ documentType: 'pan', remark: 'PAN copy is blurred' })]);
+    expect(session.open).toBe(true);
+    await expect(api.cpDocs.submit(token)).rejects.toThrow(/Upload every requested document/);
+    await api.cpDocs.upload(token, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan-clear.pdf');
+    await api.cpDocs.submit(token, 'Clear scan attached');
+    a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.docRequest?.status).toBe('cp_submitted');
+    expect((await api.cpDocs.session(token)).open).toBe(false);
+    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_review' && t.status === 'open')).toBe(true);
+
+    await api.agreements.acceptCpDocs(agreementId);
+    a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.docRequest?.status).toBe('closed');
+    expect(a.status).toBe('pending_approval');
+
+    await as(PRIYA);
+    await api.agreements.decideGate1(agreementId, 'approve');
+    const newPan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.fileName === 'pan-clear.pdf')!;
+    expect(newPan.verificationStatus).toBe('verified');
+    expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('pending_admin_approval');
+  });
+
   it('sends a non-standard draft to Legal, who approves it for signing', async () => {
     const { agreementId } = await createNonStandardDraft();
     await expect(api.agreements.submit(agreementId)).resolves.toEqual({ sentToLegal: true });
     expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('pending_approval');
     expect(getDb().tasks.find((t) => t.agreementId === agreementId && t.type === 'gate1_approval' && t.status === 'open')!.assigneeId).toBe('u-priya');
-    await as(PRIYA);
-    await api.agreements.decideGate1(agreementId, 'approve');
+    await approveForSigning(agreementId);
     expect(getDb().agreements.find((a) => a.id === agreementId)!.status).toBe('approved_for_signing');
   });
 
@@ -378,7 +453,8 @@ describe('digital signatures (DSC and drawn/typed via email link)', () => {
 
   async function approvedAgreement() {
     const { agreementId } = await createReadyDraft();
-    await api.agreements.submit(agreementId); // standard terms → approved for signing
+    await api.agreements.submit(agreementId);
+    await approveForSigning(agreementId);
     return agreementId;
   }
   const signers = (cpMethod: 'electronic' | 'dsc', instMethod: 'electronic' | 'dsc') => [
@@ -387,7 +463,7 @@ describe('digital signatures (DSC and drawn/typed via email link)', () => {
   ];
   const tokenOf = (id: string, role: 'cp' | 'institution') => getDb().agreements.find((a) => a.id === id)!.esign!.signers.find((s) => s.role === role)!.token;
 
-  it('signs in order (proprietor, then registrar), builds the signed PDF and sends it to Gate 2', async () => {
+  it('signs in order (proprietor, then registrar), builds the signed PDF and makes it Active', async () => {
     const id = await approvedAgreement();
     await api.agreements.sendForSignature(id, { signers: signers('electronic', 'dsc'), signEveryPage: true, stampPaper });
     expect((await api.agreements.get(id)).summary.displayStatus).toBe('out_for_signature');

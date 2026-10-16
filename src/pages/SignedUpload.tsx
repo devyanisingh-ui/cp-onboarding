@@ -81,7 +81,7 @@ export function SignedUpload() {
         stampFileName: st.fileName,
         checklist: checks,
       });
-      toast.success('Signed copy uploaded', 'Sent to Admin for Gate 2 verification.');
+      toast.success('Signed copy uploaded', d.agreement.source === 'legacy' ? 'Sent to Admin for Gate 2 verification.' : 'The agreement is now Active.');
       navigate(`/agreements/${d.agreement.id}`);
     } catch (err) {
       toast.error('Upload failed', errorMessage(err));
@@ -103,7 +103,7 @@ export function SignedUpload() {
       )}
       <form onSubmit={submit} noValidate className="space-y-5">
         <Card>
-          <CardHeader title="Stamp paper" description="Mandatory before Gate 2. Enter it exactly as printed." />
+          <CardHeader title="Stamp paper" description="Mandatory. Enter it exactly as printed." />
           <CardBody className="grid gap-4 sm:grid-cols-2">
             <Field label="Stamp paper number" required error={e.number?.message}>
               <Input {...form.register('number')} className="font-mono uppercase" />

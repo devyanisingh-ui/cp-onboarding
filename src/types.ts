@@ -105,6 +105,7 @@ export interface CpMaster {
 export type AgreementStatus =
   | 'draft'
   | 'pending_approval'
+  | 'pending_admin_approval'
   | 'approved_for_signing'
   | 'signed_copy_uploaded'
   | 'active'
@@ -114,7 +115,7 @@ export type AgreementStatus =
   | 'not_renewed'
   | 'expired_no_decision';
 
-export type DisplayStatus = AgreementStatus | 'expiring' | 'rejected' | 'out_for_signature';
+export type DisplayStatus = AgreementStatus | 'expiring' | 'rejected' | 'out_for_signature' | 'docs_requested';
 
 // ---------- Digital signatures (front-end simulation of an e-sign provider) ----------
 
@@ -182,11 +183,41 @@ export interface StampPaper {
   vendor: string;
 }
 
+/** 1: Legal review · 2: Gate 2 (legacy scans) · 3: Admin final approval. */
 export interface Rejection {
-  gate: 1 | 2;
+  gate: 1 | 2 | 3;
   byId: string;
   at: ISODateTime;
   comment: string;
+}
+
+/** One document Legal flagged, with its remark and the CP's replacement once uploaded. */
+export interface DocRequestItem {
+  documentId: string;
+  documentType: DocumentType;
+  remark: string;
+  replacementId?: string;
+}
+
+/**
+ * Legal → BD → CP → BD → Legal loop for corrected documents.
+ * with_bd: BD has to send the CP a link · sent_to_cp: waiting for the CP · cp_submitted: BD to
+ * check the new uploads · closed: BD verified them and resubmitted to Legal.
+ */
+export interface DocRequest {
+  id: string;
+  status: 'with_bd' | 'sent_to_cp' | 'cp_submitted' | 'closed';
+  note?: string;
+  items: DocRequestItem[];
+  requestedById: string;
+  requestedAt: ISODateTime;
+  token?: string;
+  cpEmail?: string;
+  sentAt?: ISODateTime;
+  cpNote?: string;
+  cpSubmittedAt?: ISODateTime;
+  closedAt?: ISODateTime;
+  closedById?: string;
 }
 
 export type FieldCheck = { status: 'verified' | 'mismatch'; remark?: string };
@@ -263,6 +294,8 @@ export interface Agreement {
   reviewFlag?: { reason: string; at: ISODateTime };
   /** Current (or last) digital-signature request; the paper upload path leaves it unset. */
   esign?: ESignRequest;
+  /** Legal asked for corrected CP documents; the CP re-uploads them from a link. */
+  docRequest?: DocRequest;
   closedAt?: ISODateTime;
 }
 
@@ -409,7 +442,10 @@ export type TaskType =
   | 'template_approval'
   | 'warning_override'
   | 'legacy_scan_upload'
-  | 'rate_review';
+  | 'rate_review'
+  | 'admin_approval'
+  | 'cp_doc_request'
+  | 'cp_doc_review';
 
 export interface Task {
   id: string;

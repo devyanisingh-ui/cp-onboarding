@@ -12,6 +12,7 @@ import * as config from './api/config';
 import * as reports from './api/reports';
 import * as legacy from './api/legacy';
 import * as esign from './api/esign';
+import * as docRequests from './api/docRequests';
 
 export const api = {
   auth: {
@@ -44,6 +45,10 @@ export const api = {
     saveFields: agreements.saveAgreementFields,
     submit: agreements.submitForApproval,
     decideGate1: agreements.decideGate1,
+    decideFinalApproval: agreements.decideFinalApproval,
+    requestDocChanges: docRequests.requestDocChanges,
+    sendDocRequestLink: docRequests.sendDocRequestLink,
+    acceptCpDocs: docRequests.acceptCpDocs,
     requestDeviation: agreements.requestDeviation,
     decideDeviation: agreements.decideDeviation,
     uploadSigned: agreements.uploadSignedCopy,
@@ -118,6 +123,12 @@ export const api = {
     sign: esign.signWithToken,
     decline: esign.declineWithToken,
   },
+  /** Public CP links for re-uploading documents Legal flagged (the link token is the credential). */
+  cpDocs: {
+    session: docRequests.getCpDocSession,
+    upload: docRequests.uploadCpDoc,
+    submit: docRequests.submitCpDocs,
+  },
 };
 
 export type Api = typeof api;
@@ -130,3 +141,4 @@ export type { LegacyRow, RowValidation } from './api/legacy';
 export type { RenderedDocument } from './api/agreements';
 export type { SigningSession, SignatureInput, SignerInput } from './api/esign';
 export { SIGN_METHOD_LABELS } from './api/esign';
+export type { CpDocSession } from './api/docRequests';

@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Prototype only: every seeded user signs in with their username and this shared password. */
 export const DEMO_PASSWORD = 'Apeejay@123';
@@ -227,7 +227,7 @@ export function buildSeed(): Database {
     ag({ id: 'AGR-ASU-2025-0002', cpId: 'CP-0002', status: 'active', created: -330, executionDate: d(-321), startDate: d(-320), endDate: d(45), activatedAt: ts(-318), submittedAt: ts(-328), stampPaper: stamp(2, 'Haryana', -324), signedOn: d(-322) }),
     ag({ id: 'AGR-ASU-2025-0003', cpId: 'CP-0003', status: 'active', created: -340, executionDate: d(-341), startDate: d(-340), endDate: d(25), activatedAt: ts(-337), submittedAt: ts(-339), stampPaper: stamp(3, 'Haryana', -343), signedOn: d(-342), renewal: { decision: 'do_not_renew', reason: 'Low conversions (fewer than 5 admissions this cycle)', decidedById: 'u-neha', decidedAt: ts(-4), confirmation: 'pending' } }),
     ag({ id: 'AGR-ASU-2026-0004', cpId: 'CP-0004', status: 'pending_approval', created: -12, nonStandard: true, executionDate: d(10), startDate: d(12), endDate: d(376), submittedAt: ts(-8) }),
-    ag({ id: 'AGR-ASU-2026-0005', cpId: 'CP-0005', status: 'approved_for_signing', created: -6, executionDate: d(8), startDate: d(10), endDate: d(374), submittedAt: ts(-1), locationId: 'loc-asu-city', executionPlace: 'New Delhi' }),
+    ag({ id: 'AGR-ASU-2026-0005', cpId: 'CP-0005', status: 'pending_admin_approval', created: -6, executionDate: d(8), startDate: d(10), endDate: d(374), submittedAt: ts(-1), locationId: 'loc-asu-city', executionPlace: 'New Delhi' }),
     ag({ id: 'AGR-ASU-2026-0006', cpId: 'CP-0006', status: 'draft', created: -4, executionDate: d(14), startDate: d(15), endDate: d(379) }),
     ag({ id: 'AGR-ASU-2026-0007', cpId: 'CP-0007', status: 'draft', created: -13, nonStandard: true, executionDate: d(7), startDate: d(9), endDate: d(373), submittedAt: ts(-8), lastRejection: { gate: 1, byId: 'u-priya', at: ts(-2), comment: 'Partnership deed date does not match the uploaded deed. Please correct and re-upload the PAN copy, which is illegible.' } }),
     ag({ id: 'AGR-ASU-2026-0008', cpId: 'CP-0010', status: 'approved_for_signing', created: -35, executionDate: d(2), startDate: d(3), endDate: d(367), submittedAt: ts(-30), templateVersionId: tplFor.individual }),
@@ -283,7 +283,7 @@ export function buildSeed(): Database {
   const task = (type: TaskType, title: string, assigneeId: string, created: number, due: string, extra: Partial<Task> = {}) =>
     tasks.push({ id: `T-${String(taskN++).padStart(4, '0')}`, type, title, assigneeId, createdAt: ts(created), dueDate: due, status: 'open', ...extra });
   task('gate1_approval', 'Legal approval: EduBridge Services Pvt. Ltd', 'u-priya', -8, addWorkingDays(d(-8), 2), { agreementId: 'AGR-ASU-2026-0004', cpId: 'CP-0004', institutionId: 'inst-asu', remindedAt: ts(-1) });
-  task('signing_upload', 'Get signed & upload: Scholars Gateway India Pvt. Ltd', 'u-neha', -1, addWorkingDays(d(-1), 10), { agreementId: 'AGR-ASU-2026-0005', cpId: 'CP-0005', institutionId: 'inst-asu' });
+  task('admin_approval', 'Final approval: Scholars Gateway India Pvt. Ltd', 'u-arjun', -1, addWorkingDays(d(-1), 2), { agreementId: 'AGR-ASU-2026-0005', cpId: 'CP-0005', institutionId: 'inst-asu' });
   task('deviation_review', 'Review deviation: NextStep Learning Pvt. Ltd', 'u-priya', -2, addWorkingDays(d(-2), 3), { agreementId: 'AGR-ASU-2026-0006', cpId: 'CP-0006', refId: 'DEV-0003', institutionId: 'inst-asu' });
   task('fix_rejected', 'Rework rejected draft: Sharma & Gill Associates', 'u-neha', -2, addWorkingDays(d(-2), 2), { agreementId: 'AGR-ASU-2026-0007', cpId: 'CP-0007', institutionId: 'inst-asu' });
   task('signing_upload', 'Get signed & upload: Ramesh Chandra Yadav', 'u-neha', -14, addWorkingDays(d(-14), 10), { agreementId: 'AGR-ASU-2026-0008', cpId: 'CP-0010', institutionId: 'inst-asu' });
@@ -306,6 +306,7 @@ export function buildSeed(): Database {
   for (const a of agreements) {
     ev(a.ownerId, 'create', 'agreement', a.id, a.source === 'legacy' ? 'Imported legacy agreement' : 'Created draft agreement', a.createdAt, undefined, { status: 'draft' });
     if (a.submittedAt) ev(a.ownerId, 'submit', 'agreement', a.id, a.nonStandard ? 'Sent to Legal for approval (Non-standard)' : 'Finalised on standard terms — no Legal approval needed; approved for signing', a.submittedAt, { status: 'draft' }, { status: a.nonStandard ? 'pending_approval' : 'approved_for_signing' });
+    if (a.status === 'pending_admin_approval') ev('u-priya', 'approve', 'agreement', a.id, 'Legal approved; sent to Admin for final approval', a.updatedAt, { status: 'pending_approval' }, { status: a.status });
     if (a.lastRejection) ev(a.lastRejection.byId, 'reject', 'agreement', a.id, `Rejected by Legal: ${a.lastRejection.comment}`, a.lastRejection.at, { status: 'pending_approval' }, { status: 'draft' });
     if (a.activatedAt) ev('u-arjun', 'approve', 'agreement', a.id, 'Gate 2 verified — agreement Active', a.activatedAt, { status: 'signed_copy_uploaded' }, { status: 'active' });
     if (a.closedAt) ev('system', 'status_change', 'agreement', a.id, `Status changed to ${a.status}`, a.closedAt, { status: 'active' }, { status: a.status });
@@ -342,7 +343,7 @@ export function buildSeed(): Database {
     emails: [],
     audit,
     routing: [
-      // Only non-standard agreements need approval (standard ones go straight to signing).
+      // Legal approver per institution (every agreement goes to Legal, then Admin).
       { id: 'RR-1', institutionId: 'inst-asu', condition: 'non_standard', approverId: 'u-priya', escalateToId: 'u-arjun' },
       { id: 'RR-2', institutionId: 'inst-aks', condition: 'non_standard', approverId: 'u-priya', escalateToId: 'u-arjun' },
     ],

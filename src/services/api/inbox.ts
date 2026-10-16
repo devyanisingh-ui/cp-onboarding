@@ -51,6 +51,7 @@ export interface Dashboard {
   expiring: AgreementSummary[];
   pendingApproval: AgreementSummary[];
   pendingGate2: AgreementSummary[];
+  pendingAdminApproval: AgreementSummary[];
   counts: { active: number; inProgress: number; nonStandard: number; cps: number };
   wizardDrafts: number;
 }
@@ -74,6 +75,7 @@ export async function dashboard(institutionId?: string): Promise<Dashboard> {
     expiring: sum(ags.filter((a) => a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60)).sort((a, b) => (a.endDate ?? '').localeCompare(b.endDate ?? '')),
     pendingApproval: sum(ags.filter((a) => a.status === 'pending_approval')),
     pendingGate2: sum(ags.filter((a) => a.status === 'signed_copy_uploaded')),
+    pendingAdminApproval: sum(ags.filter((a) => a.status === 'pending_admin_approval')),
     counts: {
       active: ags.filter((a) => a.status === 'active' || a.status === 'notice_period').length,
       inProgress: ags.filter((a) => IN_PROGRESS_STATUSES.includes(a.status)).length,

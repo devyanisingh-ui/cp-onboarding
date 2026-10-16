@@ -22,7 +22,7 @@ import { conflict, invalid, notFound } from '../errors';
 import { sendExternalEmail } from '../notificationChannels';
 import { nextId } from '../db';
 import { assertCan, audit, closeTasks, commit, ctx, delay, device, firstUserWithRole, getDb, inScope, notify, now } from './core';
-import { mergeContext } from './agreements';
+import { activateAgreement, mergeContext } from './agreements';
 import { storeDocument } from './documents';
 
 export const SIGN_METHOD_LABELS: Record<SignMethod, string> = {
@@ -332,24 +332,12 @@ async function completeSigning(a: Agreement, req: ESignRequest) {
   req.completedAt = now();
   req.documentHash = hash;
   req.signedDocumentId = document.id;
-  // Signed by both the CP and the institution's signatory: the agreement is Active straight away,
-  // with the same side effects as passing Gate 2 (agreements.decideGate2).
+  // Signed by both the CP and the institution's signatory: Legal and Admin approved it before
+  // signing, so it is Active straight away.
   a.signedOn = today();
-  a.status = 'active';
-  a.activatedAt = now();
   a.verification = undefined;
-  a.updatedAt = now();
-  document.verificationStatus = 'verified';
-  document.verifiedOn = now();
-  document.retentionUntil = shiftDays(a.endDate ?? today(), 365 * 8 + 2);
-  const cp = d.cps.find((c) => c.id === a.cpId);
-  if (cp) cp.reverificationRequired = false;
-  if (a.predecessorId) {
-    const p = d.agreements.find((x) => x.id === a.predecessorId);
-    if (p) p.successorId = a.id;
-  }
   closeTasks({ agreementId: a.id, types: ['signing_upload'] }, 'system');
+  activateAgreement(a, 'system');
   audit('system', 'esign_complete', 'agreement', a.id, `All parties signed — e-signed PDF filed (${document.fileName}); agreement Active`, { status: 'approved_for_signing' }, { status: a.status });
-  notify([a.ownerId], { title: 'Agreement active', body: `${a.id} (${cpName(a)}) is signed by both parties and is now Active.`, link: `/agreements/${a.id}` });
   commit();
 }

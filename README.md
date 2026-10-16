@@ -33,13 +33,15 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 
 | Role | Account | What they do |
 | --- | --- | --- |
-| BD Executive | Kavya Iyer | Creates CPs and agreements, requests deviations, uploads signed copies, renewals and terminations |
-| Legal | Priya Sharma | Decides deviations and approves non-standard agreements; approves template and rate card versions |
-| Admin | Arjun Mehta | Everything, including Gate 2 verification and confirming non-renewals and terminations |
+| BD Executive | Kavya Iyer | Creates CPs and agreements, requests deviations, gets corrected documents from the CP, sends for signature or uploads signed copies, renewals and terminations |
+| Legal | Priya Sharma | Reviews every agreement and its KYC documents (and can send documents back for the CP to correct); decides deviations; approves template and rate card versions |
+| Admin | Arjun Mehta | Final approval before signing, plus everything else: Gate 2 for legacy scans, confirming non-renewals and terminations |
 
-Standard agreements (published template and rate card, no deviations) need no approval: submitting
-sends them straight to signing. Agreements with Legal-approved deviations are non-standard and go
-to Legal for approval first. All people, partners and agreements are fictional. Data is stored in
+Every agreement goes **BD → Legal → Admin** before signing. If Legal finds a problem with a CP
+document, they send it back with a remark; the BD Executive sends the CP a personal upload link, the
+CP re-uploads the flagged documents, and the BD Executive checks them and resubmits to Legal. Once
+Admin gives final approval, the agreement is e-signed (or signed on paper and uploaded) and becomes
+Active. All people, partners and agreements are fictional. Data is stored in
 your browser; **Admin → System → Reset demo data** restores the seed.
 
 ## What's included
@@ -48,8 +50,8 @@ All 16 screens in PRD section 8: sign in, home, my tasks, CP list and detail, th
 agreement wizard, draft preview, deviation panel, agreement detail, signed copy upload, Gate 2
 verification, renewal, termination, reports, admin console and audit log. Also:
 
-- Lifecycle with Legal approval for non-standard agreements (Gate 1) and Admin verification of the
-  signed copy (Gate 2), mandatory comments on rejection, SLA due dates, reminders, escalations,
+- Lifecycle with Legal review (Gate 1), Admin final approval and Admin verification of legacy
+  scans (Gate 2), a CP document-correction loop via upload link, mandatory comments on rejection, SLA due dates, reminders, escalations,
   renewal tasks at 60 days and auto-expiry (a scheduler runs in the browser)
 - Role permissions and institution scope enforced in the mock API on every call
 - Masked PAN, GSTIN and bank account with logged "Reveal"; nothing sensitive in notifications

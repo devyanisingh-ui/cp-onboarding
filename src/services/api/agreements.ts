@@ -101,11 +101,18 @@ export function submissionBlockers(a: Agreement): string[] {
   if (gaps.length) blockers.push(`Missing KYC documents: ${gaps.join(', ')}`);
   if (d.deviations.some((x) => x.agreementId === a.id && x.status === 'pending')) blockers.push('A deviation is waiting for Legal review');
   if (a.override && a.override.status !== 'approved') blockers.push('The CP has a warning flag: an Admin override is required');
+  if (a.docRequest && a.docRequest.status !== 'closed') blockers.push('Documents Legal asked for are not yet corrected and checked');
   if (a.executionDate && a.executionDate < today() && a.source === 'app') blockers.push('Execution date is in the past');
   return blockers;
 }
 
 function actionsFor(user: User, a: Agreement): AgreementActions {
+  const acts = baseActions(user, a);
+  acts.requestDocChanges = acts.approveGate1;
+  return acts;
+}
+
+function baseActions(user: User, a: Agreement): AgreementActions {
   const d = getDb();
   const isOwnerSide = can(user, 'agreement.edit') && inScope(user, a.institutionId);
   const pendingDev = d.deviations.some((x) => x.agreementId === a.id && x.status === 'pending');
@@ -121,6 +128,10 @@ function actionsFor(user: User, a: Agreement): AgreementActions {
       a.ownerId !== user.id &&
       can(user, 'gate1.approve') &&
       (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId)),
+    requestDocChanges: false, // set below: same rule as approveGate1
+    finalApprove: a.status === 'pending_admin_approval' && can(user, 'final.approve') && a.ownerId !== user.id,
+    sendDocLink: a.status === 'draft' && !!a.docRequest && a.docRequest.status !== 'closed' && isOwnerSide && can(user, 'kyc.upload'),
+    reviewCpDocs: a.status === 'draft' && a.docRequest?.status === 'cp_submitted' && isOwnerSide,
     uploadSigned:
       (a.status === 'approved_for_signing' || (a.source === 'legacy' && a.status === 'signed_copy_uploaded' && !hasSignedCopy(a.id))) &&
       a.esign?.status !== 'in_progress' &&
@@ -433,27 +444,17 @@ export async function submitForApproval(id: string): Promise<{ sentToLegal: bool
   if (blockers.length) throw invalid(`Cannot submit yet: ${blockers.join('; ')}.`);
   const d = getDb();
   const before = { status: a.status };
-  if (!a.nonStandard) {
-    a.status = 'approved_for_signing';
-    a.submittedAt = now();
-    a.lastRejection = undefined;
-    touch(a);
-    closeTasks({ agreementId: id, types: ['fix_rejected'] }, user);
-    createTask({ type: 'signing_upload', title: `Get signed & upload: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: d.settings.sla.signingDays, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-    audit(user, 'submit', 'agreement', id, 'Finalised on standard terms — no Legal approval needed; approved for signing', before, { status: a.status });
-    commit();
-    return { sentToLegal: false };
-  }
-  const route = routeFor(a.institutionId, true);
+  // Every agreement goes BD → Legal → Admin before signing.
+  const route = routeFor(a.institutionId, a.nonStandard);
   const legalId = route?.approverId ?? firstUserWithRole('legal', a.institutionId)?.id;
   if (!legalId) throw conflict('No Legal approver is set for this institution. Ask Admin to add one under Routing.');
   a.status = 'pending_approval';
   a.submittedAt = now();
   a.lastRejection = undefined;
   touch(a);
-  closeTasks({ agreementId: id, types: ['fix_rejected'] }, user);
+  closeTasks({ agreementId: id, types: ['fix_rejected', 'cp_doc_request', 'cp_doc_review'] }, user);
   createTask({ type: 'gate1_approval', title: `Legal approval: ${cpName(a)}`, assigneeId: legalId, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-  audit(user, 'submit', 'agreement', id, 'Sent to Legal for approval (Non-standard)', before, { status: a.status });
+  audit(user, 'submit', 'agreement', id, `Sent to Legal for approval${a.nonStandard ? ' (Non-standard)' : ''}`, before, { status: a.status });
   commit();
   return { sentToLegal: true };
 }
@@ -469,11 +470,18 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
   const before = { status: a.status };
   closeTasks({ agreementId: id, types: ['gate1_approval'] }, user);
   if (decision === 'approve') {
-    a.status = 'approved_for_signing';
+    a.status = 'pending_admin_approval';
+    a.lastRejection = undefined;
     touch(a);
-    createTask({ type: 'signing_upload', title: `Get signed & upload: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: d.settings.sla.signingDays, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-    notify([a.ownerId], { title: 'Final agreement ready to print', body: `${cpName(a)} · ${a.id} was approved. Download the PDF and print two copies on stamp paper.`, link: `/agreements/${id}` });
-    audit(user, 'approve', 'agreement', id, `Legal approved${comment ? `: ${comment}` : ''}`, before, { status: a.status });
+    // Legal's review is the KYC check: the CP documents it has seen are now verified.
+    d.documents
+      .filter((x) => x.ownerType === 'cp' && x.ownerId === a.cpId && x.verificationStatus === 'pending')
+      .forEach((x) => Object.assign(x, { verificationStatus: 'verified', verifiedById: user.id, verifiedOn: now(), verificationMethod: 'manual' }));
+    const admin = firstUserWithRole('admin');
+    if (admin)
+      createTask({ type: 'admin_approval', title: `Final approval: ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    notify([a.ownerId], { title: 'Legal approved', body: `${cpName(a)} · ${a.id} was approved by Legal and is with Admin for final approval.`, link: `/agreements/${id}` });
+    audit(user, 'approve', 'agreement', id, `Legal approved${comment ? `: ${comment}` : ''}; sent to Admin for final approval`, before, { status: a.status });
   } else {
     const c = requireComment(comment);
     a.status = 'draft';
@@ -484,6 +492,58 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
     audit(user, 'reject', 'agreement', id, `Rejected by Legal: ${c}`, before, { status: a.status });
   }
   commit();
+}
+
+/** Admin's final approval: releases the agreement for signing, or returns it to the BD Executive. */
+export async function decideFinalApproval(id: string, decision: 'approve' | 'reject', comment?: string): Promise<void> {
+  await delay('write');
+  const user = ctx();
+  assertCan(user, 'final.approve', 'Only Admin gives the final approval.');
+  const a = load(id, user);
+  if (a.status !== 'pending_admin_approval') throw conflict('This agreement is not waiting for final approval.');
+  if (a.ownerId === user.id) throw forbidden('You cannot give final approval on an agreement you created.');
+  const d = getDb();
+  const before = { status: a.status };
+  closeTasks({ agreementId: id, types: ['admin_approval'] }, user);
+  if (decision === 'approve') {
+    a.status = 'approved_for_signing';
+    touch(a);
+    createTask({ type: 'signing_upload', title: `Get signed & upload: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: d.settings.sla.signingDays, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    notify([a.ownerId], { title: 'Ready for signing', body: `${cpName(a)} · ${a.id} has final approval. Send it for e-signature, or download, sign on paper and upload.`, link: `/agreements/${id}` });
+    audit(user, 'approve', 'agreement', id, `Admin final approval${comment ? `: ${comment}` : ''}; approved for signing`, before, { status: a.status });
+  } else {
+    const c = requireComment(comment);
+    a.status = 'draft';
+    a.lastRejection = { gate: 3, byId: user.id, at: now(), comment: c };
+    touch(a);
+    createTask({ type: 'fix_rejected', title: `Rework returned draft: ${cpName(a)}`, assigneeId: a.ownerId, slaDays: 2, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    notify([a.ownerId], { title: 'Returned by Admin', body: `${cpName(a)} · ${a.id} was returned by Admin with comments.`, link: `/agreements/${id}` });
+    audit(user, 'reject', 'agreement', id, `Returned by Admin: ${c}`, before, { status: a.status });
+  }
+  commit();
+}
+
+/**
+ * Makes an agreement Active, with everything that goes with it. Used when both parties have
+ * e-signed, when a paper-signed copy is uploaded, and when a legacy scan passes Gate 2.
+ */
+export function activateAgreement(a: Agreement, by: User | 'system') {
+  const d = getDb();
+  a.status = 'active';
+  a.activatedAt = now();
+  touch(a);
+  const verifiedById = by === 'system' ? undefined : by.id;
+  d.documents
+    .filter((x) => x.ownerType === 'agreement' && x.ownerId === a.id && (x.type === 'signed_copy' || x.type === 'stamp_paper_scan') && x.verificationStatus === 'pending')
+    .forEach((x) => Object.assign(x, { verificationStatus: 'verified', verifiedById, verifiedOn: now(), verificationMethod: 'manual', retentionUntil: shiftDays(a.endDate ?? today(), 365 * 8 + 2) }));
+  const cp = d.cps.find((c) => c.id === a.cpId);
+  // Clear the re-verification flag only if every CP document has actually been verified.
+  if (cp && !d.documents.some((x) => x.ownerType === 'cp' && x.ownerId === a.cpId && x.verificationStatus === 'pending')) cp.reverificationRequired = false;
+  if (a.predecessorId) {
+    const p = d.agreements.find((x) => x.id === a.predecessorId);
+    if (p) p.successorId = a.id;
+  }
+  notify([a.ownerId], { title: 'Agreement active', body: `${cpName(a)} · ${a.id} is signed and now Active.`, link: `/agreements/${a.id}` });
 }
 
 // ---------------- Deviations ----------------
@@ -626,10 +686,17 @@ export async function uploadSignedCopy(
   a.verification = undefined;
   touch(a);
   closeTasks({ agreementId: id, types: ['signing_upload', 'legacy_scan_upload'] }, user);
-  const admin = firstUserWithRole('admin');
-  if (admin)
-    createTask({ type: 'gate2_verification', title: `Gate 2 verification${a.source === 'legacy' ? ' (Legacy)' : ''}: ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate2Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-  audit(user, 'upload', 'agreement', id, `Uploaded signed copy and stamp paper ${input.stampPaper.number}${input.signedById ? `; signed by ${userName(input.signedById)}` : ''}`, before, { status: a.status, stampPaper: a.stampPaper });
+  const what = `Uploaded signed copy and stamp paper ${input.stampPaper.number}${input.signedById ? `; signed by ${userName(input.signedById)}` : ''}`;
+  if (a.source === 'app') {
+    // Legal and Admin approved it before signing, so the signed copy makes it Active.
+    activateAgreement(a, user);
+    audit(user, 'upload', 'agreement', id, `${what}; agreement Active`, before, { status: a.status, stampPaper: a.stampPaper });
+  } else {
+    const admin = firstUserWithRole('admin');
+    if (admin)
+      createTask({ type: 'gate2_verification', title: `Gate 2 verification (Legacy): ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate2Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
+    audit(user, 'upload', 'agreement', id, what, before, { status: a.status, stampPaper: a.stampPaper });
+  }
   commit();
 }
 
@@ -647,19 +714,9 @@ export async function decideGate2(id: string, decision: 'approve' | 'reject', ch
   if (decision === 'approve') {
     if (!entries.length || entries.some((e) => e.status !== 'verified')) throw invalid('Every field must be marked Verified before approving.');
     a.verification = checks;
-    a.status = 'active';
-    a.activatedAt = now();
-    touch(a);
     const stamp = { verificationStatus: 'verified' as const, verifiedById: user.id, verifiedOn: now(), verificationMethod: 'manual' as const };
-    agreementDocs.forEach((x) => Object.assign(x, stamp, { retentionUntil: shiftDays(a.endDate ?? today(), 365 * 8 + 2) }));
     d.documents.filter((x) => x.ownerType === 'cp' && x.ownerId === a.cpId && x.verificationStatus === 'pending').forEach((x) => Object.assign(x, stamp));
-    const cp = d.cps.find((c) => c.id === a.cpId)!;
-    cp.reverificationRequired = false;
-    if (a.predecessorId) {
-      const p = d.agreements.find((x) => x.id === a.predecessorId);
-      if (p) p.successorId = a.id;
-    }
-    notify([a.ownerId], { title: 'Agreement active', body: `${cpName(a)} · ${a.id} passed Gate 2 and is now Active.`, link: `/agreements/${id}` });
+    activateAgreement(a, user);
     audit(user, 'approve', 'agreement', id, `Gate 2 verified — agreement Active${a.source === 'legacy' ? ' (Legacy)' : ''}`, before, { status: a.status });
   } else {
     const c = requireComment(comment);

@@ -32,7 +32,8 @@ export type Capability =
   | 'termination.confirm'
   | 'override.decide'
   | 'legacy.import'
-  | 'scope.all';
+  | 'scope.all'
+  | 'final.approve';
 
 const ALL_CAPABILITIES: Capability[] = [
   'cp.create',
@@ -62,12 +63,13 @@ const ALL_CAPABILITIES: Capability[] = [
   'override.decide',
   'legacy.import',
   'scope.all',
+  'final.approve',
 ];
 
 /**
- * Three roles. BD Executives create CPs and agreements; Legal approves non-standard agreements
- * (deviations), templates and rate cards; Admin can do everything, including Gate 2 verification
- * and confirming non-renewals and terminations.
+ * Three roles, in approval order: BD Executives create CPs and agreements; Legal reviews every
+ * agreement and its documents (and approves deviations, templates and rate cards); Admin gives
+ * the final approval before signing and can do everything else.
  */
 const MATRIX: Record<Role, Capability[]> = {
   bd_exec: [

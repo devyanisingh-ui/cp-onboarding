@@ -67,7 +67,7 @@ export function validateLegacyRows(rows: LegacyRow[]): RowValidation[] {
       if (seen.has(key)) errors.push('Duplicate row for the same PAN and institution in this file');
       seen.add(key);
       const cp = d.cps.find((c) => c.pan === pan);
-      if (cp && d.agreements.some((a) => a.cpId === cp.id && a.institutionId === inst.id && ['active', 'notice_period', 'draft', 'pending_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status)))
+      if (cp && d.agreements.some((a) => a.cpId === cp.id && a.institutionId === inst.id && ['active', 'notice_period', 'draft', 'pending_approval', 'pending_admin_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status)))
         errors.push('This CP already has an active or in-progress agreement with this institution');
       if (cp && type && cp.type !== type) errors.push(`PAN belongs to an existing ${cp.type.replace('_', ' ')} CP`);
     }

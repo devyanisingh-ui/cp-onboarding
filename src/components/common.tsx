@@ -426,9 +426,12 @@ export function Timeline({ events, limit }: { events: AuditEvent[]; limit?: numb
 
 // ---------- Status stepper ----------
 
-export function StatusStepper({ status, nonStandard }: { status: AgreementStatus; nonStandard?: boolean }) {
-  // Standard agreements skip Legal approval, so that step is only shown for non-standard ones.
-  const steps = nonStandard ? STEPPER : STEPPER.filter((s) => s.status !== 'pending_approval');
+export function StatusStepper({ status }: { status: AgreementStatus; nonStandard?: boolean }) {
+  // Every agreement goes BD → Legal → Admin → signing. Legacy scans also show their Gate 2 step.
+  const steps =
+    status === 'signed_copy_uploaded'
+      ? [...STEPPER.slice(0, -1), { status: 'signed_copy_uploaded' as const, label: 'Gate 2' }, STEPPER[STEPPER.length - 1]!]
+      : STEPPER;
   const idx = steps.findIndex((s) => s.status === status);
   const past = idx === -1; // beyond Active (notice, terminated, expired…)
   const step = past ? steps.length : idx + 1;

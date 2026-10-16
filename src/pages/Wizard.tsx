@@ -162,7 +162,7 @@ function WizardInner({
       .then((v) => {
         if (v.limited) return;
         const live = v.agreements.filter((a) => a.status === 'active' || a.status === 'notice_period').map((a) => a.institutionId);
-        const prog = v.agreements.filter((a) => ['draft', 'pending_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status)).map((a) => a.institutionId);
+        const prog = v.agreements.filter((a) => ['draft', 'pending_approval', 'pending_admin_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status)).map((a) => a.institutionId);
         setState((s) => (s.panResult ? { ...s, panResult: { ...s.panResult, liveInstitutionIds: live, inProgressInstitutionIds: prog } } : s));
       })
       .catch(() => undefined);
@@ -317,9 +317,8 @@ function WizardInner({
   const submit = async () => {
     setBusy('submit');
     try {
-      const res = await api.agreements.submit(agreementId!);
-      if (res.sentToLegal) toast.success('Sent to Legal for approval', 'Legal has been notified.');
-      else toast.success('Approved for signing', 'Standard terms need no Legal approval. Print it on stamp paper and get it signed.');
+      await api.agreements.submit(agreementId!);
+      toast.success('Sent to Legal for review', 'After Legal, Admin gives the final approval before signing.');
       navigate(`/agreements/${agreementId}`);
     } catch (e) {
       toast.error('Cannot submit yet', errorMessage(e));
@@ -846,7 +845,7 @@ function StepReview({ agreementId, onEdit }: { agreementId: string; onEdit: (ste
         </Alert>
       ) : (
         <Alert tone="success" title="Ready to submit">
-          All merge fields are filled and KYC is uploaded. {a.nonStandard ? 'It has approved deviations, so submitting sends it to Legal for approval.' : 'It uses standard terms, so it goes straight to signing — no Legal approval needed.'}
+          All merge fields are filled and KYC is uploaded. Submitting sends it to Legal for review{a.nonStandard ? ' (with its approved deviations)' : ''}, then to Admin for final approval before signing.
         </Alert>
       )}
       <div className="grid gap-4 md:grid-cols-3">

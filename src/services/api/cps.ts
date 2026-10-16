@@ -144,7 +144,7 @@ export async function checkPan(pan: string): Promise<PanCheckResult> {
     cp: { ...toCpLimited(cp), type: cp.type, limited: !full },
     liveInstitutionIds: ags.filter((a) => a.status === 'active' || a.status === 'notice_period').map((a) => a.institutionId),
     inProgressInstitutionIds: ags
-      .filter((a) => ['draft', 'pending_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status))
+      .filter((a) => ['draft', 'pending_approval', 'pending_admin_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status))
       .map((a) => a.institutionId),
   };
 }

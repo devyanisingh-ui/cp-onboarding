@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { AlertTriangle, CheckCircle2, CircleDashed, Pencil, Scale, Send, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, CircleDashed, FileWarning, Pencil, Scale, Send, ThumbsDown, ThumbsUp } from 'lucide-react';
+import type { DocumentRecord } from '@/types';
 import { api } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { cn } from '@/lib/cn';
-import { Alert, Badge, Button, ButtonLink, Card, CardHeader, ErrorState, PageSkeleton, StatusBadge, Tabs } from '@/components/ui';
-import { ActionBar, AgreementHtml, CommentDialog, PageHeader } from '@/components/common';
+import { rejectionTitle } from '@/lib/status';
+import { Alert, Badge, Button, ButtonLink, Card, CardHeader, Checkbox, ErrorState, Field, Modal, PageSkeleton, StatusBadge, Tabs, Textarea } from '@/components/ui';
+import { ActionBar, AgreementHtml, CommentDialog, PageHeader, docLabel } from '@/components/common';
 import { DeviationCompare, DownloadMenu } from '@/components/agreement';
 
 export function DraftPreview() {
@@ -15,12 +17,13 @@ export function DraftPreview() {
   const detail = useApi(() => api.agreements.get(id), [id]);
   const doc = useApi(() => api.agreements.render(id), [id]);
   const [rejecting, setRejecting] = useState(false);
+  const [askingDocs, setAskingDocs] = useState(false);
   const [panel, setPanel] = useState<'fields' | 'deviations'>('fields');
   const [mobileView, setMobileView] = useState<'document' | 'details'>('document');
   useDocumentTitle(`Preview ${id}`);
 
-  const submit = useAction(() => api.agreements.submit(id), { success: (res) => (res.sentToLegal ? 'Sent to Legal for approval' : 'Approved for signing — no Legal approval needed'), onSuccess: () => navigate(`/agreements/${id}`) });
-  const approve = useAction(() => api.agreements.decideGate1(id, 'approve'), { success: 'Approved for signing', onSuccess: () => navigate(`/agreements/${id}`) });
+  const submit = useAction(() => api.agreements.submit(id), { success: 'Sent to Legal for review', onSuccess: () => navigate(`/agreements/${id}`) });
+  const approve = useAction(() => api.agreements.decideGate1(id, 'approve'), { success: 'Approved — sent to Admin for final approval', onSuccess: () => navigate(`/agreements/${id}`) });
   const reject = useAction((c: string) => api.agreements.decideGate1(id, 'reject', c), { success: 'Returned to the BD Executive', onSuccess: () => navigate('/tasks') });
 
   if ((detail.loading && !detail.data) || (doc.loading && !doc.data)) return <PageSkeleton />;
@@ -49,14 +52,19 @@ export function DraftPreview() {
                 <Button variant="danger" icon={<ThumbsDown className="size-4" />} onClick={() => setRejecting(true)}>
                   Reject
                 </Button>
+                {act.requestDocChanges && (
+                  <Button variant="secondary" icon={<FileWarning className="size-4" />} onClick={() => setAskingDocs(true)}>
+                    Request document changes
+                  </Button>
+                )}
                 <Button variant="success" icon={<ThumbsUp className="size-4" />} loading={approve.loading} onClick={() => void approve.run()}>
-                  Approve for signing
+                  Approve & send to Admin
                 </Button>
               </span>
             )}
             {act.submit && (
               <Button className="max-md:hidden" icon={<Send className="size-4" />} loading={submit.loading} disabled={r.blockers.length > 0} onClick={() => void submit.run()}>
-                {a.nonStandard ? 'Send to Legal for approval' : 'Finalise for signing'}
+                Send to Legal for review
               </Button>
             )}
             <DownloadMenu agreementId={a.id} html={r.html} />
@@ -76,13 +84,13 @@ export function DraftPreview() {
 
       <div className="mb-5 space-y-3">
         {a.lastRejection && a.status === 'draft' && (
-          <Alert tone="error" title={a.lastRejection.gate === 1 ? `Returned by Legal (${d.names[a.lastRejection.byId]})` : `Returned at Gate 2 by ${d.names[a.lastRejection.byId]}`}>
+          <Alert tone="error" title={`${rejectionTitle(a.lastRejection.gate)} (${d.names[a.lastRejection.byId]})`}>
             {a.lastRejection.comment}
           </Alert>
         )}
         {act.approveGate1 && (
           <Alert tone="info" title="Legal review">
-            Check the merged terms, the KYC entries and any deviations{a.nonStandard ? ' (shown side by side)' : ''}. Approving releases the final PDF for printing on stamp paper.
+            Check the merged terms, the CP’s KYC documents and any deviations{a.nonStandard ? ' (shown side by side)' : ''}. If a document is wrong, use Request document changes: the BD Executive gets the CP to re-upload it. Approving sends the agreement to Admin for final approval.
           </Alert>
         )}
         {a.status === 'draft' && r.blockers.length > 0 && (
@@ -160,7 +168,7 @@ export function DraftPreview() {
         <ActionBar className="md:hidden">
           {act.submit && (
             <Button icon={<Send className="size-4" />} loading={submit.loading} disabled={r.blockers.length > 0} onClick={() => void submit.run()}>
-              {a.nonStandard ? 'Send to Legal for approval' : 'Finalise for signing'}
+              Send to Legal for review
             </Button>
           )}
           {act.approveGate1 && (
@@ -168,8 +176,13 @@ export function DraftPreview() {
               <Button variant="danger" icon={<ThumbsDown className="size-4" />} onClick={() => setRejecting(true)}>
                 Reject
               </Button>
+              {act.requestDocChanges && (
+                <Button variant="secondary" icon={<FileWarning className="size-4" />} onClick={() => setAskingDocs(true)}>
+                  Documents
+                </Button>
+              )}
               <Button variant="success" icon={<ThumbsUp className="size-4" />} loading={approve.loading} onClick={() => void approve.run()}>
-                Approve for signing
+                Approve
               </Button>
             </>
           )}
@@ -184,6 +197,60 @@ export function DraftPreview() {
         confirmLabel="Reject and return"
         onConfirm={async (c) => (await reject.run(c)).ok}
       />
+      <DocChangesDialog open={askingDocs} onClose={() => setAskingDocs(false)} agreementId={a.id} docs={d.cpDocuments} onDone={() => navigate('/tasks')} />
     </div>
+  );
+}
+
+/** Legal flags the CP documents that are wrong, with a remark on each, and sends them back. */
+function DocChangesDialog({ open, onClose, agreementId, docs, onDone }: { open: boolean; onClose: () => void; agreementId: string; docs: DocumentRecord[]; onDone: () => void }) {
+  // Newest upload of each document type (the list comes newest first).
+  const latest = docs.filter((x, i) => docs.findIndex((y) => y.type === x.type) === i);
+  const [remarks, setRemarks] = useState<Record<string, string>>({});
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [note, setNote] = useState('');
+  const chosen = latest.filter((x) => picked[x.id]);
+  const send = useAction(
+    () => api.agreements.requestDocChanges(agreementId, chosen.map((x) => ({ documentId: x.id, remark: remarks[x.id] ?? '' })), note),
+    { success: 'Sent back to the BD Executive', onSuccess: () => (onClose(), onDone()) },
+  );
+  return (
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Request document changes"
+      description="Choose the documents the CP must correct and say what is wrong with each. The BD Executive sends the CP an upload link, checks the new files and sends the agreement back to you."
+      size="lg"
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={send.loading} disabled={!chosen.length || chosen.some((x) => !remarks[x.id]?.trim())} onClick={() => void send.run()}>
+            Send to BD Executive
+          </Button>
+        </>
+      }
+    >
+      {latest.length ? (
+        <ul className="space-y-4">
+          {latest.map((x) => (
+            <li key={x.id} className="rounded-lg border border-line p-3">
+              <Checkbox label={docLabel(x.type)} description={x.fileName} checked={!!picked[x.id]} onChange={(e) => setPicked((p) => ({ ...p, [x.id]: e.target.checked }))} />
+              {picked[x.id] && (
+                <Field label="What needs to change" required className="mt-3">
+                  <Textarea rows={2} value={remarks[x.id] ?? ''} placeholder="e.g. The PAN copy is blurred — upload a clear scan of the original." onChange={(e) => setRemarks((r) => ({ ...r, [x.id]: e.target.value }))} />
+                </Field>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-muted">This CP has no uploaded documents.</p>
+      )}
+      <Field label="Note for the BD Executive" optional className="mt-4">
+        <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+      </Field>
+    </Modal>
   );
 }

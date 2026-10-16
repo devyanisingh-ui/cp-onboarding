@@ -19,6 +19,7 @@ import { AgreementsList } from '@/pages/AgreementsList';
 import { SignedUpload } from '@/pages/SignedUpload';
 import { SendForSignature } from '@/pages/SendForSignature';
 import { Sign } from '@/pages/Sign';
+import { CpDocuments } from '@/pages/CpDocuments';
 import { Verification } from '@/pages/Verification';
 import { Renewal } from '@/pages/Renewal';
 import { Termination } from '@/pages/Termination';
@@ -69,6 +70,7 @@ export function AppRoutes() {
       <Route path="/signin" element={<SignInRoute />} />
       {/* Signing links from email: no app account needed. */}
       <Route path="/sign/:token" element={<Sign />} />
+      <Route path="/cp-documents/:token" element={<CpDocuments />} />
       <Route
         element={
           <RequireAuth>
