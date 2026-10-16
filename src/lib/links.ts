@@ -5,7 +5,7 @@ export function taskLink(t: Pick<Task, 'type' | 'agreementId' | 'refId'>): strin
   const a = t.agreementId;
   switch (t.type) {
     case 'gate1_approval':
-      return `/agreements/${a}/preview`;
+      return `/agreements/${a}/legal-review`;
     case 'deviation_review':
       return `/agreements/${a}/deviation`;
     case 'fix_rejected':

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, ShieldCheck, ThumbsDown, X } from 'lucide-react';
-import type { FieldCheck } from '@/types';
+import { Check, FileWarning, ShieldCheck, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import type { DocumentType, FieldCheck } from '@/types';
 import { api } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
@@ -9,10 +9,17 @@ import { formatDate } from '@/lib/dates';
 import { formatInr } from '@/lib/format';
 import { maskAadhaar } from '@/lib/mask';
 import { cn } from '@/lib/cn';
-import { Alert, Button, Card, ErrorState, Input, PageSkeleton, Tabs } from '@/components/ui';
+import { Alert, Button, Card, ErrorState, Field, Input, Modal, PageSkeleton, Tabs, Textarea } from '@/components/ui';
 import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, PageHeader, docLabel } from '@/components/common';
 
-export function Verification() {
+/**
+ * Checklist review of a signed agreement against its documents.
+ *  - gate2: Admin verifies a legacy scan (approve makes it Active).
+ *  - legal: Legal reviews a signed agreement. A Mismatch on a CP document (PAN, Aadhaar, cheque,
+ *    GST) can be sent back for the CP to correct; approve sends it to Admin for final approval.
+ */
+export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
+  const legal = mode === 'legal';
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const detail = useApi(() => api.agreements.get(id), [id]);
@@ -20,18 +27,31 @@ export function Verification() {
   const [checks, setChecks] = useState<Record<string, FieldCheck>>({});
   const [docTab, setDocTab] = useState('');
   const [rejecting, setRejecting] = useState(false);
+  const [askingDocs, setAskingDocs] = useState(false);
+  const [note, setNote] = useState('');
   // Phones: document and checklist are tabs instead of a long stacked page.
   const [mobileView, setMobileView] = useState<'checks' | 'doc'>('checks');
-  useDocumentTitle(`Gate 2 ${id}`);
-  const approve = useAction(() => api.agreements.decideGate2(id, 'approve', checks), { success: 'Verified — agreement is now Active', onSuccess: () => navigate(`/agreements/${id}`) });
-  const reject = useAction((c: string) => api.agreements.decideGate2(id, 'reject', checks, c), { success: 'Returned to the BD Executive', onSuccess: () => navigate('/tasks') });
+  useDocumentTitle(`${legal ? 'Legal review' : 'Gate 2'} ${id}`);
+  const remarksOf = (c: string) => {
+    const notes = Object.entries(checks).filter(([, v]) => v.remark?.trim()).map(([k, v]) => `${fields.find((f) => f.key === k)?.label ?? k}: ${v.remark!.trim()}`);
+    return notes.length ? `${c}\n\nChecklist remarks — ${notes.join('; ')}` : c;
+  };
+  const approve = useAction(() => (legal ? api.agreements.decideGate1(id, 'approve') : api.agreements.decideGate2(id, 'approve', checks)), {
+    success: legal ? 'Approved — sent to Admin for final approval' : 'Verified — agreement is now Active',
+    onSuccess: () => navigate(`/agreements/${id}`),
+  });
+  const askDocs = useAction((items: { documentId: string; remark: string }[], n: string) => api.agreements.requestDocChanges(id, items, n), {
+    success: 'Sent back to the BD Executive to get corrected documents from the CP',
+    onSuccess: () => navigate('/tasks'),
+  });
+  const reject = useAction((c: string) => (legal ? api.agreements.decideGate1(id, 'reject', remarksOf(c)) : api.agreements.decideGate2(id, 'reject', checks, c)), { success: 'Returned to the BD Executive', onSuccess: () => navigate('/tasks') });
 
   const d = detail.data;
   const fields = useMemo(() => {
     if (!d) return [];
     const a = d.agreement;
     const sp = a.stampPaper;
-    const rows: { key: string; label: string; value: ReactNode }[] = [
+    const rows: { key: string; label: string; value: ReactNode; doc?: DocumentType }[] = [
       a.esign?.status === 'completed'
         ? { key: 'pages_signed', label: 'E-signatures complete (see the signature certificate page)', value: a.esign.signers.map((s) => `${s.name}: ${s.signature?.kind === 'dsc' ? 'DSC' : s.signature?.kind}`).join(' · ') }
         : { key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' },
@@ -41,31 +61,44 @@ export function Verification() {
       { key: 'stamp_value', label: 'Stamp value and state', value: sp ? `${formatInr(sp.valueInr)} · ${sp.state}` : '—' },
       { key: 'stamp_date', label: a.esign?.status === 'completed' ? 'E-stamp issue date' : 'Stamp purchase date', value: formatDate(sp?.purchaseDate) },
       { key: 'dates', label: 'Commencement and expiry', value: `${formatDate(a.startDate)} – ${formatDate(a.endDate)}` },
-      { key: 'pan', label: 'PAN matches PAN copy', value: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} /> },
-      { key: 'aadhaar', label: 'Aadhaar copy is masked; last 4 match', value: maskAadhaar(d.cp.aadhaarLast4) },
-      { key: 'bank', label: 'Bank details match cancelled cheque', value: <MaskedValue masked={`${d.cp.bank.accountMasked} · ${d.cp.bank.ifsc}`} label="account number" reveal={async () => `${await api.cps.reveal(d.cp.id, 'account')} · ${d.cp.bank.ifsc}`} /> },
+      { key: 'pan', label: 'PAN matches PAN copy', value: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} />, doc: 'pan' },
+      { key: 'aadhaar', label: 'Aadhaar copy is masked; last 4 match', value: maskAadhaar(d.cp.aadhaarLast4), doc: 'aadhaar_masked' },
+      { key: 'bank', label: 'Bank details match cancelled cheque', value: <MaskedValue masked={`${d.cp.bank.accountMasked} · ${d.cp.bank.ifsc}`} label="account number" reveal={async () => `${await api.cps.reveal(d.cp.id, 'account')} · ${d.cp.bank.ifsc}`} />, doc: 'cancelled_cheque' },
     ];
+    if (d.cp.gstRegistered) rows.push({ key: 'gst', label: 'GSTIN matches GST certificate', value: d.cp.gstin ?? '—', doc: 'gst_certificate' });
     return rows;
   }, [d]);
 
   if ((detail.loading && !d) || (doc.loading && !doc.data)) return <PageSkeleton />;
   if (detail.error || doc.error) return <ErrorState error={detail.error ?? doc.error} onRetry={() => (detail.reload(), doc.reload())} />;
-  if (!d!.actions.verifyGate2) return <ErrorState title="Not ready for Gate 2" error={new Error('This agreement is not waiting for Gate 2 verification, or your role cannot verify it.')} />;
-  const docs = [...d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan'), ...d!.cpDocuments];
+  if (legal ? !d!.actions.approveGate1 : !d!.actions.verifyGate2)
+    return legal ? (
+      <ErrorState title="Not waiting for Legal review" error={new Error('This agreement is not waiting for your Legal review, or it was routed to someone else.')} />
+    ) : (
+      <ErrorState title="Not ready for Gate 2" error={new Error('This agreement is not waiting for Gate 2 verification, or your role cannot verify it.')} />
+    );
+  // Newest upload of each type (lists come newest first), so replaced files don't show twice.
+  const newest = <T extends { type: string; verificationStatus: string }>(list: T[]) => list.filter((x, i) => x.verificationStatus !== 'mismatch' && list.findIndex((y) => y.type === x.type && y.verificationStatus !== 'mismatch') === i);
+  const docs = [...newest(d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan')), ...(legal ? newest(d!.cpDocuments) : d!.cpDocuments)];
   const current = docs.find((x) => x.id === docTab) ?? docs[0];
   const set = (key: string, v: Partial<FieldCheck>) => setChecks((c) => ({ ...c, [key]: { ...(c[key] ?? { status: 'verified' }), ...v } as FieldCheck }));
   const done = fields.filter((f) => checks[f.key]?.status === 'verified').length;
-  const mismatches = fields.filter((f) => checks[f.key]?.status === 'mismatch').length;
+  const mismatched = fields.filter((f) => checks[f.key]?.status === 'mismatch');
+  const mismatches = mismatched.length;
+  // Legal: document mismatches can go back to the CP; anything else in the agreement means Reject.
+  const docMismatches = mismatched.filter((f) => f.doc && d!.cpDocuments.some((x) => x.type === f.doc));
+  const canAskDocs = legal && docMismatches.length > 0 && docMismatches.length === mismatches;
+
 
   return (
     <div>
       <PageHeader
-        title="Gate 2 verification"
-        subtitle={`${d!.cp.legalName} · ${d!.institution.shortCode}${d!.agreement.source === 'legacy' ? ' · Legacy import' : ''}`}
+        title={legal ? 'Legal review' : 'Gate 2 verification'}
+        subtitle={`${d!.cp.legalName} · ${d!.institution.shortCode}${d!.agreement.source === 'legacy' ? ' · Legacy import' : ''}${legal && d!.agreement.nonStandard ? ' · Non-standard' : ''}`}
       />
       <div className="mb-4 lg:hidden">
         <Tabs
-          label="Gate 2 sections"
+          label={legal ? 'Legal review sections' : 'Gate 2 sections'}
           active={mobileView}
           onChange={setMobileView}
           tabs={[
@@ -102,7 +135,10 @@ export function Verification() {
         <div className="min-w-0 space-y-4">
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
           <Alert tone="info">
-            Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments. {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.
+            {legal
+              ? 'Mark each item against the documents. Approve needs every item Verified and sends the agreement to Admin. If only CP documents (PAN, Aadhaar, cheque, GST) don’t match, request document changes and the CP re-uploads them; any other mismatch means you reject with comments.'
+              : 'Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments.'}{' '}
+            {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.
           </Alert>
           <Card>
             <ul className="divide-y divide-line">
@@ -112,7 +148,10 @@ export function Verification() {
                   <li key={f.key} className={cn('px-5 py-3.5', c?.status === 'mismatch' && 'bg-danger-50/50')}>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs text-muted">{f.label}</p>
+                        <p className="text-xs text-muted">
+                          {f.label}
+                          {legal && f.doc && c?.status === 'mismatch' && <span className="ml-1.5 font-medium text-danger-700">· CP will re-upload</span>}
+                        </p>
                         <p className="mt-0.5 text-sm font-medium text-ink">{f.value}</p>
                       </div>
                       <div className="flex rounded-md border border-line-strong p-0.5" role="group" aria-label={`${f.label} result`}>
@@ -147,20 +186,71 @@ export function Verification() {
             <Button variant="danger" icon={<ThumbsDown className="size-4" />} onClick={() => setRejecting(true)}>
               Reject
             </Button>
-            <Button variant="success" icon={<ShieldCheck className="size-4" />} disabled={done !== fields.length} loading={approve.loading} onClick={() => void approve.run()}>
-              Approve — make Active
+            {legal && (
+              <Button
+                variant="secondary"
+                icon={<FileWarning className="size-4" />}
+                disabled={!canAskDocs || docMismatches.some((f) => !checks[f.key]?.remark?.trim())}
+                title={!canAskDocs ? 'Mark Mismatch on the CP documents that need correcting (and nothing else)' : 'Add a remark on each mismatched document'}
+                onClick={() => setAskingDocs(true)}
+              >
+                Request document changes{docMismatches.length ? ` (${docMismatches.length})` : ''}
+              </Button>
+            )}
+            <Button variant="success" icon={legal ? <ThumbsUp className="size-4" /> : <ShieldCheck className="size-4" />} disabled={done !== fields.length} loading={approve.loading} onClick={() => void approve.run()}>
+              {legal ? 'Approve & send to Admin' : 'Approve — make Active'}
             </Button>
           </ActionBar>
+          {legal && mismatches > 0 && !canAskDocs && (
+            <p className="text-sm text-muted">Something other than a CP document doesn’t match, so the agreement needs to be rejected and signed again.</p>
+          )}
         </div>
       </div>
       <CommentDialog
         open={rejecting}
         onClose={() => setRejecting(false)}
-        title="Reject at Gate 2"
-        description="The BD Executive must fix and re-upload. Your field remarks are saved with the comment."
+        title={legal ? 'Reject and return to BD Executive' : 'Reject at Gate 2'}
+        description={legal ? 'The agreement goes back to Draft and must be signed again. Your checklist remarks are saved with the comment.' : 'The BD Executive must fix and re-upload. Your field remarks are saved with the comment.'}
         confirmLabel="Reject and return"
         onConfirm={async (c) => (await reject.run(c)).ok}
       />
+      {legal && (
+        <Modal
+          open={askingDocs}
+          onClose={() => setAskingDocs(false)}
+          title="Request document changes"
+          description="The BD Executive sends the CP a link to re-upload these documents, checks the new files and sends the agreement back to you. The signed agreement does not need signing again."
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setAskingDocs(false)}>
+                Cancel
+              </Button>
+              <Button
+                loading={askDocs.loading}
+                icon={<FileWarning className="size-4" />}
+                onClick={async () => {
+                  const items = docMismatches.map((f) => ({ documentId: d!.cpDocuments.find((x) => x.type === f.doc)!.id, remark: checks[f.key]!.remark!.trim() }));
+                  if ((await askDocs.run(items, note)).ok) setAskingDocs(false);
+                }}
+              >
+                Send to BD Executive
+              </Button>
+            </>
+          }
+        >
+          <ul className="space-y-2">
+            {docMismatches.map((f) => (
+              <li key={f.key} className="rounded-lg border border-line px-3 py-2.5">
+                <p className="text-sm font-semibold">{docLabel(f.doc!)}</p>
+                <p className="text-sm text-danger-700">{checks[f.key]?.remark}</p>
+              </li>
+            ))}
+          </ul>
+          <Field label="Note for the BD Executive" optional className="mt-4">
+            <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+          </Field>
+        </Modal>
+      )}
     </div>
   );
 }

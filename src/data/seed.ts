@@ -336,11 +336,11 @@ export function buildSeed(): Database {
     documents: docs,
     tasks,
     notifications: [
-      { id: 'N-0001', userId: 'u-priya', title: 'Legal approval overdue', body: 'EduBridge Services Pvt. Ltd · AGR-ASU-2026-0004 is past its SLA.', link: '/agreements/AGR-ASU-2026-0004/preview', createdAt: ts(-1, 9), read: false },
+      { id: 'N-0001', userId: 'u-priya', title: 'Legal approval overdue', body: 'EduBridge Services Pvt. Ltd · AGR-ASU-2026-0004 is past its SLA.', link: '/agreements/AGR-ASU-2026-0004/legal-review', createdAt: ts(-1, 9), read: false },
       { id: 'N-0002', userId: 'u-neha', title: 'Draft returned by Legal', body: 'Sharma & Gill Associates · AGR-ASU-2026-0007 was returned by Legal with comments.', link: '/agreements/AGR-ASU-2026-0007', createdAt: ts(-2), read: false },
       { id: 'N-0003', userId: 'u-neha', title: 'Renewal decision due', body: 'Pathway Admissions Hub · AGR-ASU-2025-0002 expires in 45 days.', link: '/agreements/AGR-ASU-2025-0002/renewal', createdAt: ts(-15), read: true },
       { id: 'N-0004', userId: 'u-priya', title: 'Deviation requested', body: 'NextStep Learning Pvt. Ltd · AGR-ASU-2026-0006 needs your review.', link: '/agreements/AGR-ASU-2026-0006/deviation', createdAt: ts(-2), read: false },
-      { id: 'N-0005', userId: 'u-priya', title: 'Signed agreement for review', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is signed and waiting for Legal review.', link: '/agreements/AGR-ASU-2026-0009/preview', createdAt: ts(-4), read: false },
+      { id: 'N-0005', userId: 'u-priya', title: 'Signed agreement for review', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is signed and waiting for Legal review.', link: '/agreements/AGR-ASU-2026-0009/legal-review', createdAt: ts(-4), read: false },
       { id: 'N-0006', userId: 'u-arjun', title: 'Rate card awaiting Legal', body: 'ASU rate card v3 was sent to Legal for approval.', link: '/admin/rate-cards', createdAt: ts(-2), read: true },
     ],
     emails: [],

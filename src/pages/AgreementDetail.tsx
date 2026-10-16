@@ -82,7 +82,7 @@ export function AgreementDetail() {
               </ButtonLink>
             )}
             {act.approveGate1 && (
-              <ButtonLink to={`/agreements/${a.id}/preview`} icon={<ShieldCheck className="size-4" />}>
+              <ButtonLink to={`/agreements/${a.id}/legal-review`} icon={<ShieldCheck className="size-4" />}>
                 Legal review
               </ButtonLink>
             )}

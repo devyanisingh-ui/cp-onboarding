@@ -22,6 +22,7 @@ const AGREEMENT_PAGES: Record<string, string> = {
   upload: 'Upload signed copy',
   esign: 'Send for e-signature',
   verify: 'Gate 2 verification',
+  'legal-review': 'Legal review',
   renewal: 'Renewal',
   terminate: 'Termination',
 };

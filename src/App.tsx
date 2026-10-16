@@ -91,6 +91,7 @@ export function AppRoutes() {
         <Route path="agreements/:id/upload" element={<SignedUpload />} />
         <Route path="agreements/:id/esign" element={<RequireCap cap="signed.upload"><SendForSignature /></RequireCap>} />
         <Route path="agreements/:id/verify" element={<RequireCap cap="gate2.verify"><Verification /></RequireCap>} />
+        <Route path="agreements/:id/legal-review" element={<RequireCap cap="gate1.approve"><Verification mode="legal" /></RequireCap>} />
         <Route path="agreements/:id/renewal" element={<Renewal />} />
         <Route path="agreements/:id/terminate" element={<Termination />} />
         <Route path="reports" element={<RequireCap cap="reports.view"><Reports /></RequireCap>} />
