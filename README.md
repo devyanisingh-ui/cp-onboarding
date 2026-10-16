@@ -35,13 +35,15 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 | --- | --- | --- |
 | BD Executive | Kavya Iyer | Creates CPs and agreements, requests deviations, gets corrected documents from the CP, sends for signature or uploads signed copies, renewals and terminations |
 | Legal | Priya Sharma | Reviews every agreement and its KYC documents (and can send documents back for the CP to correct); decides deviations; approves template and rate card versions |
-| Admin | Arjun Mehta | Final approval before signing, plus everything else: Gate 2 for legacy scans, confirming non-renewals and terminations |
+| Admin | Arjun Mehta | Final approval of signed agreements, plus everything else: Gate 2 for legacy scans, confirming non-renewals and terminations |
 
-Every agreement goes **BD → Legal → Admin** before signing. If Legal finds a problem with a CP
-document, they send it back with a remark; the BD Executive sends the CP a personal upload link, the
-CP re-uploads the flagged documents, and the BD Executive checks them and resubmits to Legal. Once
-Admin gives final approval, the agreement is e-signed (or signed on paper and uploaded) and becomes
-Active. All people, partners and agreements are fictional. Data is stored in
+Every agreement goes **BD → signing → Legal → Admin**. The BD Executive fills in the agreement and
+KYC, then gets it signed: by e-signature, or on paper and uploaded. The signed agreement goes to
+Legal for review. If Legal finds a problem with a CP document, they send it back with a remark; the
+BD Executive sends the CP a personal upload link, the CP re-uploads the flagged documents, and the BD
+Executive checks them and sends the agreement back to Legal (no re-signing needed). Legal then
+approves it, and Admin's final approval makes it Active. If Legal or Admin rejects it, it goes back
+to Draft and must be signed again. All people, partners and agreements are fictional. Data is stored in
 your browser; **Admin → System → Reset demo data** restores the seed.
 
 ## What's included

@@ -20,7 +20,7 @@ export function AgreementDetail() {
   useDocumentTitle(id);
   const decideOverride = useAction((d: 'approve' | 'reject', r: string) => api.agreements.decideOverride(id, d, r), { success: 'Override decision recorded' });
   const clearFlag = useAction(() => api.agreements.clearReviewFlag(id), { success: 'Marked as reviewed' });
-  const finalApprove = useAction(() => api.agreements.decideFinalApproval(id, 'approve'), { success: 'Final approval given — ready for signing' });
+  const finalApprove = useAction(() => api.agreements.decideFinalApproval(id, 'approve'), { success: 'Final approval given — agreement Active' });
   const finalReturn = useAction((c: string) => api.agreements.decideFinalApproval(id, 'reject', c), { success: 'Returned to the BD Executive' });
 
   if (loading && !data) return <PageSkeleton />;
@@ -112,14 +112,14 @@ export function AgreementDetail() {
 
       <div className="mb-5 space-y-3">
         {d.cp.warning && <WarningBanner reason={d.cp.warning.reason} />}
-        {a.lastRejection && (
+        {a.lastRejection && !(a.docRequest && a.docRequest.status !== 'closed') && (
           <Alert tone="error" title={`${rejectionTitle(a.lastRejection.gate)} (${d.names[a.lastRejection.byId]}) · ${formatDateTime(a.lastRejection.at)}`}>
             {a.lastRejection.comment}
           </Alert>
         )}
         {act.finalApprove && (
           <Alert tone="info" title="Waiting for your final approval">
-            Legal has approved this agreement and its documents. Check the details and give final approval to release it for signing, or return it to the BD Executive with a comment.
+            This agreement is signed and Legal has approved it and its documents. Give final approval to make it Active, or return it to the BD Executive with a comment.
           </Alert>
         )}
         {a.docRequest && a.docRequest.status !== 'closed' && (
@@ -187,7 +187,7 @@ export function AgreementDetail() {
       {!terminal && (
         <Card className="mb-5">
           <CardBody>
-            <StatusStepper status={a.status} nonStandard={a.nonStandard} />
+            <StatusStepper status={a.status} nonStandard={a.nonStandard} legacy={a.source === 'legacy'} />
           </CardBody>
         </Card>
       )}
@@ -296,7 +296,7 @@ export function AgreementDetail() {
         open={returning}
         onClose={() => setReturning(false)}
         title="Return to BD Executive"
-        description="The agreement goes back to the BD Executive as a draft with your comment. A comment is mandatory."
+        description="The agreement goes back to the BD Executive as a draft with your comment, and must be signed again. A comment is mandatory."
         confirmLabel="Return"
         onConfirm={async (c) => (await finalReturn.run(c)).ok}
       />
@@ -400,7 +400,7 @@ function ESignCard({ d, onChange }: { d: AgreementDetailData; onChange: () => vo
   );
 }
 
-/** Approved for signing: the two ways to get it signed, so the paper route isn't missed. */
+/** Ready for signing: the two ways to get it signed, so the paper route isn't missed. */
 function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreementId: string; signatory: string; cpName: string; canEsign: boolean }) {
   const step = (n: number, text: string) => (
     <li className="flex gap-3">
@@ -410,7 +410,7 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
   );
   return (
     <Card>
-      <CardHeader title="How will this be signed?" description="Choose either route. Both end with the agreement Active." />
+      <CardHeader title="How will this be signed?" description="Choose either route. Once signed, it goes to Legal for review, then to Admin for final approval." />
       <CardBody className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
           <h3 className="flex items-center gap-2 font-semibold">
@@ -419,7 +419,7 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
           <ol className="space-y-2.5 text-sm text-ink-soft">
             {step(1, 'Download the agreement and print two copies on stamp paper.')}
             {step(2, `Get every page signed by ${cpName} and by ${signatory}.`)}
-            {step(3, 'Upload the scanned signed copy and the stamp paper. The agreement then becomes Active.')}
+            {step(3, 'Upload the scanned signed copy and the stamp paper. It then goes to Legal for review.')}
           </ol>
           <div className="flex flex-wrap gap-2">
             <DownloadMenu agreementId={agreementId} />
@@ -436,7 +436,7 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
             <ol className="space-y-2.5 text-sm text-ink-soft">
               {step(1, `${cpName} gets an email link and signs first.`)}
               {step(2, `${signatory} gets their link next.`)}
-              {step(3, 'Once both have signed, the signed PDF is filed and the agreement becomes Active.')}
+              {step(3, 'Once both have signed, the signed PDF is filed and the agreement goes to Legal for review.')}
             </ol>
             <ButtonLink to={`/agreements/${agreementId}/esign`} icon={<PenLine className="size-4" />}>
               Send for e-signature

@@ -22,7 +22,7 @@ export function DraftPreview() {
   const [mobileView, setMobileView] = useState<'document' | 'details'>('document');
   useDocumentTitle(`Preview ${id}`);
 
-  const submit = useAction(() => api.agreements.submit(id), { success: 'Sent to Legal for review', onSuccess: () => navigate(`/agreements/${id}`) });
+  const submit = useAction(() => api.agreements.submit(id), { success: 'Ready for signing', onSuccess: () => navigate(`/agreements/${id}`) });
   const approve = useAction(() => api.agreements.decideGate1(id, 'approve'), { success: 'Approved — sent to Admin for final approval', onSuccess: () => navigate(`/agreements/${id}`) });
   const reject = useAction((c: string) => api.agreements.decideGate1(id, 'reject', c), { success: 'Returned to the BD Executive', onSuccess: () => navigate('/tasks') });
 
@@ -64,7 +64,7 @@ export function DraftPreview() {
             )}
             {act.submit && (
               <Button className="max-md:hidden" icon={<Send className="size-4" />} loading={submit.loading} disabled={r.blockers.length > 0} onClick={() => void submit.run()}>
-                Send to Legal for review
+                Finalise for signing
               </Button>
             )}
             <DownloadMenu agreementId={a.id} html={r.html} />
@@ -90,7 +90,7 @@ export function DraftPreview() {
         )}
         {act.approveGate1 && (
           <Alert tone="info" title="Legal review">
-            Check the merged terms, the CP’s KYC documents and any deviations{a.nonStandard ? ' (shown side by side)' : ''}. If a document is wrong, use Request document changes: the BD Executive gets the CP to re-upload it. Approving sends the agreement to Admin for final approval.
+            Check the merged terms, the CP’s KYC documents and any deviations{a.nonStandard ? ' (shown side by side)' : ''}. If a document is wrong, use Request document changes: the BD Executive gets the CP to re-upload it. Approving sends the signed agreement to Admin for final approval. Rejecting returns it to Draft, so it must be signed again.
           </Alert>
         )}
         {a.status === 'draft' && r.blockers.length > 0 && (
@@ -168,7 +168,7 @@ export function DraftPreview() {
         <ActionBar className="md:hidden">
           {act.submit && (
             <Button icon={<Send className="size-4" />} loading={submit.loading} disabled={r.blockers.length > 0} onClick={() => void submit.run()}>
-              Send to Legal for review
+              Finalise for signing
             </Button>
           )}
           {act.approveGate1 && (

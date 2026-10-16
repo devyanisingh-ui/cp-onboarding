@@ -8,7 +8,7 @@ export const STATUS_META: Record<DisplayStatus, { label: string; tone: StatusTon
   pending_approval: { label: 'Pending Legal approval', tone: 'amber' },
   docs_requested: { label: 'Documents requested', tone: 'orange' },
   pending_admin_approval: { label: 'Pending Admin approval', tone: 'amber' },
-  approved_for_signing: { label: 'Approved for signing', tone: 'blue' },
+  approved_for_signing: { label: 'Ready for signing', tone: 'blue' },
   out_for_signature: { label: 'Out for e-signature', tone: 'purple' },
   signed_copy_uploaded: { label: 'Signed copy uploaded', tone: 'purple' },
   active: { label: 'Active', tone: 'green' },
@@ -46,7 +46,7 @@ export const IN_PROGRESS_STATUSES: AgreementStatus[] = [
 export const LIVE_STATUSES: AgreementStatus[] = ['active', 'notice_period'];
 
 export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRejection' | 'esign' | 'docRequest'>): DisplayStatus {
-  if (a.status === 'draft' && a.docRequest && a.docRequest.status !== 'closed') return 'docs_requested';
+  if (a.status === 'signed_copy_uploaded' && a.docRequest && a.docRequest.status !== 'closed') return 'docs_requested';
   if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') return 'out_for_signature';
   if (a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60) return 'expiring';
   if (a.status === 'draft' && a.lastRejection) return 'rejected';
@@ -56,9 +56,9 @@ export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRej
 /** Main path shown in the Agreement detail stepper. */
 export const STEPPER: { status: AgreementStatus; label: string }[] = [
   { status: 'draft', label: 'Draft' },
+  { status: 'approved_for_signing', label: 'Signing' },
   { status: 'pending_approval', label: 'Legal approval' },
   { status: 'pending_admin_approval', label: 'Admin approval' },
-  { status: 'approved_for_signing', label: 'Signing' },
   { status: 'active', label: 'Active' },
 ];
 

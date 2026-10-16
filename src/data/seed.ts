@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 
-export const SCHEMA_VERSION = 7;
+export const SCHEMA_VERSION = 8;
 
 /** Prototype only: every seeded user signs in with their username and this shared password. */
 export const DEMO_PASSWORD = 'Apeejay@123';
@@ -226,12 +226,12 @@ export function buildSeed(): Database {
     ag({ id: 'AGR-ASU-2026-0001', cpId: 'CP-0001', status: 'active', created: -230, executionDate: d(-205), startDate: d(-200), endDate: d(165), activatedAt: ts(-204), predecessorId: 'AGR-ASU-2025-0012', submittedAt: ts(-228), stampPaper: stamp(1, 'Haryana', -210), signedOn: d(-206) }),
     ag({ id: 'AGR-ASU-2025-0002', cpId: 'CP-0002', status: 'active', created: -330, executionDate: d(-321), startDate: d(-320), endDate: d(45), activatedAt: ts(-318), submittedAt: ts(-328), stampPaper: stamp(2, 'Haryana', -324), signedOn: d(-322) }),
     ag({ id: 'AGR-ASU-2025-0003', cpId: 'CP-0003', status: 'active', created: -340, executionDate: d(-341), startDate: d(-340), endDate: d(25), activatedAt: ts(-337), submittedAt: ts(-339), stampPaper: stamp(3, 'Haryana', -343), signedOn: d(-342), renewal: { decision: 'do_not_renew', reason: 'Low conversions (fewer than 5 admissions this cycle)', decidedById: 'u-neha', decidedAt: ts(-4), confirmation: 'pending' } }),
-    ag({ id: 'AGR-ASU-2026-0004', cpId: 'CP-0004', status: 'pending_approval', created: -12, nonStandard: true, executionDate: d(10), startDate: d(12), endDate: d(376), submittedAt: ts(-8) }),
-    ag({ id: 'AGR-ASU-2026-0005', cpId: 'CP-0005', status: 'pending_admin_approval', created: -6, executionDate: d(8), startDate: d(10), endDate: d(374), submittedAt: ts(-1), locationId: 'loc-asu-city', executionPlace: 'New Delhi' }),
+    ag({ id: 'AGR-ASU-2026-0004', cpId: 'CP-0004', status: 'pending_approval', created: -12, nonStandard: true, executionDate: d(-8), startDate: d(-7), endDate: d(357), submittedAt: ts(-9), stampPaper: stamp(4, 'Haryana', -9), signedOn: d(-8) }),
+    ag({ id: 'AGR-ASU-2026-0005', cpId: 'CP-0005', status: 'pending_admin_approval', created: -6, executionDate: d(-3), startDate: d(-2), endDate: d(362), submittedAt: ts(-5), locationId: 'loc-asu-city', executionPlace: 'New Delhi', stampPaper: stamp(5, 'Haryana', -4), signedOn: d(-3) }),
     ag({ id: 'AGR-ASU-2026-0006', cpId: 'CP-0006', status: 'draft', created: -4, executionDate: d(14), startDate: d(15), endDate: d(379) }),
     ag({ id: 'AGR-ASU-2026-0007', cpId: 'CP-0007', status: 'draft', created: -13, nonStandard: true, executionDate: d(7), startDate: d(9), endDate: d(373), submittedAt: ts(-8), lastRejection: { gate: 1, byId: 'u-priya', at: ts(-2), comment: 'Partnership deed date does not match the uploaded deed. Please correct and re-upload the PAN copy, which is illegible.' } }),
     ag({ id: 'AGR-ASU-2026-0008', cpId: 'CP-0010', status: 'approved_for_signing', created: -35, executionDate: d(2), startDate: d(3), endDate: d(367), submittedAt: ts(-30), templateVersionId: tplFor.individual }),
-    ag({ id: 'AGR-ASU-2026-0009', cpId: 'CP-0012', status: 'signed_copy_uploaded', created: -30, executionDate: d(-6), startDate: d(-5), endDate: d(360), submittedAt: ts(-26), stampPaper: stamp(9, 'Haryana', -8), signedOn: d(-6) }),
+    ag({ id: 'AGR-ASU-2026-0009', cpId: 'CP-0012', status: 'pending_approval', created: -30, executionDate: d(-6), startDate: d(-5), endDate: d(360), submittedAt: ts(-26), stampPaper: stamp(9, 'Haryana', -8), signedOn: d(-6) }),
     ag({ id: 'AGR-ASU-2024-0010', cpId: 'CP-0011', status: 'signed_copy_uploaded', created: -3, source: 'legacy', legacyBatchId: 'LB-0001', executionDate: d(-420), startDate: d(-418), endDate: d(310), stampPaper: stamp(10, 'Haryana', -421), templateVersionId: 'tpl-in-1', rateCardVersionId: 'rc-asu-1', signedOn: d(-420) }),
     ag({ id: 'AGR-ASU-2025-0016', cpId: 'CP-0002', status: 'signed_copy_uploaded', created: -3, source: 'legacy', legacyBatchId: 'LB-0001', locationId: 'loc-asu-city', executionPlace: 'New Delhi', executionDate: d(-300), startDate: d(-299), endDate: d(430), templateVersionId: 'tpl-sp-1', rateCardVersionId: 'rc-asu-1', stampPaper: stamp(16, 'Haryana', -301) }),
     ag({ id: 'AGR-AKS-2025-0011', i: 'aks', cpId: 'CP-0009', status: 'terminated', created: -500, executionDate: d(-470), startDate: d(-468), endDate: d(-103), activatedAt: ts(-467), stampPaper: stamp(11, 'Maharashtra', -472), signedOn: d(-470), closedAt: ts(-30),
@@ -267,8 +267,10 @@ export function buildSeed(): Database {
     if (c.gstRegistered) doc('cp', c.id, 'gst_certificate', `GST_${c.id}.pdf`, c.createdById, days, v);
   }
   for (const a of agreements) {
-    if (['active', 'expired', 'not_renewed', 'expired_no_decision', 'terminated', 'notice_period'].includes(a.status) || (a.status === 'signed_copy_uploaded' && a.id !== 'AGR-ASU-2025-0016')) {
-      const verified = a.status !== 'signed_copy_uploaded';
+    // Signed agreements: live and closed ones, ones with Legal/Admin (signed before review), and legacy scans.
+    const awaitingReview = ['signed_copy_uploaded', 'pending_approval', 'pending_admin_approval'].includes(a.status);
+    if (['active', 'expired', 'not_renewed', 'expired_no_decision', 'terminated', 'notice_period'].includes(a.status) || (awaitingReview && a.id !== 'AGR-ASU-2025-0016')) {
+      const verified = !awaitingReview;
       const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-arjun', verifiedOn: a.activatedAt, verificationMethod: 'manual' as const } : {};
       doc('agreement', a.id, 'signed_copy', `Signed_${a.id}.pdf`, a.ownerId, -6, { ...v, retentionUntil: shiftDays(a.endDate ?? T, 365 * 8) });
       doc('agreement', a.id, 'stamp_paper_scan', `Stamp_${a.id}.pdf`, a.ownerId, -6, { ...v, retentionUntil: shiftDays(a.endDate ?? T, 365 * 8) });
@@ -287,7 +289,7 @@ export function buildSeed(): Database {
   task('deviation_review', 'Review deviation: NextStep Learning Pvt. Ltd', 'u-priya', -2, addWorkingDays(d(-2), 3), { agreementId: 'AGR-ASU-2026-0006', cpId: 'CP-0006', refId: 'DEV-0003', institutionId: 'inst-asu' });
   task('fix_rejected', 'Rework rejected draft: Sharma & Gill Associates', 'u-neha', -2, addWorkingDays(d(-2), 2), { agreementId: 'AGR-ASU-2026-0007', cpId: 'CP-0007', institutionId: 'inst-asu' });
   task('signing_upload', 'Get signed & upload: Ramesh Chandra Yadav', 'u-neha', -14, addWorkingDays(d(-14), 10), { agreementId: 'AGR-ASU-2026-0008', cpId: 'CP-0010', institutionId: 'inst-asu' });
-  task('gate2_verification', 'Gate 2 verification: Mohammed Irfan', 'u-arjun', -4, addWorkingDays(d(-4), 3), { agreementId: 'AGR-ASU-2026-0009', cpId: 'CP-0012', institutionId: 'inst-asu' });
+  task('gate1_approval', 'Legal approval: Mohammed Irfan', 'u-priya', -4, addWorkingDays(d(-4), 3), { agreementId: 'AGR-ASU-2026-0009', cpId: 'CP-0012', institutionId: 'inst-asu' });
   task('gate2_verification', 'Gate 2 verification (Legacy): Kavita Joshi', 'u-arjun', -2, addWorkingDays(d(-2), 3), { agreementId: 'AGR-ASU-2024-0010', cpId: 'CP-0011', institutionId: 'inst-asu' });
   task('legacy_scan_upload', 'Upload legacy scan: Pathway Admissions Hub', 'u-neha', -3, addWorkingDays(d(-3), 10), { agreementId: 'AGR-ASU-2025-0016', cpId: 'CP-0002', institutionId: 'inst-asu' });
   task('renewal_decision', 'Renewal decision due: Pathway Admissions Hub', 'u-neha', -15, d(15), { agreementId: 'AGR-ASU-2025-0002', cpId: 'CP-0002', institutionId: 'inst-asu' });
@@ -305,8 +307,9 @@ export function buildSeed(): Database {
     audit.push({ id: `EV-${String(auditN++).padStart(5, '0')}`, actorId, actorName: nameOf(actorId), action, entityType, entityId, summary, at, before, after, ip: '10.20.4.' + ((auditN * 37) % 250), device: auditN % 3 === 0 ? 'Chrome · Android' : 'Chrome · Windows' });
   for (const a of agreements) {
     ev(a.ownerId, 'create', 'agreement', a.id, a.source === 'legacy' ? 'Imported legacy agreement' : 'Created draft agreement', a.createdAt, undefined, { status: 'draft' });
-    if (a.submittedAt) ev(a.ownerId, 'submit', 'agreement', a.id, a.nonStandard ? 'Sent to Legal for approval (Non-standard)' : 'Finalised on standard terms — no Legal approval needed; approved for signing', a.submittedAt, { status: 'draft' }, { status: a.nonStandard ? 'pending_approval' : 'approved_for_signing' });
-    if (a.status === 'pending_admin_approval') ev('u-priya', 'approve', 'agreement', a.id, 'Legal approved; sent to Admin for final approval', a.updatedAt, { status: 'pending_approval' }, { status: a.status });
+    if (a.submittedAt) ev(a.ownerId, 'submit', 'agreement', a.id, `Finalised for signing${a.nonStandard ? ' (Non-standard)' : ''}`, a.submittedAt, { status: 'draft' }, { status: 'approved_for_signing' });
+    if (a.signedOn && ['pending_approval', 'pending_admin_approval'].includes(a.status)) ev(a.ownerId, 'upload', 'agreement', a.id, 'Uploaded signed copy; sent to Legal for review', `${a.signedOn}T12:00:00.000Z`, { status: 'approved_for_signing' }, { status: 'pending_approval' });
+    if (a.status === 'pending_admin_approval') ev('u-priya', 'approve', 'agreement', a.id, 'Legal approved; sent to Admin for final approval', ts(-1), { status: 'pending_approval' }, { status: a.status });
     if (a.lastRejection) ev(a.lastRejection.byId, 'reject', 'agreement', a.id, `Rejected by Legal: ${a.lastRejection.comment}`, a.lastRejection.at, { status: 'pending_approval' }, { status: 'draft' });
     if (a.activatedAt) ev('u-arjun', 'approve', 'agreement', a.id, 'Gate 2 verified — agreement Active', a.activatedAt, { status: 'signed_copy_uploaded' }, { status: 'active' });
     if (a.closedAt) ev('system', 'status_change', 'agreement', a.id, `Status changed to ${a.status}`, a.closedAt, { status: 'active' }, { status: a.status });
@@ -337,7 +340,7 @@ export function buildSeed(): Database {
       { id: 'N-0002', userId: 'u-neha', title: 'Draft returned by Legal', body: 'Sharma & Gill Associates · AGR-ASU-2026-0007 was returned by Legal with comments.', link: '/agreements/AGR-ASU-2026-0007', createdAt: ts(-2), read: false },
       { id: 'N-0003', userId: 'u-neha', title: 'Renewal decision due', body: 'Pathway Admissions Hub · AGR-ASU-2025-0002 expires in 45 days.', link: '/agreements/AGR-ASU-2025-0002/renewal', createdAt: ts(-15), read: true },
       { id: 'N-0004', userId: 'u-priya', title: 'Deviation requested', body: 'NextStep Learning Pvt. Ltd · AGR-ASU-2026-0006 needs your review.', link: '/agreements/AGR-ASU-2026-0006/deviation', createdAt: ts(-2), read: false },
-      { id: 'N-0005', userId: 'u-arjun', title: 'Signed copy uploaded', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is ready for Gate 2.', link: '/agreements/AGR-ASU-2026-0009/verify', createdAt: ts(-4), read: false },
+      { id: 'N-0005', userId: 'u-priya', title: 'Signed agreement for review', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is signed and waiting for Legal review.', link: '/agreements/AGR-ASU-2026-0009/preview', createdAt: ts(-4), read: false },
       { id: 'N-0006', userId: 'u-arjun', title: 'Rate card awaiting Legal', body: 'ASU rate card v3 was sent to Legal for approval.', link: '/admin/rate-cards', createdAt: ts(-2), read: true },
     ],
     emails: [],

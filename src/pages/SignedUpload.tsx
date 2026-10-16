@@ -81,7 +81,7 @@ export function SignedUpload() {
         stampFileName: st.fileName,
         checklist: checks,
       });
-      toast.success('Signed copy uploaded', d.agreement.source === 'legacy' ? 'Sent to Admin for Gate 2 verification.' : 'The agreement is now Active.');
+      toast.success('Signed copy uploaded', d.agreement.source === 'legacy' ? 'Sent to Admin for Gate 2 verification.' : 'Sent to Legal for review.');
       navigate(`/agreements/${d.agreement.id}`);
     } catch (err) {
       toast.error('Upload failed', errorMessage(err));

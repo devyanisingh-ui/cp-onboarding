@@ -2,9 +2,10 @@
  * Corrected CP documents: Legal → BD → CP → BD → Legal.
  *
  * While reviewing an agreement, Legal flags the documents that are wrong and adds a remark to each.
- * The agreement goes back to the BD Executive, who sends the CP a personal upload link. The CP
- * (no app account; the link token is their credential) re-uploads just the flagged documents and
- * sends them back. The BD Executive checks them and resubmits the agreement to Legal.
+ * The signed agreement waits with the BD Executive (status signed_copy_uploaded), who sends the CP
+ * a personal upload link. The CP (no app account; the link token is their credential) re-uploads
+ * just the flagged documents and sends them back. The BD Executive checks them and the agreement
+ * goes back to Legal. The agreement itself is not changed, so it does not need signing again.
  */
 import type { Agreement, DocRequest, DocumentType } from '@/types';
 import { can } from '@/lib/permissions';
@@ -13,7 +14,7 @@ import { nextId } from '../db';
 import { sendExternalEmail } from '../notificationChannels';
 import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, firstUserWithRole, getDb, inScope, notify, now } from './core';
 import { storeDocument } from './documents';
-import { submitForApproval } from './agreements';
+import { sendToLegal } from './agreements';
 
 const DOC_LABELS: Partial<Record<DocumentType, string>> = {
   pan: 'PAN copy',
@@ -70,7 +71,7 @@ export async function requestDocChanges(agreementId: string, items: { documentId
   };
   const summary = docs.map(({ doc, remark }) => `${label(doc.type)}: ${remark}`).join('; ');
   a.docRequest = req;
-  a.status = 'draft';
+  a.status = 'signed_copy_uploaded';
   a.lastRejection = { gate: 1, byId: user.id, at: now(), comment: req.note ? `${req.note} — ${summary}` : `Documents to correct — ${summary}` };
   a.updatedAt = now();
   closeTasks({ agreementId: a.id, types: ['gate1_approval'] }, user);
@@ -88,7 +89,7 @@ export async function sendDocRequestLink(agreementId: string, email: string): Pr
   const { user, a } = loadAgreement(agreementId);
   assertCan(user, 'kyc.upload');
   const req = a.docRequest;
-  if (a.status !== 'draft' || !req || req.status === 'closed') throw conflict('There is no open document request on this agreement.');
+  if (a.status !== 'signed_copy_uploaded' || !req || req.status === 'closed') throw conflict('There is no open document request on this agreement.');
   const to = email.trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw invalid('Enter a valid email address.', { email: 'Enter a valid email' });
   const cp = cpOf(a);
@@ -121,14 +122,14 @@ export async function acceptCpDocs(agreementId: string): Promise<void> {
   const { user, a } = loadAgreement(agreementId);
   if (!can(user, 'agreement.edit')) throw forbidden();
   const req = a.docRequest;
-  if (a.status !== 'draft' || req?.status !== 'cp_submitted') throw conflict('The CP has not sent corrected documents yet.');
+  if (a.status !== 'signed_copy_uploaded' || req?.status !== 'cp_submitted') throw conflict('The CP has not sent corrected documents yet.');
+  const before = { status: a.status };
   req.status = 'closed';
   req.closedAt = now();
   req.closedById = user.id;
-  closeTasks({ agreementId: a.id, types: ['cp_doc_review', 'cp_doc_request'] }, user);
-  audit(user, 'approve', 'agreement', a.id, 'Checked the CP’s corrected documents');
+  sendToLegal(a, user);
+  audit(user, 'submit', 'agreement', a.id, 'Checked the CP’s corrected documents; sent back to Legal', before, { status: a.status });
   commit();
-  await submitForApproval(a.id);
 }
 
 // ---------------- CP (public link) ----------------

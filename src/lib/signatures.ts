@@ -21,12 +21,12 @@ const ROLE_LABELS: Record<ESigner['role'], string> = { cp: 'Channel Partner', in
 /**
  * The signatures to show on the agreement right now: each signer's mark appears as soon as they
  * sign. Nothing is shown for a withdrawn or declined request, or once the agreement went back to
- * "Approved for signing" (e.g. returned at Gate 2) and needs signing again.
+ * Draft or "Ready for signing" (returned by Legal or Admin) and needs signing again.
  */
 export function signaturesToShow(a: Pick<Agreement, 'esign' | 'status'>): { signatures: SignatureView[]; everyPage: boolean } | null {
   const req = a.esign;
   if (!req) return null;
-  const live = req.status === 'in_progress' || (req.status === 'completed' && a.status !== 'approved_for_signing');
+  const live = req.status === 'in_progress' || (req.status === 'completed' && a.status !== 'approved_for_signing' && a.status !== 'draft');
   if (!live) return null;
   const signatures = req.signers
     .filter((s) => s.status === 'signed' && s.signature)

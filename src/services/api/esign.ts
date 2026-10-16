@@ -4,8 +4,8 @@
  * BD Executive sends an approved agreement for signature → the CP's signer gets an email link →
  * after they sign, the institution's signatory (e.g. the Registrar) gets theirs → when both have
  * signed, the app builds the signed PDF (signatures in the signature block, optionally on every
- * page, plus a signature certificate page), files it as the signed copy and the agreement becomes
- * Active. (Paper copies uploaded by hand still go through Gate 2.)
+ * page, plus a signature certificate page), files it as the signed copy and sends the agreement to
+ * Legal for review (then Admin's final approval).
  *
  * Signers have no app account: the signing link's token is their only credential. Methods:
  *  - `electronic`: drawn or typed signature, with consent, from the email link
@@ -21,8 +21,8 @@ import { stampPaperSchema } from '@/lib/schemas';
 import { conflict, invalid, notFound } from '../errors';
 import { sendExternalEmail } from '../notificationChannels';
 import { nextId } from '../db';
-import { assertCan, audit, closeTasks, commit, ctx, delay, device, firstUserWithRole, getDb, inScope, notify, now } from './core';
-import { activateAgreement, mergeContext } from './agreements';
+import { assertCan, audit, commit, ctx, delay, device, firstUserWithRole, getDb, inScope, notify, now } from './core';
+import { mergeContext, sendToLegal } from './agreements';
 import { storeDocument } from './documents';
 
 export const SIGN_METHOD_LABELS: Record<SignMethod, string> = {
@@ -107,7 +107,7 @@ export async function sendForSignature(id: string, input: { signers: SignerInput
   await delay('write');
   const { user, a } = load(id);
   assertCan(user, 'signed.upload', 'Only BD Executives or Admin can send agreements for signature.');
-  if (a.status !== 'approved_for_signing' || a.source !== 'app') throw conflict('Only agreements approved for signing can be sent for e-signature.');
+  if (a.status !== 'approved_for_signing' || a.source !== 'app') throw conflict('Only agreements that are ready for signing can be sent for e-signature.');
   if (a.esign?.status === 'in_progress') throw conflict('This agreement is already out for signature.');
   // Collect every problem at once so the form can show them together.
   const errors: Record<string, string> = {};
@@ -332,12 +332,11 @@ async function completeSigning(a: Agreement, req: ESignRequest) {
   req.completedAt = now();
   req.documentHash = hash;
   req.signedDocumentId = document.id;
-  // Signed by both the CP and the institution's signatory: Legal and Admin approved it before
-  // signing, so it is Active straight away.
+  // Signed by both the CP and the institution's signatory: Legal reviews it next, then Admin.
   a.signedOn = today();
   a.verification = undefined;
-  closeTasks({ agreementId: a.id, types: ['signing_upload'] }, 'system');
-  activateAgreement(a, 'system');
-  audit('system', 'esign_complete', 'agreement', a.id, `All parties signed — e-signed PDF filed (${document.fileName}); agreement Active`, { status: 'approved_for_signing' }, { status: a.status });
+  sendToLegal(a, 'system');
+  audit('system', 'esign_complete', 'agreement', a.id, `All parties signed — e-signed PDF filed (${document.fileName}); sent to Legal for review`, { status: 'approved_for_signing' }, { status: a.status });
+  notify([a.ownerId], { title: 'All signatures received', body: `${a.id} (${cpName(a)}) is fully signed and with Legal for review.`, link: `/agreements/${a.id}` });
   commit();
 }
