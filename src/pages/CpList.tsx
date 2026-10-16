@@ -34,7 +34,7 @@ export function CpList() {
 
   return (
     // Central Admin: pull the page up a little to tighten the gap under the sub-header.
-    <div className={cn(isAdmin && '-mt-2 lg:-mt-3')}>
+    <div className={cn(isAdmin && '-mt-3.5 lg:-mt-5')}>
       <PageHeader
         title="Channel Partners"
         subtitle="Each CP exists once, keyed on PAN, and can hold one active agreement per institution."
