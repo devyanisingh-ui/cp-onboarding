@@ -11,7 +11,7 @@ import { ROLE_LABELS } from '@/lib/format';
 import { timeAgo } from '@/lib/dates';
 import { can } from '@/lib/permissions';
 import type { Role } from '@/types';
-import { Avatar, Drawer, EmptyState, IconButton, Menu, Select, Spinner, useToast } from '@/components/ui';
+import { Avatar, Drawer, EmptyState, Menu, Select, Spinner, useToast } from '@/components/ui';
 import { BrandName } from './Brand';
 import { navFor } from './nav';
 import { SubHeader } from './SubHeader';
@@ -84,7 +84,7 @@ export function AppShell() {
       </aside>
 
       <div className="md:pl-[72px] lg:pl-60">
-        <Header onMenu={() => setMoreOpen(true)} />
+        <Header />
         <SubHeader />
         <main id="main" tabIndex={-1} className="w-full px-4 pb-28 pt-4 outline-none sm:px-6 md:pb-16 lg:px-8 lg:pt-5 xl:px-10">
           {/* Keyed on the path so each screen enters with a short fade-up. */}
@@ -122,7 +122,7 @@ function TaskCount({ className }: { className?: string }) {
   );
 }
 
-function Header({ onMenu }: { onMenu: () => void }) {
+function Header() {
   // Light glass at the top of the page; once content scrolls underneath, a near-opaque surface
   // so the content passing behind the header doesn't show through it.
   const scrolled = useScrolled();
@@ -171,9 +171,6 @@ function Header({ onMenu }: { onMenu: () => void }) {
       <PersonaSwitcher />
       <NotificationBell />
       <UserMenu />
-      <IconButton label="Open menu" className="md:hidden" onClick={onMenu}>
-        <MenuIcon className="size-5" />
-      </IconButton>
     </header>
   );
 }
