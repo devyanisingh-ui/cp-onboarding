@@ -9,12 +9,14 @@ import { useDebounced, useDocumentTitle, useMediaQuery } from '@/hooks/misc';
 import { CP_TYPE_LABELS, CP_TYPES } from '@/lib/format';
 import { Badge, ButtonLink, Card, EmptyState, ErrorState, Pagination, PageSkeleton, SearchInput, Select, Table, TD, TH, TR, Toggle } from '@/components/ui';
 import { PageHeader } from '@/components/common';
+import { cn } from '@/lib/cn';
 
 const PAGE = 10;
 
 export function CpList() {
   useDocumentTitle('Channel Partners');
-  const { institutionId: headerInst, myInstitutions, can } = useSession();
+  const { user, institutionId: headerInst, myInstitutions, can } = useSession();
+  const isAdmin = !!user?.roles.includes('admin');
   const [q, setQ] = useState('');
   const [type, setType] = useState<CpType | ''>('');
   const [status, setStatus] = useState<CpStatus | ''>('');
@@ -31,7 +33,8 @@ export function CpList() {
   const reset = () => (setQ(''), setType(''), setStatus(''), setInst(''), setWarning(false), setPage(1));
 
   return (
-    <div>
+    // Central Admin: pull the page up a little to tighten the gap under the sub-header.
+    <div className={cn(isAdmin && '-mt-2 lg:-mt-3')}>
       <PageHeader
         title="Channel Partners"
         subtitle="Each CP exists once, keyed on PAN, and can hold one active agreement per institution."
