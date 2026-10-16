@@ -6,6 +6,7 @@ import { useAction, useApi } from '@/hooks/useApi';
 import { useSession } from '@/context/SessionContext';
 import { useDocumentTitle } from '@/hooks/misc';
 import { Badge, Button, Card, CardBody, CardHeader, DL, ErrorState, Field, IconButton, Input, Modal, PageSkeleton, Select, Textarea, Toggle } from '@/components/ui';
+import { INSTITUTION_GROUPS, INSTITUTION_TYPE_LABELS } from '@/lib/format';
 import { ReadOnlyNote } from './AdminLayout';
 
 const blank = (): Institution => ({
@@ -55,7 +56,7 @@ export function Institutions() {
                 {i.legalName} <Badge tone="grey">{i.shortCode}</Badge> <Badge tone={i.active ? 'green' : 'dark'}>{i.active ? 'Active' : 'Inactive'}</Badge>
               </span>
             }
-            description={`${i.type === 'university' ? 'University' : 'School'} · ${regions.find((r) => r.id === i.regionId)?.name ?? ''}`}
+            description={`${INSTITUTION_TYPE_LABELS[i.type]} · ${regions.find((r) => r.id === i.regionId)?.name ?? ''}`}
             action={can('config.manage') ? <Button size="sm" variant="secondary" icon={<Pencil className="size-4" />} onClick={() => setEditing(structuredClone(i))}>Edit</Button> : undefined}
           />
           <CardBody>
@@ -66,7 +67,7 @@ export function Institutions() {
                 { label: 'Signatory', value: `${i.signatoryName}, ${i.signatoryDesignation}` },
                 { label: 'Coordinator', value: i.coordinatorName },
                 { label: 'Jurisdiction / seat', value: `${i.jurisdictionCourt} · ${i.arbitrationSeat}` },
-                { label: i.type === 'university' ? 'Programme groups' : 'Class groups', value: i.programmeGroups.join(', '), full: true },
+                { label: i.type === 'school' ? 'Class groups' : 'Programme groups', value: i.programmeGroups.join(', '), full: true },
                 { label: 'Locations', value: <span className="flex flex-wrap gap-1.5">{i.locations.map((l) => <Badge key={l.id} tone="accent" icon={<MapPin className="size-3" />}>{l.name}, {l.city}</Badge>)}</span>, full: true },
               ]}
             />
@@ -111,7 +112,18 @@ function InstitutionModal({ value, regions, onClose }: { value: Institution; reg
         <Field label="Type" required>
           <Select value={v.type} onChange={(e) => set('type', e.target.value as Institution['type'])}>
             <option value="university">University</option>
+            <option value="college">College</option>
             <option value="school">School</option>
+          </Select>
+        </Field>
+        <Field label="Group" hint="Where it is listed when creating an agreement">
+          <Select value={v.group ?? ''} onChange={(e) => set('group', e.target.value || undefined)}>
+            <option value="">Other</option>
+            {INSTITUTION_GROUPS.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.label}
+              </option>
+            ))}
           </Select>
         </Field>
         <Field label="Legal status text" className="sm:col-span-2" hint="Printed after the name in the agreement">
@@ -150,7 +162,7 @@ function InstitutionModal({ value, regions, onClose }: { value: Institution; reg
         <Field label="Coordinator">
           <Input value={v.coordinatorName} onChange={(e) => set('coordinatorName', e.target.value)} />
         </Field>
-        <Field label={v.type === 'university' ? 'Allowed programme groups' : 'Allowed class groups'} hint="Comma separated" className="sm:col-span-2">
+        <Field label={v.type === 'school' ? 'Allowed class groups' : 'Allowed programme groups'} hint="Comma separated" className="sm:col-span-2">
           <Input value={groups} onChange={(e) => setGroups(e.target.value)} />
         </Field>
         <div className="sm:col-span-2">

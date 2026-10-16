@@ -163,7 +163,7 @@ export function renderAgreementHtml(ctx: MergeContext): string {
   };
   const clauseDevs = ctx.deviations.filter((d) => d.type === 'clause' && d.status === 'approved');
   const rates = effectiveRates(ctx.rateCard, ctx.deviations);
-  const learners = i.type === 'university' ? 'Programme' : 'Class';
+  const learners = i.type === 'school' ? 'Class' : 'Programme';
 
   const parts: string[] = [];
   let clauseNo = 0;

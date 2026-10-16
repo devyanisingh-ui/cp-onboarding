@@ -12,7 +12,7 @@ import { useSession } from '@/context/SessionContext';
 import { useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { agreementFormSchema, cpFormSchema, cpTypesForPan, panTypeHint, type AgreementFormValues, type CpFormValues } from '@/lib/schemas';
-import { CP_TYPE_LABELS, CP_TYPES } from '@/lib/format';
+import { CP_TYPE_LABELS, CP_TYPES, INSTITUTION_GROUPS } from '@/lib/format';
 import { formatDate, shiftDays, timeAgo, today } from '@/lib/dates';
 import { isValidPan } from '@/lib/validation';
 import { maskPan } from '@/lib/mask';
@@ -536,6 +536,11 @@ function StepInstitution({ ctx, state, patch, locked }: { ctx: WizardContext; st
     if (inst && !inst.locations.some((l) => l.id === state.locationId)) patch({ locationId: inst.locations.length === 1 ? inst.locations[0]!.id : '' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.institutionId]);
+  // Institution is picked in two steps: a group (Delhi, Punjab, ASU, UP, Mumbai), then one of its
+  // schools/colleges from the dropdown — or its campuses when the group is a single institution (ASU).
+  const [pickedGroup, setPickedGroup] = useState<string>();
+  const groupOf = (i: { group?: string }) => i.group ?? 'other';
+  const group = inst ? groupOf(inst) : pickedGroup;
   if (locked)
     return (
       <div className="space-y-4">
@@ -544,6 +549,21 @@ function StepInstitution({ ctx, state, patch, locked }: { ctx: WizardContext; st
       </div>
     );
   if (!ctx.institutions.length) return <Alert tone="warning" title="No institutions assigned">Ask Admin to assign you to an institution before creating agreements.</Alert>;
+  type Inst = WizardContext['institutions'][number];
+  const unavailable = (i: Inst) => blocked.has(i.id) || !i.hasRateCard;
+  const reason = (i: Inst, short = false) =>
+    state.panResult?.liveInstitutionIds.includes(i.id)
+      ? short ? 'active agreement' : 'CP already has an active agreement here — use Renew on it instead'
+      : blocked.has(i.id)
+        ? short ? 'agreement in progress' : 'An agreement for this CP is already in progress here'
+        : short ? 'no rate card' : 'No published rate card yet';
+  const members = (g: string) => ctx.institutions.filter((i) => groupOf(i) === g);
+  const groups = [...INSTITUTION_GROUPS, { id: 'other', label: 'Other' }].filter((g) => members(g.id).length);
+  const inGroup = group ? members(group) : [];
+  const single = inGroup.length === 1;
+  const places = inGroup.flatMap((i) =>
+    i.locations.map((loc) => ({ inst: i, loc, label: single ? loc.name : i.locations.length > 1 ? `${i.name} — ${loc.name}` : i.name })),
+  );
   return (
     <div className="space-y-8">
       <RadioGroup
@@ -551,29 +571,41 @@ function StepInstitution({ ctx, state, patch, locked }: { ctx: WizardContext; st
         legend="Institution"
         required
         layout="cards"
-        value={state.institutionId}
-        onChange={(v) => patch({ institutionId: v })}
-        options={ctx.institutions.map((i) => ({
-          value: i.id,
-          label: i.name,
-          icon: <Building2 className="size-5" />,
-          disabled: blocked.has(i.id) || !i.hasRateCard,
-          description: blocked.has(i.id)
-            ? state.panResult?.liveInstitutionIds.includes(i.id)
-              ? 'CP already has an active agreement here — use Renew on it instead'
-              : 'An agreement for this CP is already in progress here'
-            : !i.hasRateCard
-              ? 'No published rate card yet'
-              : `${i.shortCode} · ${i.city}`,
-        }))}
+        value={group}
+        onChange={(g) => {
+          setPickedGroup(g);
+          if (inst && groupOf(inst) === g) return;
+          // A group with just one available institution and campus needs no second choice.
+          const open = members(g).filter((i) => !unavailable(i));
+          const only = open.length === 1 && open[0]!.locations.length === 1 ? open[0]! : undefined;
+          patch({ institutionId: only?.id ?? '', locationId: only?.locations[0]!.id ?? '' });
+        }}
+        options={groups.map((g) => {
+          const m = members(g.id);
+          const allOut = m.every(unavailable);
+          return {
+            value: g.id,
+            label: g.label,
+            icon: <Building2 className="size-5" />,
+            disabled: allOut,
+            description: m.length === 1 ? (allOut ? reason(m[0]!) : `${m[0]!.shortCode} · ${m[0]!.city}`) : allOut ? 'None available for this CP' : `${m.length} schools & colleges`,
+          };
+        })}
       />
-      {inst && (
-        <Field label="Location / campus" required className="max-w-md">
-          <Select value={state.locationId} onChange={(e) => patch({ locationId: e.target.value })}>
-            <option value="">Choose a location</option>
-            {inst.locations.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
+      {group && (
+        <Field label={single ? 'Location / campus' : 'School / college'} required className="max-w-md">
+          <Select
+            value={inst ? state.locationId : ''}
+            onChange={(e) => {
+              const o = places.find((p) => p.loc.id === e.target.value);
+              patch({ institutionId: o?.inst.id ?? '', locationId: o?.loc.id ?? '' });
+            }}
+          >
+            <option value="">{single ? 'Choose a location' : 'Choose a school or college'}</option>
+            {places.map((p) => (
+              <option key={p.loc.id} value={p.loc.id} disabled={unavailable(p.inst)}>
+                {p.label}
+                {unavailable(p.inst) ? ` (${reason(p.inst, true)})` : ''}
               </option>
             ))}
           </Select>

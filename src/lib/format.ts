@@ -15,6 +15,17 @@ export const CP_TYPE_LABELS: Record<CpType, string> = {
 
 export const CP_TYPES = Object.keys(CP_TYPE_LABELS) as CpType[];
 
+/** First choice in the new-agreement wizard; each groups institutions by state/city (Institution.group). */
+export const INSTITUTION_GROUPS: { id: string; label: string }[] = [
+  { id: 'delhi', label: 'Delhi' },
+  { id: 'punjab', label: 'Punjab' },
+  { id: 'asu', label: 'ASU' },
+  { id: 'up', label: 'UP' },
+  { id: 'mumbai', label: 'Mumbai' },
+];
+
+export const INSTITUTION_TYPE_LABELS = { university: 'University', college: 'College', school: 'School' } as const;
+
 const inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 });
 export function formatInr(n: number | undefined | null): string {
   return n == null || Number.isNaN(n) ? '—' : inr.format(n);

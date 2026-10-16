@@ -243,7 +243,7 @@ export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Prom
 // ---------------- Wizard ----------------
 
 export interface WizardContext {
-  institutions: { id: string; name: string; shortCode: string; locations: { id: string; name: string }[]; hasTemplate: Record<CpType, boolean>; hasRateCard: boolean; signatoryName: string; signatoryDesignation: string; coordinatorName: string; city: string }[];
+  institutions: { id: string; name: string; shortCode: string; group?: string; locations: { id: string; name: string }[]; hasTemplate: Record<CpType, boolean>; hasRateCard: boolean; signatoryName: string; signatoryDesignation: string; coordinatorName: string; city: string }[];
 }
 
 export async function wizardContext(): Promise<WizardContext> {
@@ -257,6 +257,7 @@ export async function wizardContext(): Promise<WizardContext> {
         id: i.id,
         name: i.legalName,
         shortCode: i.shortCode,
+        group: i.group,
         city: i.city,
         locations: i.locations.map((l) => ({ id: l.id, name: `${l.name}, ${l.city}` })),
         hasTemplate: {

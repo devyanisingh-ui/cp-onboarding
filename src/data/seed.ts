@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** Prototype only: every seeded user signs in with their username and this shared password. */
 export const DEMO_PASSWORD = 'Apeejay@123';
@@ -43,6 +43,7 @@ export function buildSeed(): Database {
       city: 'Gurugram',
       state: 'Haryana',
       regionId: 'north',
+      group: 'asu',
       jurisdictionCourt: 'Gurugram, Haryana',
       arbitrationSeat: 'New Delhi',
       locations: [
@@ -65,6 +66,7 @@ export function buildSeed(): Database {
       city: 'Navi Mumbai',
       state: 'Maharashtra',
       regionId: 'west',
+      group: 'mumbai',
       jurisdictionCourt: 'Navi Mumbai, Maharashtra',
       arbitrationSeat: 'New Delhi',
       locations: [{ id: 'loc-aks-main', name: 'Kharghar Campus', city: 'Navi Mumbai' }],
@@ -75,11 +77,43 @@ export function buildSeed(): Database {
       active: true,
     },
   ];
+  // Other Apeejay schools and colleges, grouped by state/city for the wizard. All are run by
+  // Apeejay Education Society. Punjab and UP lists are placeholders until the final list is shared.
+  const SOCIETY = 'run by Apeejay Education Society, a society registered under the Societies Registration Act, 1860';
+  const SCHOOL_GROUPS = ['Pre-primary', 'Primary', 'Middle', 'Secondary'];
+  const other = (
+    id: string, shortCode: string, legalName: string, type: Institution['type'], group: string, regionId: string,
+    address: string, city: string, state: string, court: string, campus: string,
+    signatory: [string, string], coordinator: string, programmeGroups = SCHOOL_GROUPS,
+  ): Institution => ({
+    id, legalName, shortCode, type, group, regionId, city, state,
+    legalStatus: `a ${type === 'school' ? 'school' : 'college'} ${SOCIETY}`,
+    registeredAddress: address,
+    jurisdictionCourt: court,
+    arbitrationSeat: 'New Delhi',
+    locations: [{ id: `loc-${id.slice(5)}-main`, name: campus, city }],
+    signatoryName: signatory[0],
+    signatoryDesignation: signatory[1],
+    coordinatorName: coordinator,
+    programmeGroups,
+    active: true,
+  });
+  institutions.push(
+    other('inst-ans', 'ANS', 'Apeejay School, Nerul', 'school', 'mumbai', 'west', 'Sector 15, Nerul, Navi Mumbai, Maharashtra 400706', 'Navi Mumbai', 'Maharashtra', 'Navi Mumbai, Maharashtra', 'Nerul Campus', ['Mrs. Kavita Menon', 'Principal'], 'Mr. Rohit Sawant, Front Office'),
+    other('inst-ass', 'ASS', 'Apeejay School, Saket', 'school', 'delhi', 'north', 'J Block, Saket, New Delhi 110017', 'New Delhi', 'Delhi', 'New Delhi', 'Saket Campus', ['Mrs. Anjali Khanna', 'Principal'], 'Ms. Neetu Bansal, Front Office'),
+    other('inst-asp', 'ASP', 'Apeejay School, Pitampura', 'school', 'delhi', 'north', 'Sainik Vihar, Pitampura, New Delhi 110034', 'New Delhi', 'Delhi', 'New Delhi', 'Pitampura Campus', ['Mrs. Ritu Malhotra', 'Principal'], 'Mr. Amit Arora, Front Office'),
+    other('inst-asm', 'ASM', 'Apeejay School of Management', 'college', 'delhi', 'north', 'Sector 8, Institutional Area, Dwarka, New Delhi 110077', 'New Delhi', 'Delhi', 'New Delhi', 'Dwarka Campus', ['Dr. Sanjay Gupta', 'Director'], 'Ms. Pallavi Sethi, Admissions Office', ['Management']),
+    other('inst-acfa', 'ACFA', 'Apeejay College of Fine Arts', 'college', 'punjab', 'north', 'Parkash Nagar, Jalandhar, Punjab 144001', 'Jalandhar', 'Punjab', 'Jalandhar, Punjab', 'Jalandhar Campus', ['Dr. Neerja Dhingra', 'Principal'], 'Mr. Gurpreet Singh, Admissions Office', ['Design & Visual Arts']),
+    other('inst-asj', 'ASJ', 'Apeejay School, Jalandhar', 'school', 'punjab', 'north', 'Model Town, Jalandhar, Punjab 144003', 'Jalandhar', 'Punjab', 'Jalandhar, Punjab', 'Model Town Campus', ['Mrs. Harjeet Kaur', 'Principal'], 'Ms. Simran Sandhu, Front Office'),
+    other('inst-asn', 'ASN', 'Apeejay School, Noida', 'school', 'up', 'north', 'Sector 16A, Noida, Uttar Pradesh 201301', 'Noida', 'Uttar Pradesh', 'Gautam Buddh Nagar, Uttar Pradesh', 'Noida Campus', ['Mrs. Shalini Verma', 'Principal'], 'Mr. Vivek Tyagi, Front Office'),
+    other('inst-asg', 'ASG', 'Apeejay School, Greater Noida', 'school', 'up', 'north', 'Pocket 1, Knowledge Park III, Greater Noida, Uttar Pradesh 201308', 'Greater Noida', 'Uttar Pradesh', 'Gautam Buddh Nagar, Uttar Pradesh', 'Greater Noida Campus', ['Mrs. Meenu Chauhan', 'Principal'], 'Ms. Pooja Rana, Front Office'),
+  );
+  const allInstitutionIds = institutions.map((i) => i.id);
 
   const users: User[] = [
-    { id: 'u-neha', name: 'Kavya Iyer', email: 'kavya.iyer@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
-    { id: 'u-priya', name: 'Priya Sharma', email: 'priya.sharma@apeejay.edu', designation: 'Legal Counsel', roles: ['legal'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
-    { id: 'u-arjun', name: 'Arjun Mehta', email: 'arjun.mehta@apeejay.edu', designation: 'Central Admin', roles: ['admin'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], active: true },
+    { id: 'u-neha', name: 'Kavya Iyer', email: 'kavya.iyer@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: allInstitutionIds, managerId: 'u-arjun', active: true },
+    { id: 'u-priya', name: 'Priya Sharma', email: 'priya.sharma@apeejay.edu', designation: 'Legal Counsel', roles: ['legal'], regionId: 'north', institutionIds: allInstitutionIds, managerId: 'u-arjun', active: true },
+    { id: 'u-arjun', name: 'Arjun Mehta', email: 'arjun.mehta@apeejay.edu', designation: 'Central Admin', roles: ['admin'], regionId: 'north', institutionIds: allInstitutionIds, active: true },
   ];
 
   // ---------------- Rate cards ----------------
@@ -105,6 +139,16 @@ export function buildSeed(): Database {
       extras: [], createdById: 'u-arjun', createdAt: ts(-410), approvedById: 'u-priya', approvedAt: ts(-405), publishedById: 'u-arjun', publishedAt: ts(-404),
     },
   ];
+  // The other schools reuse the Kharghar school rates; the two colleges reuse ASU's matching row.
+  const aksRows = rateCards.find((r) => r.id === 'rc-aks-1')!.rows;
+  const asuRow = (group: string) => asuRows(1000).filter((r) => r.programmeGroup === group);
+  for (const i of institutions.slice(2)) {
+    rateCards.push({
+      id: `rc-${i.id.slice(5)}-1`, institutionId: i.id, version: 1, effectiveFrom: d(-240), status: 'published', applyMode: 'new_only',
+      rows: i.type === 'school' ? aksRows : asuRow(i.programmeGroups[0]!),
+      extras: [], createdById: 'u-arjun', createdAt: ts(-250), approvedById: 'u-priya', approvedAt: ts(-247), publishedById: 'u-arjun', publishedAt: ts(-246),
+    });
+  }
 
   // ---------------- Templates ----------------
   const tpl = (id: string, cpType: TemplateVersion['cpType'], version: number, status: TemplateVersion['status'], institutionId: string | null, daysAgo: number, note: string): TemplateVersion => ({

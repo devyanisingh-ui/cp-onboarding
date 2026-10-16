@@ -21,12 +21,14 @@ export interface Institution {
   id: string;
   legalName: string;
   shortCode: string;
-  type: 'university' | 'school';
+  type: 'university' | 'college' | 'school';
   legalStatus: string;
   registeredAddress: string;
   city: string;
   state: string;
   regionId: string;
+  /** Wizard grouping (Delhi, Punjab, ASU, UP, Mumbai); see INSTITUTION_GROUPS. */
+  group?: string;
   jurisdictionCourt: string;
   arbitrationSeat: string;
   locations: Location[];
