@@ -136,17 +136,18 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(function Select
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    const onDoc = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!button.current?.contains(t) && !list.current?.contains(t)) close(false);
     };
     const onMove = () => place();
-    document.addEventListener('mousedown', onDoc);
+    // pointerdown: iOS Safari sends no mousedown for taps on plain page content.
+    document.addEventListener('pointerdown', onDoc);
     window.addEventListener('resize', onMove);
     window.addEventListener('scroll', onMove, true);
     const t = setTimeout(() => list.current?.focus(), 0);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('pointerdown', onDoc);
       window.removeEventListener('resize', onMove);
       window.removeEventListener('scroll', onMove, true);
       clearTimeout(t);

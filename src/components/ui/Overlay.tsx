@@ -168,7 +168,7 @@ export function Menu({
   label: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number } | null>(null);
+  const [pos, setPos] = useState<{ top?: number; bottom?: number; left?: number; right?: number; maxHeight?: number } | null>(null);
   const id = useId();
   const box = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -178,7 +178,8 @@ export function Menu({
     if (!r) return;
     const below = window.innerHeight - r.bottom;
     const up = below < 260 && r.top > below;
-    const h = up ? { bottom: window.innerHeight - r.top + 8 } : { top: r.bottom + 8 };
+    // Cap the height to the room on that side so a long list scrolls instead of running off a phone screen.
+    const h = up ? { bottom: window.innerHeight - r.top + 8, maxHeight: r.top - 16 } : { top: r.bottom + 8, maxHeight: below - 16 };
     setPos(align === 'right' ? { ...h, right: Math.max(8, window.innerWidth - r.right) } : { ...h, left: Math.max(8, r.left) });
   }, [align]);
 
@@ -190,7 +191,7 @@ export function Menu({
   useEffect(() => {
     if (!open) return;
     place();
-    const onDoc = (e: MouseEvent) => {
+    const onDoc = (e: PointerEvent) => {
       const t = e.target as Node;
       if (!box.current?.contains(t) && !panel.current?.contains(t)) close(false);
     };
@@ -220,13 +221,15 @@ export function Menu({
       }
     };
     const onMove = () => place();
-    document.addEventListener('mousedown', onDoc);
+    // pointerdown, not mousedown: iOS Safari sends no mousedown when tapping plain page content,
+    // so a tap outside never closed the menu on iPhones.
+    document.addEventListener('pointerdown', onDoc);
     document.addEventListener('keydown', onKey);
     window.addEventListener('resize', onMove);
     window.addEventListener('scroll', onMove, true);
     const t = setTimeout(() => panel.current?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus(), 0);
     return () => {
-      document.removeEventListener('mousedown', onDoc);
+      document.removeEventListener('pointerdown', onDoc);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onMove);
       window.removeEventListener('scroll', onMove, true);
@@ -247,7 +250,7 @@ export function Menu({
             aria-label={label}
             style={{ position: 'fixed', ...pos }}
             className={cn(
-              'surface-raised z-[70] w-max min-w-60 max-w-[min(20rem,calc(100vw-1rem))] animate-pop-in rounded-xl p-1.5',
+              'surface-raised z-[70] w-max min-w-60 max-w-[min(20rem,calc(100vw-1rem))] animate-pop-in overflow-y-auto overscroll-contain rounded-xl p-1.5',
               pos.bottom != null ? 'origin-bottom' : align === 'right' ? 'origin-top-right' : 'origin-top-left',
             )}
           >
