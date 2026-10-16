@@ -75,7 +75,8 @@ export function Home() {
           </p>
         </div>
         {canCreate && (
-          <ButtonLink to="/agreements/new" size="lg" icon={<Plus className="size-5" />} className="w-full sm:w-auto">
+          // Phones: same 40px height and text size as the New CP agreement button on the CPs screen.
+          <ButtonLink to="/agreements/new" size="lg" icon={<Plus className="size-4 sm:size-5" />} className="w-full max-sm:h-10 max-sm:px-4 max-sm:text-sm sm:w-auto">
             New CP agreement
           </ButtonLink>
         )}
