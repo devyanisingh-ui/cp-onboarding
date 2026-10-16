@@ -29,7 +29,7 @@ export function Sign() {
           <Lock className="size-3.5" aria-hidden /> Secure signing link
         </span>
       </header>
-      <main id="main" className="mx-auto w-full max-w-[1400px] px-4 pb-6 pt-2.5 sm:px-6 lg:px-10 lg:pb-8 lg:pt-3">
+      <main id="main" className="mx-auto w-full max-w-[1400px] px-4 pb-6 pt-4 sm:px-6 lg:px-10 lg:pb-8 lg:pt-5">
         {loading && !data ? (
           <PageSkeleton />
         ) : error && !data ? (

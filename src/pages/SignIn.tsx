@@ -61,7 +61,7 @@ export function SignIn() {
         <p className="relative text-xs text-primary-200">Apeejay Education Society · Internal use only</p>
       </div>
 
-      <main className="flex items-center justify-center px-4 pb-10 pt-2.5 sm:px-8 lg:pt-3">
+      <main className="flex items-center justify-center px-4 pb-10 pt-4 sm:px-8 lg:pt-5">
         <div className="surface w-full max-w-md rounded-2xl p-6 sm:p-8">
           <div className="mb-8 lg:hidden">
             <BrandName />

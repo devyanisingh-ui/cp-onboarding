@@ -99,7 +99,7 @@ export function AppShell() {
       <div className="md:pl-[72px] lg:pl-60">
         <Header onMenu={() => setMoreOpen(true)} />
         <SubHeader />
-        <main id="main" tabIndex={-1} className="w-full px-4 pb-28 pt-2.5 outline-none sm:px-6 md:pb-16 lg:px-8 lg:pt-3 xl:px-10">
+        <main id="main" tabIndex={-1} className="w-full px-4 pb-28 pt-4 outline-none sm:px-6 md:pb-16 lg:px-8 lg:pt-5 xl:px-10">
           {/* Keyed on the path so each screen enters with a short fade-up. */}
           <div key={location.pathname} className="animate-page-in">
             <Outlet />
