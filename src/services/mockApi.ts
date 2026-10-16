@@ -11,10 +11,11 @@ import * as inbox from './api/inbox';
 import * as config from './api/config';
 import * as reports from './api/reports';
 import * as legacy from './api/legacy';
+import * as esign from './api/esign';
 
 export const api = {
   auth: {
-    signIn: session.ssoSignIn,
+    signIn: session.passwordSignIn,
     signOut: session.signOut,
     currentUser: session.currentUser,
     demoAccounts: session.demoAccounts,
@@ -53,6 +54,10 @@ export const api = {
     confirmTermination: agreements.confirmTermination,
     decideOverride: agreements.decideOverride,
     clearReviewFlag: agreements.clearReviewFlag,
+    sendForSignature: esign.sendForSignature,
+    resendSignatureEmail: esign.resendSignatureEmail,
+    cancelSignature: esign.cancelSignature,
+    defaultCpSigner: esign.defaultCpSigner,
   },
   documents: {
     upload: documents.uploadDocument,
@@ -107,6 +112,12 @@ export const api = {
     setSimulateErrors: session.setSimulateErrors,
     reset: session.resetDemoData,
   },
+  /** Public signing links (signers have no app account; the link token is their credential). */
+  signing: {
+    session: esign.getSigningSession,
+    sign: esign.signWithToken,
+    decline: esign.declineWithToken,
+  },
 };
 
 export type Api = typeof api;
@@ -117,3 +128,5 @@ export type { ReportId, ReportResult, ReportFilters } from './api/reports';
 export type { CpView } from './api/cps';
 export type { LegacyRow, RowValidation } from './api/legacy';
 export type { RenderedDocument } from './api/agreements';
+export type { SigningSession, SignatureInput, SignerInput } from './api/esign';
+export { SIGN_METHOD_LABELS } from './api/esign';

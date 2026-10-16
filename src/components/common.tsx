@@ -66,16 +66,29 @@ export function PageHeader({
 }
 
 /** PRD §8: the primary action per screen is fixed at the bottom on phones. */
-export function ActionBar({ children, className }: { children: ReactNode; className?: string }) {
+/**
+ * Primary actions for a screen. Phones: always fixed above the bottom nav. Wider screens: inline
+ * at the end of the content, or with `pinned`, fixed to the bottom of the window beside the
+ * sidebar however long the page is (long forms such as the new-agreement wizard).
+ */
+export function ActionBar({ children, className, pinned = false }: { children: ReactNode; className?: string; pinned?: boolean }) {
   return (
-    <div
-      className={cn(
-        'glass-3 safe-bottom fixed inset-x-0 bottom-16 z-20 flex gap-2 border-t border-white/80 px-4 py-3 shadow-[0_-8px_24px_-14px_rgb(22_28_56/0.2)] md:static md:bg-transparent md:shadow-none md:backdrop-blur-none md:z-auto md:mt-6 md:justify-end md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none [&>*]:flex-1 md:[&>*]:flex-none',
-        className,
-      )}
-    >
-      {children}
-    </div>
+    <>
+      <div
+        className={cn(
+          'glass-3 fixed inset-x-0 bottom-16 z-20 flex gap-2 border-t border-white/80 px-4 py-3 shadow-[0_-8px_24px_-14px_rgb(22_28_56/0.2)] [&>*]:flex-1 md:mt-6 md:justify-end md:[&>*]:flex-none',
+          pinned
+            ? // Same insets as the content column (right of the sidebar), flush with the window bottom.
+              'md:bottom-0 md:left-[72px] md:border-line/70 md:px-6 md:py-3 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:left-60 lg:px-8 xl:px-10'
+            : 'md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none',
+          className,
+        )}
+      >
+        {children}
+      </div>
+      {/* Room at the end of the page so the pinned bar never covers the last of the content. */}
+      {pinned && <div className="hidden md:block md:h-6" aria-hidden />}
+    </>
   );
 }
 

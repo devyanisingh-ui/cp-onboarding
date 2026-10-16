@@ -4,6 +4,7 @@ import { formatDate } from './dates';
 import { formatInr, CP_TYPE_LABELS } from './format';
 import { FIELD_BY_KEY, TOKEN_RE, fieldApplies } from './templateFields';
 import { contentFor, isRequired, usedFieldKeys } from './templateContent';
+import { signaturesToShow, type SignatureView } from './signatures';
 
 /**
  * Renders an agreement from its template version's content (built in the template editor)
@@ -191,18 +192,30 @@ export function renderAgreementHtml(ctx: MergeContext): string {
         break;
       }
       case 'signatures':
-        parts.push(`<section class="signatures">
+        {
+          // Signatures already given appear above their signing line as soon as each signer signs.
+          const shown = signaturesToShow(a)?.signatures ?? [];
+          const mark = (role: SignatureView['role']) => {
+            const s = shown.find((x) => x.role === role);
+            if (!s) return '<div class="sig-mark"></div>'; // same height either way, so both signing lines align
+            const look = s.image
+              ? `<img src="${esc(s.image)}" alt="Signature of ${esc(s.name)}" />`
+              : `<span class="sig-dsc">${(s.dscLines ?? []).map((l, n) => (n === 0 ? `<strong>${esc(l)}</strong>` : esc(l))).join('<br/>')}</span>`;
+            return `<div class="sig-mark">${look}<span class="sig-meta">${esc(s.caption)}</span></div>`;
+          };
+          parts.push(`<section class="signatures">
     <div>
       <p><strong>For and on behalf of ${esc(i.legalName)}</strong></p>
-      <div class="sign-line"></div>
+      ${mark('institution')}<div class="sign-line"></div>
       <p>${field('institution.signatory_name')}<br/>${field('institution.signatory_designation')}</p>
     </div>
     <div>
       <p><strong>For and on behalf of ${field('cp.legal_name')}</strong></p>
-      <div class="sign-line"></div>
+      ${mark('cp')}<div class="sign-line"></div>
       <p>${signatoryLine(cp.type, field)}</p>
     </div>
   </section>`);
+        }
         break;
       case 'annexure': {
         const rateRows = rates.rows
@@ -267,7 +280,11 @@ export const DOC_CSS = `
 .agreement-doc mark.missing{background:#fef3c7;color:#92400e;border:1px dashed #d97706;padding:0 4px;border-radius:3px;font-family:system-ui,sans-serif;font-size:12px}
 .agreement-doc .dev-tag{font-family:system-ui,sans-serif;font-size:11px;background:#ffedd5;color:#9a3412;padding:1px 6px;border-radius:999px}
 .agreement-doc .signatures{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:28px}
-.agreement-doc .sign-line{border-bottom:1px solid #111827;height:48px;margin:8px 0}
+.agreement-doc .sign-line{border-bottom:1px solid #111827;height:0;margin:2px 0 8px}
+.agreement-doc .sig-mark{height:84px;margin-top:8px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.agreement-doc .sig-mark img{display:block;max-height:60px;max-width:240px;object-fit:contain;object-position:left bottom}
+.agreement-doc .sig-dsc{display:inline-block;max-width:280px;border:1px solid #0b6480;background:#eff8fb;color:#0b6480;border-radius:3px;padding:4px 7px;font:11px/1.35 system-ui,sans-serif}
+.agreement-doc .sig-meta{font:11px/1.3 system-ui,sans-serif;color:#6b7280}
 .agreement-doc .annexure{margin-top:32px;border-top:2px solid #111827;padding-top:12px;overflow-x:auto}
 .agreement-doc table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 12px}
 .agreement-doc th,.agreement-doc td{border:1px solid #9ca3af;padding:6px 8px;text-align:left;vertical-align:top}

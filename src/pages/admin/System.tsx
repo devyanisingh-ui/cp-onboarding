@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Mail, Play, RotateCcw, Send } from 'lucide-react';
 import { api } from '@/services/mockApi';
 import { getDb } from '@/services/db';
@@ -69,14 +70,21 @@ export function System() {
               <li key={m.id}>
                 <button type="button" className="w-full px-5 py-3 text-left hover:bg-[var(--surface-hover)]" onClick={() => setOpen(open === m.id ? null : m.id)} aria-expanded={open === m.id}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge tone={m.kind === 'escalation' ? 'orange' : m.kind === 'digest' ? 'purple' : m.kind === 'reminder' ? 'amber' : 'accent'}>{m.kind}</Badge>
+                    <Badge tone={m.kind === 'escalation' ? 'orange' : m.kind === 'digest' ? 'purple' : m.kind === 'reminder' ? 'amber' : m.kind === 'signature' ? 'blue' : 'accent'}>{m.kind}</Badge>
                     <span className="text-sm font-medium">{m.subject}</span>
                   </div>
                   <p className="mt-0.5 text-xs text-muted">
                     To {m.to} · {formatDateTime(m.sentAt)}
                   </p>
-                  {open === m.id && <pre className="mt-2 whitespace-pre-wrap rounded-md bg-canvas p-3 font-sans text-xs text-ink-soft">{m.body}{m.link ? `\n\nOpen: ${m.link}` : ''}</pre>}
+                  {open === m.id && <pre className="mt-2 whitespace-pre-wrap rounded-md bg-canvas p-3 font-sans text-xs text-ink-soft">{m.body}</pre>}
                 </button>
+                {open === m.id && m.link && (
+                  <p className="px-5 pb-3 text-xs">
+                    <Link to={m.link} className="hit-area font-medium text-primary-700 hover:underline">
+                      {m.kind === 'signature' ? 'Open signing link' : 'Open link'} →
+                    </Link>
+                  </p>
+                )}
               </li>
             ))}
           </ul>

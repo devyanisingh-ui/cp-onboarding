@@ -219,7 +219,6 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Admin', to: '/admin' }, { label: 'Templates', to: '/admin/templates' }, { label: `${CP_TYPE_LABELS[cpType]} v${template.version}` }]}
         title={`${CP_TYPE_LABELS[cpType]} template · v${template.version}`}
         subtitle={`${scope} · ${editable ? 'Draft — edits are saved as this new version only. Published versions are never changed.' : 'Read-only.'}`}
         badges={
@@ -302,9 +301,9 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
 
       {wide ? (
         <div className={cn('grid items-start gap-5', ultra ? 'grid-cols-[240px_minmax(0,1fr)_minmax(0,460px)]' : 'grid-cols-[minmax(0,1fr)_minmax(0,420px)]')}>
-          {ultra && <Card className="sticky top-20 max-h-[calc(100dvh-6rem)] overflow-hidden">{palette}</Card>}
+          {ultra && <Card className="sticky top-[7.5rem] max-h-[calc(100dvh-8.5rem)] overflow-hidden">{palette}</Card>}
           <div className="min-w-0">{canvas}</div>
-          <Card className="sticky top-20 flex max-h-[calc(100dvh-6rem)] flex-col overflow-hidden">
+          <Card className="sticky top-[7.5rem] flex max-h-[calc(100dvh-8.5rem)] flex-col overflow-hidden">
             <div className="px-4 pt-2">
               <Tabs
                 label="Template side panel"

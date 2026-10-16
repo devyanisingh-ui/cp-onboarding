@@ -32,12 +32,14 @@ export function Verification() {
     const a = d.agreement;
     const sp = a.stampPaper;
     const rows: { key: string; label: string; value: ReactNode }[] = [
-      { key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' },
+      a.esign?.status === 'completed'
+        ? { key: 'pages_signed', label: 'E-signatures complete (see the signature certificate page)', value: a.esign.signers.map((s) => `${s.name}: ${s.signature?.kind === 'dsc' ? 'DSC' : s.signature?.kind}`).join(' · ') }
+        : { key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' },
       { key: 'cp_name', label: 'CP name in signature block', value: d.cp.legalName },
       { key: 'signatory', label: 'Institution signatory', value: `${a.signatoryName}, ${a.signatoryDesignation}` },
-      { key: 'stamp_number', label: 'Stamp paper number', value: sp?.number ?? '—' },
+      { key: 'stamp_number', label: a.esign?.status === 'completed' ? 'E-stamp certificate number' : 'Stamp paper number', value: sp?.number ?? '—' },
       { key: 'stamp_value', label: 'Stamp value and state', value: sp ? `${formatInr(sp.valueInr)} · ${sp.state}` : '—' },
-      { key: 'stamp_date', label: 'Stamp purchase date', value: formatDate(sp?.purchaseDate) },
+      { key: 'stamp_date', label: a.esign?.status === 'completed' ? 'E-stamp issue date' : 'Stamp purchase date', value: formatDate(sp?.purchaseDate) },
       { key: 'dates', label: 'Commencement and expiry', value: `${formatDate(a.startDate)} – ${formatDate(a.endDate)}` },
       { key: 'pan', label: 'PAN matches PAN copy', value: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} /> },
       { key: 'aadhaar', label: 'Aadhaar copy is masked; last 4 match', value: maskAadhaar(d.cp.aadhaarLast4) },
@@ -58,7 +60,6 @@ export function Verification() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: d!.agreement.id, to: `/agreements/${d!.agreement.id}` }, { label: 'Gate 2' }]}
         title="Gate 2 verification"
         subtitle={`${d!.cp.legalName} · ${d!.institution.shortCode}${d!.agreement.source === 'legacy' ? ' · Legacy import' : ''}`}
       />
@@ -74,7 +75,7 @@ export function Verification() {
         />
       </div>
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card className={cn('min-w-0 overflow-hidden lg:sticky lg:top-20 lg:self-start', mobileView !== 'doc' && 'max-lg:hidden')}>
+        <Card className={cn('min-w-0 overflow-hidden lg:sticky lg:top-[7.5rem] lg:self-start', mobileView !== 'doc' && 'max-lg:hidden')}>
           <div className="px-4 pt-2">
             <Tabs label="Uploaded documents" active={current?.id ?? ''} onChange={setDocTab} tabs={docs.map((x) => ({ id: x.id, label: docLabel(x.type) }))} />
           </div>

@@ -1,36 +1,14 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Clock, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Clock, Eye, EyeOff, Lock, ShieldCheck, User as UserIcon } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
 import { api } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
 import { ROLE_LABELS } from '@/lib/format';
 import { useDocumentTitle } from '@/hooks/misc';
-import { Alert, Avatar, Button, Field, Input, Modal } from '@/components/ui';
+import { Alert, Avatar, Button, Field, Input } from '@/components/ui';
 import { BrandName } from '@/components/layout/Brand';
-import type { SsoProvider } from '@/services/api/session';
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
-      <path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.5c2.1-1.9 3.3-4.7 3.3-8Z" />
-      <path fill="#34A853" d="M12 23c3 0 5.4-1 7.2-2.7l-3.5-2.7c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5H2.3v2.8A11 11 0 0 0 12 23Z" />
-      <path fill="#FBBC05" d="M5.9 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.3a11 11 0 0 0 0 9.8l3.6-2.8Z" />
-      <path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.1 1.6l3.1-3.1A11 11 0 0 0 2.3 7.1l3.6 2.8C6.8 7.3 9.2 5.4 12 5.4Z" />
-    </svg>
-  );
-}
-
-function MicrosoftIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-5" aria-hidden>
-      <path fill="#F25022" d="M2 2h9.5v9.5H2z" />
-      <path fill="#7FBA00" d="M12.5 2H22v9.5h-9.5z" />
-      <path fill="#00A4EF" d="M2 12.5h9.5V22H2z" />
-      <path fill="#FFB900" d="M12.5 12.5H22V22h-9.5z" />
-    </svg>
-  );
-}
+import { DEMO_PASSWORD } from '@/data/seed';
 
 export function SignIn() {
   useDocumentTitle('Sign in');
@@ -38,24 +16,23 @@ export function SignIn() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: string } | null)?.from ?? '/';
-  const [provider, setProvider] = useState<SsoProvider | null>(null);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const accounts = api.auth.demoAccounts();
 
-  const go = async (value: string) => {
-    if (!provider) return;
-    setBusy(value);
+  const submit = async () => {
+    setBusy(true);
     setError(null);
     try {
-      await signIn(provider, value);
-      setProvider(null);
+      await signIn(username, password);
       navigate(from, { replace: true });
     } catch (e) {
       setError(errorMessage(e));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
@@ -90,10 +67,10 @@ export function SignIn() {
             <BrandName />
           </div>
           <h1 className="text-display">Sign in</h1>
-          <p className="mt-1 text-sm text-muted">Use your Apeejay work account. There are no separate app passwords.</p>
+          <p className="mt-1 text-sm text-muted">Enter your CP Onboarding username and password.</p>
           {/* Shared prototype: make clear this is not a live Apeejay system. */}
           <p className="mt-4 rounded-lg border border-amber-200 bg-warning-50 px-3 py-2 text-xs font-medium text-amber-900">
-            Prototype for review. Sign-in is simulated, no password is ever asked for, and all partners and agreements are fictional demo data.
+            Prototype for review. Sign-in is simulated and all partners and agreements are fictional demo data. Do not use a real password.
           </p>
 
           {endedReason && (
@@ -102,18 +79,81 @@ export function SignIn() {
             </Alert>
           )}
 
-          <div className="mt-6 space-y-3">
-            <Button variant="secondary" size="lg" block icon={<GoogleIcon />} onClick={() => (setProvider('google'), setError(null))}>
-              Sign in with Google
+          <form
+            className="mt-6 space-y-4"
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              void submit();
+            }}
+          >
+            {error && <Alert tone="error">{error}</Alert>}
+            <Field label="Username" hint="Usually the part of your work email before @, e.g. neha.kapoor">
+              <Input
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                autoFocus
+                prefix={<UserIcon className="size-4" aria-hidden />}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+              />
+            </Field>
+            <Field
+              label="Password"
+              labelAction={
+                <button type="button" className="flex items-center gap-1 text-xs font-medium text-primary-700 hover:underline" onClick={() => setShowPassword((v) => !v)}>
+                  {showPassword ? <EyeOff className="size-3.5" aria-hidden /> : <Eye className="size-3.5" aria-hidden />}
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              }
+            >
+              <Input
+                type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
+                prefix={<Lock className="size-4" aria-hidden />}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            <Button type="submit" size="lg" block loading={busy} disabled={!username.trim() || !password}>
+              Sign in
             </Button>
-            <Button variant="secondary" size="lg" block icon={<MicrosoftIcon />} onClick={() => (setProvider('microsoft'), setError(null))}>
-              Sign in with Microsoft
-            </Button>
-          </div>
+          </form>
+
+          <details className="mt-6 rounded-lg border border-line p-3 text-sm">
+            <summary className="cursor-pointer font-medium text-ink">Demo accounts</summary>
+            <p className="mt-2 text-xs text-muted">
+              Every demo account uses the password <code className="rounded bg-sunken px-1 font-mono text-ink">{DEMO_PASSWORD}</code>. Pick one to fill the form.
+            </p>
+            <ul className="-mx-1 mt-2 space-y-0.5">
+              {accounts.map((a) => (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUsername(a.username);
+                      setPassword(DEMO_PASSWORD);
+                      setError(null);
+                    }}
+                    className="flex w-full items-center gap-3 rounded-lg px-1 py-2 text-left hover:bg-[var(--surface-hover)]"
+                  >
+                    <Avatar name={a.name} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-ink">{a.name}</span>
+                      <span className="block truncate text-xs text-muted">
+                        {a.username} · {a.roles.map((r) => ROLE_LABELS[r]).join(', ')}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </details>
 
           <div className="mt-8 space-y-2 rounded-lg bg-sunken/70 p-4 text-xs text-muted">
             <p className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-primary-600" aria-hidden /> Only Admin-approved Apeejay domains can sign in.
+              <ShieldCheck className="size-4 text-primary-600" aria-hidden /> Only users set up by the central Admin team can sign in.
             </p>
             <p className="flex items-center gap-2">
               <Clock className="size-4 text-primary-600" aria-hidden /> Sessions end after 30 minutes of inactivity.
@@ -122,53 +162,6 @@ export function SignIn() {
         </div>
       </main>
 
-      <Modal
-        open={!!provider}
-        onClose={() => setProvider(null)}
-        title={`Choose an account`}
-        description={`Continue to CP Onboarding with ${provider === 'google' ? 'Google' : 'Microsoft'} (simulated sign-in for this prototype)`}
-      >
-        {error && (
-          <Alert tone="error" className="mb-4">
-            {error}
-          </Alert>
-        )}
-        <ul className="-mx-2 max-h-72 space-y-0.5 overflow-y-auto">
-          {accounts.map((a) => (
-            <li key={a.id}>
-              <button
-                type="button"
-                onClick={() => void go(a.email)}
-                disabled={!!busy}
-                className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left hover:bg-[var(--surface-hover)] disabled:opacity-60"
-              >
-                <Avatar name={a.name} />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold text-ink">{a.name}</span>
-                  <span className="block truncate text-xs text-muted">
-                    {a.email} · {a.roles.map((r) => ROLE_LABELS[r]).join(', ')}
-                  </span>
-                </span>
-                {busy === a.email && <span className="text-xs text-muted">Signing in…</span>}
-              </button>
-            </li>
-          ))}
-        </ul>
-        <form
-          className="mt-4 border-t border-line pt-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void go(email);
-          }}
-        >
-          <Field label="Use another account" hint="Try a non-Apeejay address to see the domain check.">
-            <Input type="email" autoComplete="email" placeholder="name@apeejay.edu" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          <Button type="submit" className="mt-3" block loading={busy === email && !!email} disabled={!email}>
-            Continue
-          </Button>
-        </form>
-      </Modal>
     </div>
   );
 }

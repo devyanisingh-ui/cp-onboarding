@@ -34,7 +34,6 @@ export function DraftPreview() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: a.id, to: `/agreements/${a.id}` }, { label: 'Preview' }]}
         title="Draft preview"
         subtitle={`${d.cp.legalName} · ${d.institution.shortCode} · Template v${d.template.version} · Rate card v${d.rateCard.version}`}
         badges={
@@ -108,7 +107,7 @@ export function DraftPreview() {
           </div>
         </div>
 
-        <aside className={cn('min-w-0 space-y-5 lg:sticky lg:top-20 lg:self-start', mobileView !== 'details' && 'hidden lg:block')}>
+        <aside className={cn('min-w-0 space-y-5 lg:sticky lg:top-[7.5rem] lg:self-start', mobileView !== 'details' && 'hidden lg:block')}>
           <Card>
             <div className="px-5 pt-2">
               <Tabs

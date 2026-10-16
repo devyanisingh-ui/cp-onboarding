@@ -5,6 +5,7 @@ import { addWorkingDays, daysBetween, daysUntil, shiftDays, today } from '@/lib/
 import { missingFields, mergeFields, renderAgreementHtml, clausesFor, type MergeField } from '@/lib/agreementTemplate';
 import { agreementDateErrors } from '@/lib/validation';
 import { displayStatus, FINAL_STATUSES, LIVE_STATUSES, IN_PROGRESS_STATUSES } from '@/lib/status';
+import { signaturesToShow } from '@/lib/signatures';
 import type { CpFormValues } from '@/lib/schemas';
 import { conflict, forbidden, invalid, notFound } from '../errors';
 import { nextId } from '../db';
@@ -65,7 +66,7 @@ export function currentRateCard(institutionId: string): RateCard | undefined {
     .sort((a, b) => b.version - a.version)[0];
 }
 
-function mergeContext(a: Agreement) {
+export function mergeContext(a: Agreement) {
   const d = getDb();
   return {
     agreement: a,
@@ -122,8 +123,11 @@ function actionsFor(user: User, a: Agreement): AgreementActions {
       (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId)),
     uploadSigned:
       (a.status === 'approved_for_signing' || (a.source === 'legacy' && a.status === 'signed_copy_uploaded' && !hasSignedCopy(a.id))) &&
+      a.esign?.status !== 'in_progress' &&
       can(user, 'signed.upload') &&
       inScope(user, a.institutionId),
+    sendForSignature: a.status === 'approved_for_signing' && a.source === 'app' && a.esign?.status !== 'in_progress' && can(user, 'signed.upload') && inScope(user, a.institutionId),
+    manageSignature: a.status === 'approved_for_signing' && a.esign?.status === 'in_progress' && can(user, 'signed.upload') && inScope(user, a.institutionId),
     verifyGate2: a.status === 'signed_copy_uploaded' && hasSignedCopy(a.id) && can(user, 'gate2.verify'),
     renewalDecision: a.status === 'active' && renewalWindow && !a.renewal && can(user, 'renewal.decide') && inScope(user, a.institutionId),
     confirmNonRenewal: a.renewal?.decision === 'do_not_renew' && a.renewal.confirmation === 'pending' && can(user, 'renewal.confirm') && inScope(user, a.institutionId),
@@ -224,7 +228,7 @@ export async function renderDocument(id: string): Promise<RenderedDocument> {
   return { html: renderAgreementHtml(m), fields, missing: missingFields(m), blockers: a.status === 'draft' ? submissionBlockers(a) : [] };
 }
 
-export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Promise<{ fileName: string; html: string }> {
+export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Promise<{ fileName: string; html: string; signing: ReturnType<typeof signaturesToShow> }> {
   await delay();
   const user = ctx();
   const a = load(id, user);
@@ -232,7 +236,8 @@ export async function downloadDocument(id: string, format: 'docx' | 'pdf'): Prom
   if (format === 'docx' && missingFields(m).length && a.status !== 'draft') throw conflict('Document has missing fields.');
   audit(user, 'download', 'agreement', a.id, `Downloaded ${format.toUpperCase()} of ${a.id}`);
   commit();
-  return { fileName: `${a.id}_v${a.version}.${format}`, html: renderAgreementHtml(m) };
+  // Signatures given so far (e-signature in progress or complete) go into the downloaded file too.
+  return { fileName: `${a.id}_v${a.version}.${format}`, html: renderAgreementHtml(m), signing: signaturesToShow(a) };
 }
 
 // ---------------- Wizard ----------------

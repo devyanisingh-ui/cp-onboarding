@@ -333,7 +333,6 @@ function WizardInner({
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: agreementId ?? 'New CP agreement' }]}
         title={agreementId ? `Draft ${agreementId}` : 'New CP agreement'}
         subtitle={agreementId ? `${label()} · ${inst?.shortCode ?? ''}` : 'Six short steps. Save as a draft at any point and come back later.'}
       />
@@ -373,7 +372,7 @@ function WizardInner({
         </CardBody>
       </Card>
 
-      <ActionBar>
+      <ActionBar pinned>
         {step > minStep && (
           <Button variant="secondary" icon={<ArrowLeft className="size-4" />} onClick={() => goto(step - 1)} className="md:mr-auto">
             Back

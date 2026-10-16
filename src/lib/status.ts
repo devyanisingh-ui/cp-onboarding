@@ -7,6 +7,7 @@ export const STATUS_META: Record<DisplayStatus, { label: string; tone: StatusTon
   rejected: { label: 'Rejected', tone: 'red' },
   pending_approval: { label: 'Pending Legal approval', tone: 'amber' },
   approved_for_signing: { label: 'Approved for signing', tone: 'blue' },
+  out_for_signature: { label: 'Out for e-signature', tone: 'purple' },
   signed_copy_uploaded: { label: 'Signed copy uploaded', tone: 'purple' },
   active: { label: 'Active', tone: 'green' },
   expiring: { label: 'Expiring', tone: 'orange' },
@@ -41,7 +42,8 @@ export const IN_PROGRESS_STATUSES: AgreementStatus[] = [
 /** Statuses that count towards "one active agreement per CP per institution". */
 export const LIVE_STATUSES: AgreementStatus[] = ['active', 'notice_period'];
 
-export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRejection'>): DisplayStatus {
+export function displayStatus(a: Pick<Agreement, 'status' | 'endDate' | 'lastRejection' | 'esign'>): DisplayStatus {
+  if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') return 'out_for_signature';
   if (a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60) return 'expiring';
   if (a.status === 'draft' && a.lastRejection) return 'rejected';
   return a.status;

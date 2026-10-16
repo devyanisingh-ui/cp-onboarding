@@ -14,6 +14,7 @@ import type { Role } from '@/types';
 import { Avatar, Drawer, EmptyState, IconButton, Menu, Select, Spinner, useToast } from '@/components/ui';
 import { BrandName } from './Brand';
 import { navFor } from './nav';
+import { SubHeader } from './SubHeader';
 
 export function AppShell() {
   const user = useUser();
@@ -91,12 +92,13 @@ export function AppShell() {
         </nav>
         <div className="mx-4 mb-4 hidden rounded-lg border border-white/80 bg-white/50 p-3 text-xs text-muted lg:block">
           <p className="font-medium text-ink-soft">Prototype build</p>
-          <p>Mock data · no real SSO</p>
+          <p>Mock data · simulated sign-in</p>
         </div>
       </aside>
 
       <div className="md:pl-[72px] lg:pl-60">
         <Header onMenu={() => setMoreOpen(true)} />
+        <SubHeader />
         <main id="main" tabIndex={-1} className="w-full px-4 pb-28 pt-6 outline-none sm:px-6 md:pb-16 lg:px-8 lg:pt-8 xl:px-10">
           {/* Keyed on the path so each screen enters with a short fade-up. */}
           <div key={location.pathname} className="animate-page-in">

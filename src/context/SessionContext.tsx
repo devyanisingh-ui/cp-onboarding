@@ -48,8 +48,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(iv);
   }, []);
 
-  const signIn = useCallback<SessionValue['signIn']>(async (provider, email) => {
-    const u = await api.auth.signIn(provider, email);
+  const signIn = useCallback<SessionValue['signIn']>(async (username, password) => {
+    const u = await api.auth.signIn(username, password);
     setUser(u);
     setEndedReason(null);
     return u;

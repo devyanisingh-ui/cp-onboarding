@@ -81,6 +81,10 @@ export interface AgreementActions {
   decideDeviation: boolean;
   approveGate1: boolean;
   uploadSigned: boolean;
+  /** Send the approved agreement for digital signature (DSC or drawn/typed via an email link). */
+  sendForSignature: boolean;
+  /** Resend or withdraw a signature request that is in progress. */
+  manageSignature: boolean;
   verifyGate2: boolean;
   renewalDecision: boolean;
   confirmNonRenewal: boolean;

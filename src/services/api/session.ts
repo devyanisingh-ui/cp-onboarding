@@ -1,29 +1,34 @@
 import type { Role, User } from '@/types';
-import { emailDomainAllowed } from '@/lib/validation';
+import { DEMO_PASSWORD } from '@/data/seed';
 import { ApiError, invalid } from '../errors';
 import { resetDb } from '../db';
 import { clearBlobs } from '../blobStore';
 import { assertCan, audit, commit, ctx, delay, getDb, getSessionUserId, setSessionUserId } from './core';
 import { runScheduledJobs } from './scheduler';
 
-export type SsoProvider = 'google' | 'microsoft';
+/** Username is the part of the work email before the "@" (e.g. neha.kapoor). */
+export function usernameOf(user: Pick<User, 'email'>): string {
+  return user.email.split('@')[0].toLowerCase();
+}
 
 /**
- * Mock of the OpenID Connect sign-in. The real build redirects to Google/Microsoft and receives
- * a verified email; access requires an Admin-allowed domain AND a user record with roles.
+ * Mock of username + password sign-in. The prototype has no backend, so every active user shares
+ * DEMO_PASSWORD; the real build verifies a hashed password on the server.
  */
-export async function ssoSignIn(provider: SsoProvider, email: string): Promise<User> {
+export async function passwordSignIn(username: string, password: string): Promise<User> {
   await delay('write');
-  const d = getDb();
-  const value = email.trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) throw invalid('Enter a valid work email.');
-  if (!emailDomainAllowed(value, d.settings.allowedDomains))
-    throw new ApiError(403, `${value.split('@')[1]} is not an Apeejay domain. Sign in with your Apeejay Google Workspace or Microsoft 365 account.`);
-  const user = d.users.find((u) => u.email.toLowerCase() === value);
-  if (!user) throw new ApiError(403, 'Your Apeejay account is not set up in CP Onboarding yet. Ask the central Admin team to add you.');
+  const value = username.trim().toLowerCase();
+  if (!value) throw invalid('Enter your username.');
+  if (!password) throw invalid('Enter your password.');
+  const user = getDb().users.find((u) => usernameOf(u) === value || u.email.toLowerCase() === value);
+  if (!user || password !== DEMO_PASSWORD) throw new ApiError(401, 'Incorrect username or password.');
   if (!user.active) throw new ApiError(403, 'Your access has been deactivated. Contact the central Admin team.');
+  return startSession(user, 'Signed in with username and password');
+}
+
+function startSession(user: User, detail: string): User {
   setSessionUserId(user.id);
-  audit(user, 'login', 'session', user.id, `Signed in with ${provider === 'google' ? 'Google' : 'Microsoft'}`);
+  audit(user, 'login', 'session', user.id, detail);
   commit();
   runScheduledJobs();
   return structuredClone(user);
@@ -47,11 +52,11 @@ export function currentUser(): User | null {
   }
 }
 
-/** Accounts shown in the mock SSO account picker (prototype only). */
-export function demoAccounts(): Pick<User, 'id' | 'name' | 'email' | 'designation' | 'roles'>[] {
+/** Accounts listed on the sign-in screen (prototype only). */
+export function demoAccounts(): (Pick<User, 'id' | 'name' | 'email' | 'designation' | 'roles'> & { username: string })[] {
   return getDb()
     .users.filter((u) => u.active)
-    .map(({ id, name, email, designation, roles }) => ({ id, name, email, designation, roles }));
+    .map(({ id, name, email, designation, roles }) => ({ id, name, email, designation, roles, username: usernameOf({ email }) }));
 }
 
 /** Primary persona per role for the reviewer role switcher (PRD Appendix A). */
@@ -64,7 +69,8 @@ export const PERSONAS: Record<Role, string> = {
 export async function switchPersona(userId: string): Promise<User> {
   const user = getDb().users.find((u) => u.id === userId && u.active);
   if (!user) throw invalid('That account is not available.');
-  return ssoSignIn('google', user.email);
+  await delay('write');
+  return startSession(user, 'Switched persona (prototype)');
 }
 
 // ---------------- System (Admin → System, prototype controls) ----------------

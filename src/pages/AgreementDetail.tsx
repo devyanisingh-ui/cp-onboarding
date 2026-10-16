@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Ban, CalendarClock, FileSearch, FileSignature, Flag, History, Link2, Pencil, RefreshCw, Scale, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
-import { api } from '@/services/mockApi';
+import { Ban, CalendarClock, FileSearch, FileSignature, Flag, History, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
+import type { ESigner, ESignRequest } from '@/types';
+import { api, type AgreementDetail as AgreementDetailData } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { formatDate, formatDateTime, daysUntil } from '@/lib/dates';
 import { CP_TYPE_LABELS, formatInr } from '@/lib/format';
-import { STATUS_META } from '@/lib/status';
+import { STATUS_META, type StatusTone } from '@/lib/status';
 import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, ErrorState, PageSkeleton, StatusBadge } from '@/components/ui';
 import { AgreementLink, CommentDialog, DocumentList, PageHeader, StatusStepper, Timeline, WarningBanner } from '@/components/common';
 import { DeviationCompare, DownloadMenu } from '@/components/agreement';
@@ -30,7 +31,6 @@ export function AgreementDetail() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: a.id }]}
         title={d.cp.legalName}
         subtitle={
           <span className="flex flex-wrap gap-x-2">
@@ -63,9 +63,14 @@ export function AgreementDetail() {
                 Request deviation
               </ButtonLink>
             )}
+            {act.sendForSignature && (
+              <ButtonLink to={`/agreements/${a.id}/esign`} icon={<PenLine className="size-4" />}>
+                {a.esign ? 'Send for e-signature again' : 'Send for e-signature'}
+              </ButtonLink>
+            )}
             {act.uploadSigned && (
-              <ButtonLink to={`/agreements/${a.id}/upload`} icon={<Upload className="size-4" />}>
-                {a.source === 'legacy' ? 'Upload scan' : 'Upload signed copy'}
+              <ButtonLink to={`/agreements/${a.id}/upload`} variant={act.sendForSignature ? 'secondary' : 'primary'} icon={<Upload className="size-4" />}>
+                {a.source === 'legacy' ? 'Upload scan' : act.sendForSignature ? 'Upload paper copy' : 'Upload signed copy'}
               </ButtonLink>
             )}
             {act.verifyGate2 && (
@@ -165,6 +170,7 @@ export function AgreementDetail() {
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-5">
+          {a.esign && <ESignCard d={d} onChange={reload} />}
           <Card>
             <CardHeader title="Key dates and terms" icon={<CalendarClock />} />
             <CardBody>
@@ -180,7 +186,7 @@ export function AgreementDetail() {
                   { label: 'Template', value: `${CP_TYPE_LABELS[d.template.cpType]} v${d.template.version}` },
                   { label: 'Rate card', value: `${d.institution.shortCode} v${d.rateCard.version} (from ${formatDate(d.rateCard.effectiveFrom)})` },
                   { label: 'Owner', value: d.summary.ownerName },
-                  ...(a.stampPaper ? [{ label: 'Stamp paper', value: `${a.stampPaper.number} · ${formatInr(a.stampPaper.valueInr)} · ${a.stampPaper.state}` }] : []),
+                  ...(a.stampPaper ? [{ label: a.esign ? 'E-stamp' : 'Stamp paper', value: `${a.stampPaper.number} · ${formatInr(a.stampPaper.valueInr)} · ${a.stampPaper.state}` }] : []),
                   ...(a.signedOn ? [{ label: 'Signed', value: `${formatDate(a.signedOn)}${a.signedById ? ` by ${d.names[a.signedById]}` : ''}` }] : []),
                   ...(a.activatedAt ? [{ label: 'Active since', value: formatDate(a.activatedAt.slice(0, 10)) }] : []),
                 ]}
@@ -263,5 +269,101 @@ export function AgreementDetail() {
         onConfirm={async (c) => (await decideOverride.run(override!, c)).ok}
       />
     </div>
+  );
+}
+
+const SIGNER_STATUS: Record<ESigner['status'], { label: string; tone: StatusTone }> = {
+  waiting: { label: 'Waiting', tone: 'grey' },
+  sent: { label: 'Link sent', tone: 'amber' },
+  signed: { label: 'Signed', tone: 'green' },
+  declined: { label: 'Declined', tone: 'red' },
+};
+
+const REQUEST_STATUS: Record<ESignRequest['status'], { label: string; tone: StatusTone }> = {
+  in_progress: { label: 'In progress', tone: 'purple' },
+  completed: { label: 'All signed', tone: 'green' },
+  declined: { label: 'Declined', tone: 'red' },
+  cancelled: { label: 'Withdrawn', tone: 'grey' },
+};
+
+/** Progress of the digital-signature request: who signs, how, and where it stands. */
+function ESignCard({ d, onChange }: { d: AgreementDetailData; onChange: () => void }) {
+  const a = d.agreement;
+  const req = a.esign!;
+  const [withdrawing, setWithdrawing] = useState(false);
+  const resend = useAction(() => api.agreements.resendSignatureEmail(a.id), { success: 'Signing email sent again', onSuccess: onChange });
+  const withdraw = useAction((reason: string) => api.agreements.cancelSignature(a.id, reason), { success: 'Signature request withdrawn', onSuccess: onChange });
+  const current = req.status === 'in_progress' ? req.signers.find((s) => s.status === 'sent') : undefined;
+  const declined = req.signers.find((s) => s.status === 'declined');
+
+  return (
+    <Card>
+      <CardHeader
+        title="E-signature"
+        description={`Sent by ${d.names[req.sentById] ?? 'BD Executive'} on ${formatDateTime(req.sentAt)}${req.signEveryPage ? ' · signing every page' : ''}`}
+        icon={<PenLine />}
+        action={<Badge tone={REQUEST_STATUS[req.status].tone}>{REQUEST_STATUS[req.status].label}</Badge>}
+      />
+      <ol className="divide-y divide-line">
+        {req.signers.map((s) => (
+          <li key={s.role} className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 px-5 py-3 text-sm">
+            <span className="min-w-0">
+              <span className="font-medium">
+                {s.order}. {s.name}
+              </span>
+              <span className="text-muted"> · {s.role === 'cp' ? 'Channel Partner' : (s.designation ?? 'Institution')}</span>
+              <span className="block text-xs text-muted">
+                {s.method === 'dsc' ? 'Digital signature certificate (DSC)' : 'Drawn or typed signature'} · {s.email}
+              </span>
+              <span className="block text-xs text-muted">
+                {s.status === 'signed'
+                  ? `Signed ${formatDateTime(s.signedAt)}${s.signature?.kind === 'dsc' ? ` · certificate ${s.signature.certificate?.serial}` : s.signature ? ` · ${s.signature.kind}` : ''}`
+                  : s.status === 'sent'
+                    ? `Link sent ${formatDateTime(s.sentAt)}${s.viewedAt ? ` · opened ${formatDateTime(s.viewedAt)}` : ' · not opened yet'}`
+                    : s.status === 'declined'
+                      ? `Declined ${formatDateTime(s.declinedAt)}`
+                      : 'Gets the link after the previous signer'}
+              </span>
+            </span>
+            <Badge tone={SIGNER_STATUS[s.status].tone}>{SIGNER_STATUS[s.status].label}</Badge>
+          </li>
+        ))}
+      </ol>
+      {declined && (
+        <div className="border-t border-line px-5 py-3">
+          <Alert tone="error" title={`${declined.name} declined to sign`}>
+            “{declined.declineReason}” — fix what’s needed, then send for e-signature again (or use the paper copy).
+          </Alert>
+        </div>
+      )}
+      {d.actions.manageSignature && current && (
+        <div className="space-y-3 border-t border-line px-5 py-4">
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" icon={<Mail className="size-4" />} loading={resend.loading} onClick={() => void resend.run()}>
+              Resend signing email
+            </Button>
+            <Button size="sm" variant="ghost" icon={<Ban className="size-4" />} onClick={() => setWithdrawing(true)}>
+              Withdraw request
+            </Button>
+          </div>
+          <p className="text-xs text-muted">
+            Prototype: emails go to the outbox in Admin → System.{' '}
+            <Link to={`/sign/${current.token}`} className="hit-area font-medium text-primary-700 hover:underline">
+              Open {current.name}’s signing page
+            </Link>{' '}
+            to act as the signer.
+          </p>
+        </div>
+      )}
+      <CommentDialog
+        open={withdrawing}
+        onClose={() => setWithdrawing(false)}
+        title="Withdraw signature request"
+        description="The signing links stop working and the current signer is told by email. Signatures already given are discarded."
+        confirmLabel="Withdraw"
+        placeholder="Reason"
+        onConfirm={async (c) => (await withdraw.run(c)).ok}
+      />
+    </Card>
   );
 }

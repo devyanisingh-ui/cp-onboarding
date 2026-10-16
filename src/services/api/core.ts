@@ -73,7 +73,7 @@ export function now(): string {
 
 // ---------- Audit (immutable, append-only) ----------
 
-function device(): string {
+export function device(): string {
   if (typeof navigator === 'undefined') return 'Unknown';
   const ua = navigator.userAgent;
   const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';

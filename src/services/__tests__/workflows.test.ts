@@ -5,8 +5,9 @@ import { getDb } from '../db';
 import { runScheduledJobs } from '../api/scheduler';
 import { shiftDays, today } from '@/lib/dates';
 import type { CpFormValues } from '@/lib/schemas';
+import { DEMO_PASSWORD } from '@/data/seed';
 
-const as = (email: string) => api.auth.signIn('google', email);
+const as = (email: string) => api.auth.signIn(email, DEMO_PASSWORD);
 const NEHA = 'neha.kapoor@apeejay.edu';
 const PRIYA = 'priya.sharma@apeejay.edu';
 const ARJUN = 'arjun.mehta@apeejay.edu';
@@ -57,9 +58,11 @@ beforeEach(async () => {
 });
 
 describe('authentication', () => {
-  it('rejects non-Apeejay domains and unknown users', async () => {
-    await expect(as('someone@gmail.com')).rejects.toThrow(/not an Apeejay domain/);
-    await expect(as('nobody@apeejay.edu')).rejects.toThrow(/not set up/);
+  it('signs in by username and rejects unknown users or wrong passwords', async () => {
+    await expect(as('nobody')).rejects.toThrow(/Incorrect username or password/);
+    await expect(api.auth.signIn('neha.kapoor', 'wrong')).rejects.toThrow(/Incorrect username or password/);
+    await expect(api.auth.signIn('', DEMO_PASSWORD)).rejects.toThrow(/Enter your username/);
+    await expect(api.auth.signIn(' Neha.Kapoor ', DEMO_PASSWORD)).resolves.toMatchObject({ id: 'u-neha' });
     await expect(as(NEHA)).resolves.toMatchObject({ id: 'u-neha' });
   });
 });
@@ -366,5 +369,93 @@ describe('document export', () => {
       fs.writeFileSync(`${process.env.EXPORT_SAMPLES}/sample.docx`, docx);
       fs.writeFileSync(`${process.env.EXPORT_SAMPLES}/sample.pdf`, pdf);
     }
+  });
+});
+
+describe('digital signatures (DSC and drawn/typed via email link)', () => {
+  const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=';
+  const stampPaper = { number: 'IN-DL12345678901234', valueInr: 100, purchaseDate: today(), state: 'Haryana', vendor: 'SHCIL e-stamp' };
+
+  async function approvedAgreement() {
+    const { agreementId } = await createReadyDraft();
+    await api.agreements.submit(agreementId); // standard terms → approved for signing
+    return agreementId;
+  }
+  const signers = (cpMethod: 'electronic' | 'dsc', instMethod: 'electronic' | 'dsc') => [
+    { role: 'cp' as const, name: 'Ravi Kumar', designation: 'Proprietor', email: 'ravi@sunrise.in', method: cpMethod },
+    { role: 'institution' as const, name: 'Prof. Alok Verma', designation: 'Registrar', email: 'registrar@asu.example', method: instMethod },
+  ];
+  const tokenOf = (id: string, role: 'cp' | 'institution') => getDb().agreements.find((a) => a.id === id)!.esign!.signers.find((s) => s.role === role)!.token;
+
+  it('signs in order (proprietor, then registrar), builds the signed PDF and sends it to Gate 2', async () => {
+    const id = await approvedAgreement();
+    await api.agreements.sendForSignature(id, { signers: signers('electronic', 'dsc'), signEveryPage: true, stampPaper });
+    expect((await api.agreements.get(id)).summary.displayStatus).toBe('out_for_signature');
+    // Only the first signer has been emailed.
+    expect(getDb().emails.filter((m) => m.kind === 'signature').map((m) => m.to)).toEqual(['ravi@sunrise.in']);
+
+    const reg = await api.signing.session(tokenOf(id, 'institution'));
+    expect(reg.yourTurn).toBe(false);
+    expect(reg.waitingFor).toBe('Ravi Kumar');
+    await expect(api.signing.sign(tokenOf(id, 'institution'), { kind: 'dsc', certificateId: reg.certificates[0]!.id, pin: '1234' })).rejects.toThrow(/turn/);
+
+    const cp = await api.signing.session(tokenOf(id, 'cp'));
+    expect(cp.yourTurn).toBe(true);
+    expect(JSON.stringify(cp)).not.toContain(tokenOf(id, 'cp')); // the token never comes back
+    await expect(api.signing.sign(tokenOf(id, 'cp'), { kind: 'drawn', image: PNG, consent: false })).rejects.toThrow(/agree/);
+    await expect(api.signing.sign(tokenOf(id, 'cp'), { kind: 'drawn', image: PNG, consent: true })).resolves.toEqual({ completed: false });
+    // The agreement shows the proprietor's signature straight away: in the preview, on the next signer's page and in downloads.
+    expect((await api.agreements.render(id)).html).toContain('Signed electronically (drawn)');
+    expect((await api.signing.session(tokenOf(id, 'institution'))).html).toContain('alt="Signature of Ravi Kumar"');
+    const dl = await api.agreements.download(id, 'pdf');
+    expect(dl.signing?.signatures.map((s) => s.role)).toEqual(['cp']);
+    expect(dl.signing?.everyPage).toBe(true);
+    expect(getDb().emails.filter((m) => m.kind === 'signature').map((m) => m.to)).toContain('registrar@asu.example');
+
+    const reg2 = await api.signing.session(tokenOf(id, 'institution'));
+    expect(reg2.yourTurn).toBe(true);
+    const [valid, expired] = reg2.certificates;
+    await expect(api.signing.sign(tokenOf(id, 'institution'), { kind: 'dsc', certificateId: expired!.id, pin: '1234' })).rejects.toThrow(/expired/);
+    await expect(api.signing.sign(tokenOf(id, 'institution'), { kind: 'dsc', certificateId: valid!.id, pin: '12' })).rejects.toThrow(/PIN/);
+    await expect(api.signing.sign(tokenOf(id, 'institution'), { kind: 'dsc', certificateId: valid!.id, pin: '123456' })).resolves.toEqual({ completed: true });
+
+    const a = getDb().agreements.find((x) => x.id === id)!;
+    expect(a.status).toBe('signed_copy_uploaded');
+    expect(a.esign!.status).toBe('completed');
+    expect(a.esign!.documentHash).toMatch(/^[0-9a-f]{64}$/);
+    const signed = getDb().documents.find((x) => x.id === a.esign!.signedDocumentId)!;
+    expect(signed.type).toBe('signed_copy');
+    expect(signed.fileName).toBe(`${id}_e-signed.pdf`);
+    if (process.env.EXPORT_SAMPLES) {
+      const { getBlob } = await import('../blobStore');
+      const blob = (await getBlob(signed.blobKey!))!;
+      const buf = await new Promise<Uint8Array>((res) => { const r = new FileReader(); r.onload = () => res(new Uint8Array(r.result as ArrayBuffer)); r.readAsArrayBuffer(blob); });
+      (await import('node:fs')).writeFileSync(`${process.env.EXPORT_SAMPLES}/esigned.pdf`, buf);
+    }
+    expect(getDb().tasks.some((t) => t.agreementId === id && t.type === 'gate2_verification' && t.status === 'open')).toBe(true);
+    expect(getDb().tasks.some((t) => t.agreementId === id && t.type === 'signing_upload' && t.status === 'open')).toBe(false);
+
+    await as(ARJUN);
+    await api.agreements.decideGate2(id, 'approve', { pages: { status: 'verified' } });
+    expect(getDb().agreements.find((x) => x.id === id)!.status).toBe('active');
+  });
+
+  it('typed signature with every page off; decline and withdraw return it to the BD Executive', async () => {
+    const id = await approvedAgreement();
+    await expect(api.agreements.sendForSignature(id, { signers: signers('electronic', 'electronic').map((s) => ({ ...s, email: 'same@x.in' })), signEveryPage: false, stampPaper })).rejects.toThrow(/signer details/);
+    await api.agreements.sendForSignature(id, { signers: signers('electronic', 'electronic'), signEveryPage: false, stampPaper });
+    expect((await api.agreements.get(id)).actions.uploadSigned).toBe(false); // paper path hidden while out for signature
+    await api.signing.decline(tokenOf(id, 'cp'), 'Clause 4 needs another look');
+    const a = getDb().agreements.find((x) => x.id === id)!;
+    expect(a.esign!.status).toBe('declined');
+    expect((await api.agreements.get(id)).actions.sendForSignature).toBe(true);
+
+    await api.agreements.sendForSignature(id, { signers: signers('electronic', 'electronic'), signEveryPage: false, stampPaper });
+    await api.signing.sign(tokenOf(id, 'cp'), { kind: 'typed', image: PNG, typedName: 'Ravi Kumar', consent: true });
+    expect((await api.agreements.render(id)).html).toContain('Signed electronically (typed)');
+    await api.agreements.cancelSignature(id, 'Wrong signatory email');
+    expect((await api.agreements.render(id)).html).not.toContain('Signed electronically'); // withdrawn: signatures no longer shown
+    expect(getDb().agreements.find((x) => x.id === id)!.esign!.status).toBe('cancelled');
+    await expect(api.signing.sign(tokenOf(id, 'cp'), { kind: 'typed', image: PNG, typedName: 'Ravi Kumar', consent: true })).rejects.toThrow(/no longer active/);
   });
 });

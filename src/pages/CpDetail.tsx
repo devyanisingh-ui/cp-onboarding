@@ -34,12 +34,11 @@ export function CpDetail() {
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
   if (!data) return null;
 
-  const crumbs = [{ label: 'CPs', to: '/cps' }, { label: data.cp.legalName }];
 
   if (data.limited) {
     return (
       <div>
-        <PageHeader breadcrumbs={crumbs} title={data.cp.legalName} badges={<Badge tone={CP_STATUS_META[data.cp.status].tone}>{CP_STATUS_META[data.cp.status].label}</Badge>} subtitle={<span className="font-mono">{data.cp.panMasked}</span>} />
+        <PageHeader title={data.cp.legalName} badges={<Badge tone={CP_STATUS_META[data.cp.status].tone}>{CP_STATUS_META[data.cp.status].label}</Badge>} subtitle={<span className="font-mono">{data.cp.panMasked}</span>} />
         <div className="space-y-4">
           {data.cp.warning && <WarningBanner reason={data.cp.warning.reason} />}
           <Alert tone="info" title="Limited view">
@@ -70,7 +69,6 @@ export function CpDetail() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={crumbs}
         title={cp.legalName}
         badges={
           <>

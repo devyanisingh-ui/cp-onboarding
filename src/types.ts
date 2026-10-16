@@ -112,7 +112,65 @@ export type AgreementStatus =
   | 'not_renewed'
   | 'expired_no_decision';
 
-export type DisplayStatus = AgreementStatus | 'expiring' | 'rejected';
+export type DisplayStatus = AgreementStatus | 'expiring' | 'rejected' | 'out_for_signature';
+
+// ---------- Digital signatures (front-end simulation of an e-sign provider) ----------
+
+/** `dsc`: digital signature certificate on a USB token; `electronic`: drawn or typed signature from an email link. */
+export type SignMethod = 'dsc' | 'electronic';
+
+export interface DscCertificate {
+  id: string;
+  subject: string;
+  issuer: string;
+  serial: string;
+  className: string;
+  validFrom: ISODate;
+  validTo: ISODate;
+}
+
+export interface SignatureMark {
+  kind: 'drawn' | 'typed' | 'dsc';
+  /** PNG data URL of the drawn or typed signature (not used for DSC, which prints a text appearance). */
+  image?: string;
+  typedName?: string;
+  certificate?: DscCertificate;
+}
+
+export interface ESigner {
+  role: 'cp' | 'institution';
+  order: number;
+  name: string;
+  designation?: string;
+  email: string;
+  method: SignMethod;
+  /** Secret for the signing link. A real provider keeps this server-side. */
+  token: string;
+  status: 'waiting' | 'sent' | 'signed' | 'declined';
+  sentAt?: ISODateTime;
+  viewedAt?: ISODateTime;
+  signedAt?: ISODateTime;
+  declinedAt?: ISODateTime;
+  declineReason?: string;
+  signature?: SignatureMark;
+  ip?: string;
+  device?: string;
+}
+
+export interface ESignRequest {
+  id: string;
+  status: 'in_progress' | 'completed' | 'declined' | 'cancelled';
+  /** Also place each signer's signature at the foot of every page. */
+  signEveryPage: boolean;
+  signers: ESigner[];
+  sentById: string;
+  sentAt: ISODateTime;
+  completedAt?: ISODateTime;
+  cancelledAt?: ISODateTime;
+  /** SHA-256 of the unsigned agreement PDF, printed on the signature certificate page. */
+  documentHash?: string;
+  signedDocumentId?: string;
+}
 
 export interface StampPaper {
   number: string;
@@ -201,6 +259,8 @@ export interface Agreement {
   termination?: Termination;
   override?: WarningOverride;
   reviewFlag?: { reason: string; at: ISODateTime };
+  /** Current (or last) digital-signature request; the paper upload path leaves it unset. */
+  esign?: ESignRequest;
   closedAt?: ISODateTime;
 }
 
@@ -384,7 +444,7 @@ export interface EmailMessage {
   subject: string;
   body: string;
   link?: string;
-  kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event';
+  kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event' | 'signature';
   sentAt: ISODateTime;
 }
 

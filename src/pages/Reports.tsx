@@ -66,7 +66,6 @@ export function ReportView() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Reports', to: '/reports' }, { label: meta.title }]}
         title={meta.title}
         subtitle={meta.description}
         actions={

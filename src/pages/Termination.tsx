@@ -59,7 +59,7 @@ export function Termination() {
 
   return (
     <div>
-      <PageHeader breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: a.id, to: `/agreements/${a.id}` }, { label: 'Termination' }]} title="Terminate agreement" subtitle={`${d.cp.legalName} · ${d.institution.shortCode} · expires ${formatDate(a.endDate)}`} />
+      <PageHeader title="Terminate agreement" subtitle={`${d.cp.legalName} · ${d.institution.shortCode} · expires ${formatDate(a.endDate)}`} />
 
       {d.actions.confirmTermination && a.termination ? (
         <Card>

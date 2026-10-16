@@ -17,6 +17,8 @@ import { DeviationPanel } from '@/pages/DeviationPanel';
 import { AgreementDetail } from '@/pages/AgreementDetail';
 import { AgreementsList } from '@/pages/AgreementsList';
 import { SignedUpload } from '@/pages/SignedUpload';
+import { SendForSignature } from '@/pages/SendForSignature';
+import { Sign } from '@/pages/Sign';
 import { Verification } from '@/pages/Verification';
 import { Renewal } from '@/pages/Renewal';
 import { Termination } from '@/pages/Termination';
@@ -65,6 +67,8 @@ export function AppRoutes() {
   return (
     <Routes>
       <Route path="/signin" element={<SignInRoute />} />
+      {/* Signing links from email: no app account needed. */}
+      <Route path="/sign/:token" element={<Sign />} />
       <Route
         element={
           <RequireAuth>
@@ -83,6 +87,7 @@ export function AppRoutes() {
         <Route path="agreements/:id/preview" element={<DraftPreview />} />
         <Route path="agreements/:id/deviation" element={<DeviationPanel />} />
         <Route path="agreements/:id/upload" element={<SignedUpload />} />
+        <Route path="agreements/:id/esign" element={<RequireCap cap="signed.upload"><SendForSignature /></RequireCap>} />
         <Route path="agreements/:id/verify" element={<RequireCap cap="gate2.verify"><Verification /></RequireCap>} />
         <Route path="agreements/:id/renewal" element={<Renewal />} />
         <Route path="agreements/:id/terminate" element={<Termination />} />

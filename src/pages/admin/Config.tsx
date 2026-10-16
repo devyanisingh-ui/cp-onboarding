@@ -123,7 +123,7 @@ function UserModal({ value, lookups, onClose }: { value: User; lookups: Lookups;
       open
       onClose={onClose}
       title={value.id ? `Edit ${value.name}` : 'Add user'}
-      description="Users sign in with SSO — no passwords are set here."
+      description="Users sign in with their username (the part of their email before @) and password."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>

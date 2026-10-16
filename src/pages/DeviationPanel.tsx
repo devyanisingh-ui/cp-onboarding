@@ -22,12 +22,10 @@ export function DeviationPanel() {
   const d = data!;
   const pending = d.deviations.filter((x) => x.status === 'pending');
   const decided = d.deviations.filter((x) => x.status !== 'pending');
-  const crumbs = [{ label: 'Agreements', to: '/agreements' }, { label: d.agreement.id, to: `/agreements/${d.agreement.id}` }, { label: 'Deviation' }];
 
   return (
     <div>
       <PageHeader
-        breadcrumbs={crumbs}
         title="Deviation panel"
         subtitle={`${d.cp.legalName} · ${d.institution.shortCode} · Rate card v${d.rateCard.version}. Changes apply to this agreement only — the master template and rate card are never edited.`}
         badges={d.agreement.nonStandard ? <Badge tone="orange">Non-standard</Badge> : <Badge tone="grey">Standard terms</Badge>}

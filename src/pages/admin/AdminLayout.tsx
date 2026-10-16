@@ -1,28 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
-import { Building2, Clock, FileText, FileUp, Globe, IndianRupee, List, Route, Server, UsersRound } from 'lucide-react';
 import { useSession } from '@/context/SessionContext';
 import { cn } from '@/lib/cn';
-import type { Capability } from '@/lib/permissions';
+import { ADMIN_SECTIONS } from '@/components/layout/nav';
 import { PageHeader } from '@/components/common';
-
-const ITEMS: { to: string; label: string; icon: typeof Building2; cap: Capability }[] = [
-  { to: 'institutions', label: 'Institutions & locations', icon: Building2, cap: 'config.view' },
-  { to: 'templates', label: 'Templates', icon: FileText, cap: 'template.view' },
-  { to: 'rate-cards', label: 'Rate cards', icon: IndianRupee, cap: 'ratecard.view' },
-  { to: 'users', label: 'Users & roles', icon: UsersRound, cap: 'config.view' },
-  { to: 'routing', label: 'Routing rules', icon: Route, cap: 'config.view' },
-  { to: 'slas', label: 'SLAs', icon: Clock, cap: 'config.view' },
-  { to: 'lists', label: 'Master lists', icon: List, cap: 'config.view' },
-  { to: 'domains', label: 'Allowed domains', icon: Globe, cap: 'config.view' },
-  { to: 'legacy', label: 'Legacy import', icon: FileUp, cap: 'legacy.import' },
-  { to: 'system', label: 'System & notifications', icon: Server, cap: 'config.view' },
-];
 
 export function AdminLayout() {
   const { can } = useSession();
   const { pathname } = useLocation();
-  const items = ITEMS.filter((i) => can(i.cap));
+  const items = ADMIN_SECTIONS.filter((i) => can(i.cap));
   const navRef = useRef<HTMLElement>(null);
   // On phones the section tabs scroll sideways: keep the current one in view.
   useEffect(() => {

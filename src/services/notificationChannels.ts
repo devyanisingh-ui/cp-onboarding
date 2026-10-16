@@ -9,7 +9,7 @@ export interface OutboundMessage {
   title: string;
   body: string;
   link: string;
-  kind: 'task' | 'reminder' | 'escalation' | 'event' | 'digest';
+  kind: 'task' | 'reminder' | 'escalation' | 'event' | 'digest' | 'signature';
 }
 
 export interface NotificationChannel {
@@ -49,4 +49,12 @@ export const channels: NotificationChannel[] = [emailChannel, whatsappChannel];
 
 export function deliver(user: User, msg: OutboundMessage) {
   for (const c of channels) if (c.enabled) c.send(user, msg);
+}
+
+/**
+ * Email to someone without an app account (e-signature signers). Goes to the same simulated
+ * outbox; WhatsApp and other channels never carry signing links.
+ */
+export function sendExternalEmail(to: string, msg: OutboundMessage) {
+  getDb().emails.push({ id: nextId('email', 'M-'), to, subject: msg.title, body: msg.body, link: msg.link, kind: msg.kind, sentAt: new Date().toISOString() });
 }

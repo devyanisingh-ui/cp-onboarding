@@ -17,6 +17,9 @@ import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 
 export const SCHEMA_VERSION = 4;
 
+/** Prototype only: every seeded user signs in with their username and this shared password. */
+export const DEMO_PASSWORD = 'Apeejay@123';
+
 /** Seed data is generated relative to today so SLAs, expiries and overdue items always look live. */
 export function buildSeed(): Database {
   const T = today();

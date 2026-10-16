@@ -93,7 +93,6 @@ export function SignedUpload() {
   return (
     <div>
       <PageHeader
-        breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: d.agreement.id, to: `/agreements/${d.agreement.id}` }, { label: 'Upload signed copy' }]}
         title={d.agreement.source === 'legacy' ? 'Upload legacy scan' : 'Upload signed copy'}
         subtitle={`${d.cp.legalName} · ${d.institution.shortCode}`}
       />

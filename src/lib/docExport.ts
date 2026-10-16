@@ -5,6 +5,7 @@
  * The agreement HTML (see renderAgreementHtml) is reduced to a small block model, then written
  * out as WordprocessingML (zipped by hand, no compression) or laid out with pdf-lib.
  */
+import type { SignatureView } from './signatures';
 
 export interface Run {
   text: string;
@@ -67,7 +68,9 @@ export function extractBlocks(html: string): Block[] {
         blocks.push({
           kind: 'signatures',
           cols: Array.from(c.children).map((col) =>
-            Array.from(col.children).map((p) => (p.classList.contains('sign-line') ? [{ text: '______________________________' }] : tidy(runsOf(p)))),
+            Array.from(col.children)
+              .filter((p) => !p.classList.contains('sig-mark')) // on-screen signature; exports place signatures themselves
+              .map((p) => (p.classList.contains('sign-line') ? [{ text: '______________________________' }] : tidy(runsOf(p)))),
           ),
         });
       else if (tag === 'table') {
@@ -105,7 +108,8 @@ function wCell(content: string, width: number, borders: boolean, shade?: string)
 
 const CONTENT_WIDTH = 9866; // A4 minus 18 mm margins, in twentieths of a point
 
-function docxBody(blocks: Block[]): string {
+/** `signed`: caption per signature-block column (0 = institution, 1 = CP) for signatures already given. */
+function docxBody(blocks: Block[], signed: (string | undefined)[] = []): string {
   const out: string[] = [];
   for (const b of blocks) {
     switch (b.kind) {
@@ -126,7 +130,16 @@ function docxBody(blocks: Block[]): string {
         break;
       case 'signatures': {
         const w = Math.floor(CONTENT_WIDTH / Math.max(1, b.cols.length));
-        const cells = b.cols.map((col) => wCell(col.map((p, i) => wPara(p, { before: i === 1 ? 480 : 0, after: 80 })).join('') || '<w:p/>', w, false)).join('');
+        const cells = b.cols
+          .map((col, ci) => {
+            const paras = col.map((p, i) => {
+              const line = wPara(p, { before: i === 1 && !signed[ci] ? 480 : 0, after: 80 });
+              // A signature already given goes just above the signing line.
+              return i === 1 && signed[ci] ? wPara([{ text: signed[ci]!, italic: true }], { before: 360, after: 0, runExtra: '<w:color w:val="0B6480"/><w:sz w:val="18"/>' }) + line : line;
+            });
+            return wCell(paras.join('') || '<w:p/>', w, false);
+          })
+          .join('');
         out.push(`<w:tbl><w:tblPr><w:tblW w:w="${CONTENT_WIDTH}" w:type="dxa"/><w:tblLayout w:type="fixed"/></w:tblPr><w:tblGrid>${b.cols.map(() => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid><w:tr>${cells}</w:tr></w:tbl>`);
         out.push(wPara([], { after: 120 }));
         break;
@@ -155,8 +168,12 @@ function docxBody(blocks: Block[]): string {
   return out.join('');
 }
 
-export function buildDocx(html: string, title: string): Blob {
-  const body = docxBody(extractBlocks(html));
+export function buildDocx(html: string, title: string, opts: { signatures?: { role: 'cp' | 'institution'; caption: string }[] } = {}): Blob {
+  const caption = (role: 'cp' | 'institution') => {
+    const s = opts.signatures?.find((x) => x.role === role);
+    return s ? `${s.caption}` : undefined;
+  };
+  const body = docxBody(extractBlocks(html), [caption('institution'), caption('cp')]);
   const files: [string, string][] = [
     [
       '[Content_Types].xml',
@@ -252,7 +269,36 @@ export function zipStore(files: [string, string | Uint8Array][]): Uint8Array {
 
 // ---------------- PDF ----------------
 
-export async function buildPdf(html: string, title: string): Promise<Blob> {
+/** A signature to place on the agreement PDF. */
+export interface PdfSignature {
+  role: 'cp' | 'institution';
+  /** Short label for the per-page footer, e.g. "Channel Partner". */
+  label: string;
+  /** PNG bytes of a drawn or typed signature. */
+  image?: Uint8Array;
+  /** Text appearance for a DSC signature ("Digitally signed by …"). */
+  dscLines?: string[];
+}
+
+/** Audit page appended after the agreement (who signed, how and when, and the document hash). */
+export interface PdfCertificate {
+  title: string;
+  intro: string[];
+  sections: { heading: string; rows: [string, string][] }[];
+}
+
+export interface PdfSignOptions {
+  signatures?: PdfSignature[];
+  /** Also put each signature at the foot of every page. */
+  everyPage?: boolean;
+  certificate?: PdfCertificate;
+}
+
+export async function buildPdf(html: string, title: string, opts: PdfSignOptions = {}): Promise<Blob> {
+  return new Blob([await buildPdfBytes(html, title, opts)], { type: 'application/pdf' });
+}
+
+export async function buildPdfBytes(html: string, title: string, opts: PdfSignOptions = {}): Promise<Uint8Array> {
   const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
   pdf.setTitle(title);
@@ -291,7 +337,8 @@ export async function buildPdf(html: string, title: string): Promise<Blob> {
   let page = pdf.addPage([W, H]);
   let y = H - M;
   const ensure = (h: number) => {
-    if (y - h < M + 14) {
+    // Signing every page puts a signature strip in the footer, so stop the text a little higher.
+    if (y - h < M + (opts.everyPage && opts.signatures?.length ? 34 : 14)) {
       page = pdf.addPage([W, H]);
       y = H - M;
     }
@@ -357,6 +404,9 @@ export async function buildPdf(html: string, title: string): Promise<Blob> {
   };
 
   const contentW = W - 2 * M;
+  const signed = !!opts.signatures?.length;
+  /** Where each signature-block column's signing line was drawn (column 0 = institution, 1 = CP). */
+  const signSpots: { page: typeof page; x: number; y: number; width: number }[] = [];
   for (const b of extractBlocks(html)) {
     switch (b.kind) {
       case 'title':
@@ -392,8 +442,9 @@ export async function buildPdf(html: string, title: string): Promise<Blob> {
         laid.forEach((col, ci) => {
           y = top;
           col.forEach((lines, pi) => {
-            if (pi === 1) y -= 26; // room to sign above the line
+            if (pi === 1) y -= signed ? 52 : 26; // room to sign above the line
             drawLines(lines, 10.5, M + ci * colW, colW - 16);
+            if (pi === 1) signSpots[ci] = { page, x: M + ci * colW, y, width: colW - 16 };
             y -= 6;
           });
           bottom = Math.min(bottom, y);
@@ -432,11 +483,101 @@ export async function buildPdf(html: string, title: string): Promise<Blob> {
     }
   }
 
+  // ---- Signatures ----
+  const agreementPages = pdf.getPages();
+  if (signed) {
+    const images = new Map<PdfSignature, Awaited<ReturnType<typeof pdf.embedPng>>>();
+    for (const s of opts.signatures!) if (s.image) images.set(s, await pdf.embedPng(s.image));
+    const accent = rgb(0.04, 0.39, 0.5);
+    /** Draws one signature appearance inside a box whose bottom-left is (x, y). */
+    const appearance = (p: typeof page, s: PdfSignature, x: number, y0: number, w: number, h: number, compact = false) => {
+      const img = images.get(s);
+      if (img) {
+        const scale = Math.min(w / img.width, h / img.height);
+        p.drawImage(img, { x, y: y0, width: img.width * scale, height: img.height * scale });
+      } else if (s.dscLines?.length) {
+        // The per-page strip has room for "Digitally signed by …" and the date only.
+        const lines = compact ? s.dscLines.slice(0, 2) : s.dscLines;
+        const size = Math.min(7.5, h / (lines.length * 1.25));
+        p.drawRectangle({ x: x - 2, y: y0 - 2, width: w, height: h + 2, borderColor: accent, borderWidth: 0.6, color: rgb(0.94, 0.97, 0.98) });
+        lines.forEach((line, i) => p.drawText(safe(line), { x: x + 2, y: y0 + h - (i + 1) * size * 1.25, size, font: i === 0 ? fonts.b : fonts.r, color: accent, maxWidth: w - 6 }));
+      }
+    };
+    const byRole = (r: PdfSignature['role']) => opts.signatures!.find((s) => s.role === r);
+    // In the signature block, column 0 signs for the institution and column 1 for the CP.
+    (['institution', 'cp'] as const).forEach((role, ci) => {
+      const s = byRole(role);
+      const spot = signSpots[ci];
+      if (s && spot) appearance(spot.page, s, spot.x, spot.y + 12, Math.min(spot.width, 190), 36);
+    });
+    if (opts.everyPage) {
+      for (const p of agreementPages) {
+        (['cp', 'institution'] as const).forEach((role, i) => {
+          const s = byRole(role);
+          if (!s) return;
+          const x = M + i * 150;
+          p.drawText(safe(s.label), { x, y: M - 14, size: 6.5, font: fonts.r, color: grey });
+          appearance(p, s, x, M - 5, 130, 20, true);
+        });
+      }
+    }
+  }
+
+  // ---- Signature certificate page ----
+  if (opts.certificate) {
+    const c = opts.certificate;
+    page = pdf.addPage([W, H]);
+    y = H - M;
+    drawLines(wrap([{ text: c.title, bold: true }], 15, contentW), 15, M, contentW);
+    y -= 4;
+    for (const line of c.intro) {
+      drawLines(wrap([{ text: line }], 9.5, contentW), 9.5, M, contentW, { color: grey });
+      y -= 2;
+    }
+    for (const sec of c.sections) {
+      ensure(40);
+      y -= 12;
+      drawLines(wrap([{ text: sec.heading, bold: true }], 11, contentW), 11, M, contentW);
+      y -= 2;
+      for (const [k, v] of sec.rows) {
+        const valueLines = wrap([{ text: v }], 9, contentW - 140);
+        ensure(valueLines.length * 9 * 1.4 + 2);
+        const rowTop = y;
+        drawLines(wrap([{ text: k }], 9, 132), 9, M, 132, { color: grey, leading: 1.4 });
+        const afterKey = y;
+        y = rowTop;
+        drawLines(valueLines, 9, M + 140, contentW - 140, { leading: 1.4 });
+        y = Math.min(y, afterKey) - 3;
+      }
+    }
+  }
+
   const pages = pdf.getPages();
   pages.forEach((p, i) => {
     const label = `Page ${i + 1} of ${pages.length}`;
     p.drawText(label, { x: W - M - fonts.r.widthOfTextAtSize(label, 8), y: M - 22, size: 8, font: fonts.r, color: grey });
   });
-  const bytes = await pdf.save();
-  return new Blob([bytes], { type: 'application/pdf' });
+  return pdf.save();
+}
+
+/** SHA-256 of some bytes, as lowercase hex. */
+export async function sha256Hex(bytes: Uint8Array): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+/** PNG bytes from a data URL. */
+function dataUrlBytes(dataUrl: string): Uint8Array {
+  const bin = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+  return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+}
+
+/** Signatures already given (see lib/signatures) in the form the PDF builder places them. */
+export function toPdfSignatures(views: SignatureView[]): PdfSignature[] {
+  return views.map((v) => ({ role: v.role, label: v.label, image: v.image ? dataUrlBytes(v.image) : undefined, dscLines: v.dscLines }));
+}
+
+/** Signatures already given, as captions for the DOCX signature block. */
+export function toDocxSignatures(views: SignatureView[]): { role: SignatureView['role']; caption: string }[] {
+  return views.map((v) => ({ role: v.role, caption: `${v.kind === 'dsc' ? 'Digitally signed' : 'Signed electronically'} by ${v.name} — ${v.caption}` }));
 }

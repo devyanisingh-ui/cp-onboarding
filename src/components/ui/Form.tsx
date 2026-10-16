@@ -85,7 +85,7 @@ export function Field({
 
 type WithInvalid<T> = T & { invalid?: boolean };
 
-export const Input = forwardRef<HTMLInputElement, WithInvalid<InputHTMLAttributes<HTMLInputElement>> & { prefix?: ReactNode }>(
+export const Input = forwardRef<HTMLInputElement, WithInvalid<Omit<InputHTMLAttributes<HTMLInputElement>, 'prefix'>> & { prefix?: ReactNode }>(
   function Input({ className, invalid, prefix, ...rest }, ref) {
     if (prefix)
       return (

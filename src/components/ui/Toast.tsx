@@ -36,7 +36,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       {children}
-      <div aria-live="polite" aria-relevant="additions" className="pointer-events-none fixed inset-x-0 bottom-20 z-[60] flex flex-col items-center gap-2 px-4 md:bottom-6 md:right-6 md:left-auto md:items-end">
+      {/* Top-right, just below the app header. */}
+      <div aria-live="polite" aria-relevant="additions" className="pointer-events-none fixed inset-x-0 top-[4.75rem] z-[60] flex flex-col items-end gap-2 px-4 sm:px-6 md:left-[72px] lg:left-60 lg:px-8 xl:px-10">
         {items.map((t) => (
           <div
             key={t.id}

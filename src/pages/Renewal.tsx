@@ -46,7 +46,7 @@ export function Renewal() {
 
   return (
     <div>
-      <PageHeader breadcrumbs={[{ label: 'Agreements', to: '/agreements' }, { label: a.id, to: `/agreements/${a.id}` }, { label: 'Renewal' }]} title="Renewal decision" subtitle={`${d.cp.legalName} · ${d.institution.shortCode}`} />
+      <PageHeader title="Renewal decision" subtitle={`${d.cp.legalName} · ${d.institution.shortCode}`} />
 
       <Card className="mb-5">
         <CardBody className="flex flex-col gap-5 sm:flex-row sm:items-center">

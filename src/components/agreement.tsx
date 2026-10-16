@@ -6,7 +6,7 @@ import { errorMessage } from '@/services/errors';
 import { formatInr } from '@/lib/format';
 import { formatShortDate } from '@/lib/dates';
 import { isHostedViewer, printAgreement, saveFile } from '@/lib/download';
-import { buildDocx, buildPdf } from '@/lib/docExport';
+import { buildDocx, buildPdf, toDocxSignatures, toPdfSignatures } from '@/lib/docExport';
 import { cn } from '@/lib/cn';
 import { Badge, Button, Menu, useToast } from '@/components/ui';
 
@@ -68,7 +68,12 @@ export function DownloadMenu({ agreementId, html }: { agreementId: string; html?
     setBusy(true);
     try {
       const res = await api.agreements.download(agreementId, format);
-      const file = format === 'docx' ? buildDocx(res.html, agreementId) : await buildPdf(res.html, agreementId);
+      // Include any signatures already given (e-signature in progress or complete).
+      const signed = res.signing?.signatures ?? [];
+      const file =
+        format === 'docx'
+          ? buildDocx(res.html, agreementId, { signatures: toDocxSignatures(signed) })
+          : await buildPdf(res.html, agreementId, { signatures: toPdfSignatures(signed), everyPage: res.signing?.everyPage });
       if (await saveFile(file, res.fileName))
         toast.success(format === 'docx' ? 'DOCX downloaded' : 'PDF downloaded', format === 'docx' ? 'Opens in Word for Legal review.' : 'Print two copies on stamp paper.');
     } catch (e) {
