@@ -33,7 +33,7 @@ To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the p
 
 | Role | Account | What they do |
 | --- | --- | --- |
-| BD Executive | Neha Kapoor | Creates CPs and agreements, requests deviations, uploads signed copies, renewals and terminations |
+| BD Executive | Kavya Iyer | Creates CPs and agreements, requests deviations, uploads signed copies, renewals and terminations |
 | Legal | Priya Sharma | Decides deviations and approves non-standard agreements; approves template and rate card versions |
 | Admin | Arjun Mehta | Everything, including Gate 2 verification and confirming non-renewals and terminations |
 

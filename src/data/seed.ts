@@ -15,7 +15,7 @@ import type {
 } from '@/types';
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Prototype only: every seeded user signs in with their username and this shared password. */
 export const DEMO_PASSWORD = 'Apeejay@123';
@@ -77,7 +77,7 @@ export function buildSeed(): Database {
   ];
 
   const users: User[] = [
-    { id: 'u-neha', name: 'Neha Kapoor', email: 'neha.kapoor@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
+    { id: 'u-neha', name: 'Kavya Iyer', email: 'kavya.iyer@apeejay.edu', designation: 'BD Executive', roles: ['bd_exec'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
     { id: 'u-priya', name: 'Priya Sharma', email: 'priya.sharma@apeejay.edu', designation: 'Legal Counsel', roles: ['legal'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], managerId: 'u-arjun', active: true },
     { id: 'u-arjun', name: 'Arjun Mehta', email: 'arjun.mehta@apeejay.edu', designation: 'Central Admin', roles: ['admin'], regionId: 'north', institutionIds: ['inst-asu', 'inst-aks'], active: true },
   ];

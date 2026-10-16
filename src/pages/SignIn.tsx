@@ -88,7 +88,7 @@ export function SignIn() {
             }}
           >
             {error && <Alert tone="error">{error}</Alert>}
-            <Field label="Username" hint="Usually the part of your work email before @, e.g. neha.kapoor">
+            <Field label="Username" hint="Usually the part of your work email before @, e.g. kavya.iyer">
               <Input
                 autoComplete="username"
                 autoCapitalize="none"

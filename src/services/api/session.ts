@@ -6,7 +6,7 @@ import { clearBlobs } from '../blobStore';
 import { assertCan, audit, commit, ctx, delay, getDb, getSessionUserId, setSessionUserId } from './core';
 import { runScheduledJobs } from './scheduler';
 
-/** Username is the part of the work email before the "@" (e.g. neha.kapoor). */
+/** Username is the part of the work email before the "@" (e.g. kavya.iyer). */
 export function usernameOf(user: Pick<User, 'email'>): string {
   return user.email.split('@')[0].toLowerCase();
 }

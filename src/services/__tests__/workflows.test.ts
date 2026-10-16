@@ -8,7 +8,7 @@ import type { CpFormValues } from '@/lib/schemas';
 import { DEMO_PASSWORD } from '@/data/seed';
 
 const as = (email: string) => api.auth.signIn(email, DEMO_PASSWORD);
-const NEHA = 'neha.kapoor@apeejay.edu';
+const KAVYA = 'kavya.iyer@apeejay.edu';
 const PRIYA = 'priya.sharma@apeejay.edu';
 const ARJUN = 'arjun.mehta@apeejay.edu';
 
@@ -32,7 +32,7 @@ const newCp: CpFormValues = {
 const file = (name: string, type = 'application/pdf') => ({ file: new Blob(['x'], { type }), fileName: name });
 
 async function createReadyDraft() {
-  await as(NEHA);
+  await as(KAVYA);
   const { agreementId, cpId } = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: newCp });
   for (const [type, name] of [['pan', 'pan.pdf'], ['aadhaar_masked', 'aadhaar_masked.pdf'], ['cancelled_cheque', 'cheque.pdf']] as const)
     await api.documents.upload({ ownerType: 'cp', ownerId: cpId, type, ...file(name) });
@@ -46,7 +46,7 @@ async function createNonStandardDraft() {
   await api.agreements.requestDeviation(ids.agreementId, [{ type: 'rate', ref: 'r-eng:1-10', proposedValue: '20000' }], 'Competitive market in Gurugram');
   await as(PRIYA);
   await api.agreements.decideDeviation(getDb().deviations.find((d) => d.agreementId === ids.agreementId)!.id, 'approve', {});
-  await as(NEHA);
+  await as(KAVYA);
   return ids;
 }
 
@@ -60,10 +60,10 @@ beforeEach(async () => {
 describe('authentication', () => {
   it('signs in by username and rejects unknown users or wrong passwords', async () => {
     await expect(as('nobody')).rejects.toThrow(/Incorrect username or password/);
-    await expect(api.auth.signIn('neha.kapoor', 'wrong')).rejects.toThrow(/Incorrect username or password/);
+    await expect(api.auth.signIn('kavya.iyer', 'wrong')).rejects.toThrow(/Incorrect username or password/);
     await expect(api.auth.signIn('', DEMO_PASSWORD)).rejects.toThrow(/Enter your username/);
     await expect(api.auth.signIn(' Neha.Kapoor ', DEMO_PASSWORD)).resolves.toMatchObject({ id: 'u-neha' });
-    await expect(as(NEHA)).resolves.toMatchObject({ id: 'u-neha' });
+    await expect(as(KAVYA)).resolves.toMatchObject({ id: 'u-neha' });
   });
 });
 
@@ -76,7 +76,7 @@ describe('new CP onboarding (PRD 6.1)', () => {
 
     // Time passes: the execution date arrives and the copies are signed.
     getDb().agreements.find((a) => a.id === agreementId)!.executionDate = today();
-    await as(NEHA);
+    await as(KAVYA);
     await api.agreements.uploadSigned(agreementId, {
       stampPaper: { number: 'IN-HR99887766', valueInr: 100, purchaseDate: today(), state: 'Haryana', vendor: 'Tehsil vendor' },
       signedOn: today(),
@@ -99,19 +99,19 @@ describe('new CP onboarding (PRD 6.1)', () => {
   });
 
   it('does not block a CP whose PAN holder type differs from the CP type (advisory only)', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const cp = { ...newCp, type: 'partnership' as const, pan: 'ABCPQ5678R', typeFields: { partners: 'A One, B Two', deedDate: '2020-01-01', authorisedPartner: 'A One' } };
     await expect(api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp })).resolves.toMatchObject({ agreementId: expect.any(String) });
   });
 
   it('blocks submission when fields or KYC are missing', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const { agreementId } = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: newCp });
     await expect(api.agreements.submit(agreementId)).rejects.toThrow(/Missing fields.*Missing KYC/);
   });
 
   it('enforces one active agreement per CP per institution', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const existing = getDb().cps.find((c) => c.id === 'CP-0001')!;
     await expect(
       api.agreements.saveCpAndDraft({ existingCpId: 'CP-0001', institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: { ...newCp, pan: existing.pan, legalName: existing.legalName } }),
@@ -151,7 +151,7 @@ describe('new CP onboarding (PRD 6.1)', () => {
   });
 
   it('requires an Admin override for a warning-flagged CP', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const horizon = getDb().cps.find((c) => c.id === 'CP-0009')!;
     const cp = { ...newCp, type: 'partnership' as const, pan: horizon.pan, legalName: horizon.legalName, typeFields: { partners: 'Deepak Jain, Nitin Jain', deedDate: '2020-01-01', authorisedPartner: 'Deepak Jain' } };
     await expect(api.agreements.saveCpAndDraft({ existingCpId: horizon.id, institutionId: 'inst-asu', locationId: 'loc-asu-main', cp })).rejects.toThrow(/override/);
@@ -177,7 +177,7 @@ describe('scope rules (PRD 3)', () => {
   });
 
   it('never sends raw PAN or account numbers in CP DTOs; reveal is logged', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const view = await api.cps.get('CP-0001');
     expect(JSON.stringify(view)).not.toContain('ABFPM1234K');
     expect(JSON.stringify(view)).not.toContain('50100234567812');
@@ -213,7 +213,7 @@ describe('deviations (PRD 6.2)', () => {
 
 describe('renewal (PRD 6.4) and termination (PRD 6.5)', () => {
   it('Renew creates a linked draft starting the day after expiry', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const { newAgreementId } = await api.agreements.decideRenewal('AGR-ASU-2025-0002', 'renew');
     const old = getDb().agreements.find((a) => a.id === 'AGR-ASU-2025-0002')!;
     const n = getDb().agreements.find((a) => a.id === newAgreementId)!;
@@ -223,7 +223,7 @@ describe('renewal (PRD 6.4) and termination (PRD 6.5)', () => {
   });
 
   it('Do not renew needs a reason and Admin confirmation', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     await expect(api.agreements.decideRenewal('AGR-ASU-2025-0002', 'do_not_renew', '')).rejects.toThrow();
     await api.agreements.decideRenewal('AGR-ASU-2025-0002', 'do_not_renew', 'Low conversions this cycle');
     await as(ARJUN);
@@ -281,7 +281,7 @@ describe('maker-checker (PRD 3)', () => {
 
 describe('legacy import (PRD 6.6)', () => {
   it('validates rows and imports valid ones at Signed copy uploaded', async () => {
-    await as(NEHA);
+    await as(KAVYA);
     const batch = await api.legacy.import('test.xlsx', [
       { institution_code: 'AKS', cp_type: 'Individual', legal_name: 'Test Person', pan: 'ABCPT1234Z', execution_date: '2025-06-01', start_date: '2025-06-02', end_date: shiftDays(today(), 200) },
       { institution_code: 'AKS', cp_type: 'Individual', legal_name: 'Bad', pan: 'BAD', execution_date: 'x', start_date: '2025-06-02', end_date: '2020-01-01' },
