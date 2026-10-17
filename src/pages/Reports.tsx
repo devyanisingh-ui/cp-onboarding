@@ -132,12 +132,19 @@ export function ReportView() {
         <ErrorState error={error} onRetry={reload} />
       ) : data ? (
         <>
-          <div className="mb-4 flex flex-wrap gap-2">
+          {/* Summary cards: equal-width columns, and auto-rows-fr keeps every card the same height. */}
+          <div className="mb-4 grid auto-rows-fr grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {data.summary.map((s) => (
-              <div key={s.label} className={`surface rounded-xl px-4 py-3${id === 'expiring' ? ' min-w-48' : ''}`}>
+              <div key={s.label} className="surface flex min-h-24 min-w-0 flex-col justify-between gap-1.5 rounded-xl px-4 py-3">
                 <p className="text-xl font-bold tabular-nums">{s.value}</p>
                 <p className="text-xs text-muted">
-                  {s.tone && s.tone in STATUS_META ? <Badge tone={STATUS_META[s.tone as keyof typeof STATUS_META].tone}>{s.label}</Badge> : s.label}
+                  {s.tone && s.tone in STATUS_META ? (
+                    <Badge tone={STATUS_META[s.tone as keyof typeof STATUS_META].tone} className="max-w-full whitespace-normal!">
+                      {s.label}
+                    </Badge>
+                  ) : (
+                    s.label
+                  )}
                 </p>
               </div>
             ))}
