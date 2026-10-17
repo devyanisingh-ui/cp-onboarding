@@ -4,7 +4,8 @@ export type ISODate = string; // YYYY-MM-DD
 export type ISODateTime = string;
 
 export type Role = 'bd_exec' | 'legal' | 'admin';
-export type CpType = 'sole_prop' | 'pvt_ltd' | 'partnership' | 'individual';
+/** CP categories from the KYC checklist. `proprietorship` = Proprietorship Firm (firm PAN + owner's PAN). */
+export type CpType = 'individual' | 'sole_prop' | 'proprietorship' | 'partnership' | 'pvt_ltd';
 
 export interface Region {
   id: string;
@@ -70,6 +71,18 @@ export interface TypeFields {
   authorisedPartner?: string;
   fatherName?: string;
   dob?: ISODate;
+  /** Proprietorship Firm: the owner's name. */
+  ownerName?: string;
+  /** PAN of the proprietor (Proprietorship Firm), authorised partner (Partnership) or director (Company). */
+  ownerPan?: string;
+  /** Udyam / MSME registration number (Sole Proprietorship and Proprietorship Firms). */
+  msmeNumber?: string;
+  /** Shop & Establishment registration / trade licence number, if any (Sole Proprietorship). */
+  shopLicenceNumber?: string;
+  /** Other business registration of a Proprietorship Firm, e.g. "Trade licence TL/2021/0456". */
+  businessRegistration?: string;
+  /** Company: date on the certificate of incorporation. */
+  incorporationDate?: ISODate;
 }
 
 export interface WarningFlag {
@@ -405,6 +418,13 @@ export type DocumentType =
   | 'aadhaar_masked'
   | 'cancelled_cheque'
   | 'gst_certificate'
+  | 'owner_pan'
+  | 'msme_certificate'
+  | 'shop_establishment'
+  | 'office_address_proof'
+  | 'business_registration'
+  | 'partnership_deed'
+  | 'incorporation_certificate'
   | 'draft'
   | 'signed_copy'
   | 'stamp_paper_scan'

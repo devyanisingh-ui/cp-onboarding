@@ -94,9 +94,21 @@ export function effectiveRates(rateCard: RateCard, deviations: Deviation[]): Eff
 // ---------- Merge fields ----------
 
 const TYPE_FIELDS: Record<CpType, { key: keyof CpMaster['typeFields']; label: string; date?: boolean }[]> = {
-  sole_prop: [{ key: 'proprietorName', label: 'Name of the Proprietor' }],
+  sole_prop: [
+    { key: 'proprietorName', label: 'Name of the Proprietor' },
+    { key: 'msmeNumber', label: 'MSME (Udyam) registration' },
+    { key: 'shopLicenceNumber', label: 'Shop & Establishment / trade licence' },
+  ],
+  proprietorship: [
+    { key: 'ownerName', label: 'Firm owner' },
+    { key: 'ownerPan', label: 'PAN of the firm owner' },
+    { key: 'msmeNumber', label: 'MSME (Udyam) registration' },
+    { key: 'businessRegistration', label: 'Other business registration' },
+  ],
   pvt_ltd: [
     { key: 'cin', label: 'CIN' },
+    { key: 'incorporationDate', label: 'Date of incorporation', date: true },
+    { key: 'ownerPan', label: 'PAN of the director' },
     { key: 'registeredOffice', label: 'Registered office' },
     { key: 'authorisedSignatory', label: 'Director / authorised signatory' },
     { key: 'boardResolutionDate', label: 'Board resolution date', date: true },
@@ -105,6 +117,7 @@ const TYPE_FIELDS: Record<CpType, { key: keyof CpMaster['typeFields']; label: st
     { key: 'partners', label: 'Partners' },
     { key: 'deedDate', label: 'Partnership deed date', date: true },
     { key: 'authorisedPartner', label: 'Authorised partner' },
+    { key: 'ownerPan', label: 'PAN of the authorised partner' },
   ],
   individual: [
     { key: 'fatherName', label: "Father's name" },
@@ -259,6 +272,8 @@ function signatoryLine(type: CpType, field: (k: string) => string): string {
   switch (type) {
     case 'sole_prop':
       return `${field('cp.proprietor_name')}<br/>Proprietor`;
+    case 'proprietorship':
+      return `${field('cp.owner_name')}<br/>Proprietor`;
     case 'pvt_ltd':
       return `${field('cp.authorised_signatory')}<br/>Authorised Signatory`;
     case 'partnership':

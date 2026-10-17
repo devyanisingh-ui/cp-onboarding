@@ -1,6 +1,8 @@
 import type { Agreement, AgreementStatus, CpType, Deviation, RateCard, TemplateVersion, User, WizardDraft } from '@/types';
 import { SLABS } from '@/types';
 import { can } from '@/lib/permissions';
+import { CP_TYPES } from '@/lib/format';
+import { requiredKyc } from '@/lib/kyc';
 import { addWorkingDays, daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
 import { missingFields, mergeFields, renderAgreementHtml, clausesFor, type MergeField } from '@/lib/agreementTemplate';
 import { agreementDateErrors } from '@/lib/validation';
@@ -78,15 +80,14 @@ export function mergeContext(a: Agreement) {
   };
 }
 
-const REQUIRED_KYC = ['pan', 'aadhaar_masked', 'cancelled_cheque'] as const;
-
+/** Documents the KYC checklist requires for this CP's category that haven't been uploaded. */
 export function kycGaps(cpId: string): string[] {
   const d = getDb();
   const cp = d.cps.find((c) => c.id === cpId)!;
   const docs = d.documents.filter((x) => x.ownerType === 'cp' && x.ownerId === cpId);
-  const labels: Record<string, string> = { pan: 'PAN copy', aadhaar_masked: 'Masked Aadhaar', cancelled_cheque: 'Cancelled cheque', gst_certificate: 'GST certificate' };
-  const need: string[] = [...REQUIRED_KYC, ...(cp.gstRegistered ? ['gst_certificate'] : [])];
-  return need.filter((t) => !docs.some((x) => x.type === t)).map((t) => labels[t]!);
+  return requiredKyc(cp.type, cp.gstRegistered)
+    .filter((k) => !docs.some((x) => x.type === k.type))
+    .map((k) => k.label);
 }
 
 /** Everything that blocks submission. */
@@ -271,12 +272,7 @@ export async function wizardContext(): Promise<WizardContext> {
         group: i.group,
         city: i.city,
         locations: i.locations.map((l) => ({ id: l.id, name: `${l.name}, ${l.city}` })),
-        hasTemplate: {
-          sole_prop: !!currentTemplate('sole_prop', i.id),
-          pvt_ltd: !!currentTemplate('pvt_ltd', i.id),
-          partnership: !!currentTemplate('partnership', i.id),
-          individual: !!currentTemplate('individual', i.id),
-        },
+        hasTemplate: Object.fromEntries(CP_TYPES.map((t) => [t, !!currentTemplate(t, i.id)])) as Record<CpType, boolean>,
         hasRateCard: !!currentRateCard(i.id),
         signatoryName: i.signatoryName,
         signatoryDesignation: i.signatoryDesignation,

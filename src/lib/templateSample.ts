@@ -8,7 +8,8 @@ import type { MergeContext } from './agreementTemplate';
  */
 const SAMPLE_CP: Record<CpType, Pick<CpMaster, 'legalName' | 'pan' | 'residenceAddress' | 'businessAddress' | 'typeFields'>> = {
   sole_prop: { legalName: 'Sample Education Consultants', pan: 'ABCPS1234D', residenceAddress: '12, Sample Nagar, Gurugram', businessAddress: 'SCO 1, Sample Market, Gurugram', typeFields: { proprietorName: 'Asha Sample' } },
-  pvt_ltd: { legalName: 'Sample Admissions Pvt. Ltd', pan: 'AABCS1234E', residenceAddress: '', businessAddress: 'Unit 1, Sample Tower, Gurugram', typeFields: { cin: 'U80900HR2020PTC000001', registeredOffice: 'B-1, Sample Enclave, New Delhi', authorisedSignatory: 'Ravi Sample, Director', boardResolutionDate: '2026-01-15' } },
+  proprietorship: { legalName: 'Sample Career Point', pan: 'ABCFS1234J', residenceAddress: '9, Sample Vihar, Noida', businessAddress: 'Shop 4, Sample Plaza, Noida', typeFields: { ownerName: 'Asha Sample', ownerPan: 'ABCPS9876K', msmeNumber: 'UDYAM-UP-28-0000001', businessRegistration: 'Trade licence TL/2022/0001' } },
+  pvt_ltd: { legalName: 'Sample Admissions Pvt. Ltd', pan: 'AABCS1234E', residenceAddress: '', businessAddress: 'Unit 1, Sample Tower, Gurugram', typeFields: { cin: 'U80900HR2020PTC000001', incorporationDate: '2020-02-10', ownerPan: 'ABCPS1111L', registeredOffice: 'B-1, Sample Enclave, New Delhi', authorisedSignatory: 'Ravi Sample, Director', boardResolutionDate: '2026-01-15' } },
   partnership: { legalName: 'Sample & Co. Associates', pan: 'AABFS1234G', residenceAddress: '3, Sample Road, Ludhiana', businessAddress: '22, Sample Mall Road, Ludhiana', typeFields: { partners: 'Asha Sample, Ravi Sample', deedDate: '2021-04-01', authorisedPartner: 'Asha Sample' } },
   individual: { legalName: 'Asha Sample', pan: 'ABCPS5678H', residenceAddress: '7, Sample Colony, Faridabad', businessAddress: '', typeFields: { fatherName: 'Shri R. Sample', dob: '1985-05-20' } },
 };

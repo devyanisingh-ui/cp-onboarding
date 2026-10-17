@@ -161,7 +161,7 @@ export async function getCpForEdit(id: string): Promise<CpDTO> {
 }
 
 function validateCp(values: CpFormValues, isNew: boolean) {
-  const parsed = cpFormSchema({ requireAccount: isNew }).safeParse(values);
+  const parsed = cpFormSchema({ requireAccount: isNew, existing: !isNew }).safeParse(values);
   if (!parsed.success) {
     const fieldErrors: Record<string, string> = {};
     for (const issue of parsed.error.issues) fieldErrors[issue.path.join('.')] = issue.message;
@@ -188,11 +188,11 @@ export function upsertCp(values: CpFormValues, existingId?: string): CpMaster {
       email: v.email,
       residenceAddress: v.residenceAddress,
       businessAddress: v.businessAddress,
-      gstRegistered: v.gstRegistered,
-      gstin: v.gstRegistered ? v.gstin?.toUpperCase() : undefined,
+      gstRegistered: v.type !== 'individual' && v.gstRegistered,
+      gstin: v.type !== 'individual' && v.gstRegistered ? v.gstin?.toUpperCase() : undefined,
       bank: { ...v.bank, ifsc: v.bank.ifsc.toUpperCase() },
       aadhaarLast4: v.aadhaarLast4,
-      typeFields: clean(v.typeFields),
+      typeFields: clean({ ...v.typeFields, ownerPan: v.typeFields.ownerPan?.toUpperCase() }),
       consent: { statement: CONSENT_STATEMENT, recordedAt: now(), recordedById: user.id },
       createdAt: now(),
       createdById: user.id,
@@ -215,11 +215,12 @@ export function upsertCp(values: CpFormValues, existingId?: string): CpMaster {
     email: v.email,
     residenceAddress: v.residenceAddress,
     businessAddress: v.businessAddress,
-    gstRegistered: v.gstRegistered,
-    gstin: v.gstRegistered ? v.gstin?.toUpperCase() : undefined,
+    gstRegistered: v.type !== 'individual' && v.gstRegistered,
+    gstin: v.type !== 'individual' && v.gstRegistered ? v.gstin?.toUpperCase() : undefined,
     bank: { ...v.bank, ifsc: v.bank.ifsc.toUpperCase(), accountNumber: v.bank.accountNumber || cp.bank.accountNumber },
     aadhaarLast4: v.aadhaarLast4,
-    typeFields: clean(v.typeFields),
+    // A masked owner PAN coming back from the form means 'unchanged'.
+    typeFields: clean({ ...v.typeFields, ownerPan: isMasked(v.typeFields.ownerPan) ? cp.typeFields.ownerPan : v.typeFields.ownerPan?.toUpperCase() }),
   };
   const ch = diff(cp, next, ['bank']);
   if (ch.changed.length === 0) return cp;

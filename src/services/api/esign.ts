@@ -56,6 +56,8 @@ export function defaultCpSigner(a: Agreement): { name: string; designation: stri
   switch (cp.type) {
     case 'sole_prop':
       return { name: t.proprietorName || cp.contactPerson, designation: 'Proprietor', email: cp.email };
+    case 'proprietorship':
+      return { name: t.ownerName || cp.contactPerson, designation: 'Proprietor', email: cp.email };
     case 'pvt_ltd':
       return { name: (t.authorisedSignatory || cp.contactPerson).split(',')[0]!.trim(), designation: 'Authorised Signatory', email: cp.email };
     case 'partnership':

@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Check, FileWarning, ShieldCheck, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import type { DocumentType, FieldCheck } from '@/types';
+import { kycDocsFor, kycLabel, PAN_OF, PERSON_ROLE } from '@/lib/kyc';
 import { api } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
@@ -10,7 +11,7 @@ import { formatInr } from '@/lib/format';
 import { maskAadhaar } from '@/lib/mask';
 import { cn } from '@/lib/cn';
 import { Alert, Button, Card, ErrorState, Field, Input, Modal, PageSkeleton, Tabs, Textarea } from '@/components/ui';
-import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, PageHeader, docLabel } from '@/components/common';
+import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, PageHeader } from '@/components/common';
 
 /**
  * Checklist review of a signed agreement against its documents.
@@ -61,11 +62,29 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
       { key: 'stamp_value', label: 'Stamp value and state', value: sp ? `${formatInr(sp.valueInr)} · ${sp.state}` : '—' },
       { key: 'stamp_date', label: a.esign?.status === 'completed' ? 'E-stamp issue date' : 'Stamp purchase date', value: formatDate(sp?.purchaseDate) },
       { key: 'dates', label: 'Commencement and expiry', value: `${formatDate(a.startDate)} – ${formatDate(a.endDate)}` },
-      { key: 'pan', label: 'PAN matches PAN copy', value: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} />, doc: 'pan' },
-      { key: 'aadhaar', label: 'Aadhaar copy is masked; last 4 match', value: maskAadhaar(d.cp.aadhaarLast4), doc: 'aadhaar_masked' },
-      { key: 'bank', label: 'Bank details match cancelled cheque', value: <MaskedValue masked={`${d.cp.bank.accountMasked} · ${d.cp.bank.ifsc}`} label="account number" reveal={async () => `${await api.cps.reveal(d.cp.id, 'account')} · ${d.cp.bank.ifsc}`} />, doc: 'cancelled_cheque' },
     ];
-    if (d.cp.gstRegistered) rows.push({ key: 'gst', label: 'GSTIN matches GST certificate', value: d.cp.gstin ?? '—', doc: 'gst_certificate' });
+    // One row per KYC document the checklist asks for from this CP category (optional ones only if uploaded).
+    const t = d.cp.type;
+    const f = d.cp.typeFields;
+    const role = PERSON_ROLE[t];
+    const docRow: Partial<Record<DocumentType, { label: string; value: ReactNode }>> = {
+      pan: { label: `${PAN_OF[t]} matches the PAN card`, value: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} /> },
+      owner_pan: { label: `PAN of the ${role} matches the PAN card`, value: f.ownerPan ?? '—' },
+      aadhaar_masked: { label: `Aadhaar of the ${role} is masked; last 4 match`, value: maskAadhaar(d.cp.aadhaarLast4) },
+      cancelled_cheque: { label: 'Bank details match the cheque / bank letter', value: <MaskedValue masked={`${d.cp.bank.accountMasked} · ${d.cp.bank.ifsc}`} label="account number" reveal={async () => `${await api.cps.reveal(d.cp.id, 'account')} · ${d.cp.bank.ifsc}`} /> },
+      gst_certificate: { label: 'GSTIN matches the GST certificate', value: d.cp.gstin ?? '—' },
+      msme_certificate: { label: 'MSME (Udyam) certificate matches the firm', value: f.msmeNumber ?? '—' },
+      office_address_proof: { label: 'Office address proof matches the office address', value: d.cp.businessAddress || '—' },
+      shop_establishment: { label: 'Shop & Establishment / trade licence matches', value: f.shopLicenceNumber ?? '—' },
+      business_registration: { label: 'Business registration of the firm matches', value: f.businessRegistration ?? '—' },
+      partnership_deed: { label: 'Partnership deed: partners and deed date match', value: `${f.partners ?? '—'} · ${formatDate(f.deedDate)}` },
+      incorporation_certificate: { label: 'Certificate of incorporation: CIN and date match', value: `${f.cin ?? '—'} · ${formatDate(f.incorporationDate)}` },
+    };
+    for (const k of kycDocsFor(t, d.cp.gstRegistered)) {
+      if (k.when === 'optional' && !d.cpDocuments.some((x) => x.type === k.type)) continue;
+      const r = docRow[k.type];
+      if (r) rows.push({ key: k.type, label: r.label, value: r.value, doc: k.type });
+    }
     return rows;
   }, [d]);
 
@@ -112,7 +131,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
       <div className="grid gap-5 lg:grid-cols-2">
         <Card className={cn('min-w-0 overflow-hidden lg:sticky lg:top-[7.5rem] lg:self-start', mobileView !== 'doc' && 'max-lg:hidden')}>
           <div className="px-4 pt-2">
-            <Tabs label="Uploaded documents" active={current?.id ?? ''} onChange={setDocTab} tabs={docs.map((x) => ({ id: x.id, label: docLabel(x.type) }))} />
+            <Tabs label="Uploaded documents" active={current?.id ?? ''} onChange={setDocTab} tabs={docs.map((x) => ({ id: x.id, label: kycLabel(d!.cp.type, x.type) }))} />
           </div>
           <div className="max-h-[75vh] overflow-y-auto bg-sunken p-3">
             {current && (
@@ -138,7 +157,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
           <Alert tone="info">
             {legal
-              ? 'Mark each item against the documents. Approve needs every item Verified and sends the agreement to Admin. If only CP documents (PAN, Aadhaar, cheque, GST) don’t match, request document changes and the CP re-uploads them; any other mismatch means you reject with comments.'
+              ? 'Mark each item against the documents. Approve needs every item Verified and sends the agreement to Admin. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the CP re-uploads it; if the signed agreement itself is wrong, reject it.'
               : 'Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments.'}{' '}
             {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.
           </Alert>
@@ -193,7 +212,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
                 variant="secondary"
                 icon={<FileWarning className="size-4" />}
                 disabled={!canAskDocs}
-                title={!canAskDocs ? 'Mark Mismatch on a CP document (PAN, Aadhaar, cancelled cheque or GST) first' : undefined}
+                title={!canAskDocs ? 'Mark Mismatch on one of the CP’s documents first' : undefined}
                 onClick={() => setAskingDocs(true)}
               >
                 Request document changes{docMismatches.length ? ` (${docMismatches.length})` : ''}
@@ -244,7 +263,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           <ul className="space-y-3">
             {docMismatches.map((f) => (
               <li key={f.key} className="rounded-lg border border-line p-3">
-                <Field label={`${docLabel(f.doc!)} — what needs to change`} required>
+                <Field label={`${kycLabel(d!.cp.type, f.doc!)} — what needs to change`} required>
                   <Textarea
                     rows={2}
                     value={checks[f.key]?.remark ?? ''}

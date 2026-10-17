@@ -14,8 +14,9 @@ import type {
   User,
 } from '@/types';
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
+import { requiredKyc } from '@/lib/kyc';
 
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /** Prototype only: every seeded user signs in with their username and this shared password. */
 export const DEMO_PASSWORD = 'Apeejay@123';
@@ -168,8 +169,9 @@ export function buildSeed(): Database {
     tpl('tpl-pa-1', 'partnership', 1, 'published', null, 200, 'Initial Legal-vetted template.'),
     tpl('tpl-pa-2', 'partnership', 2, 'pending_approval', null, -30, 'Adds authorised-partner resolution clause.'),
     tpl('tpl-in-1', 'individual', 1, 'published', null, 200, 'Initial Legal-vetted template.'),
+    tpl('tpl-pf-1', 'proprietorship', 1, 'published', null, 30, 'Template for Proprietorship Firms (KYC checklist 2026).'),
   ];
-  const tplFor = { sole_prop: 'tpl-sp-2', pvt_ltd: 'tpl-pl-1', partnership: 'tpl-pa-1', individual: 'tpl-in-1' } as const;
+  const tplFor = { sole_prop: 'tpl-sp-2', proprietorship: 'tpl-pf-1', pvt_ltd: 'tpl-pl-1', partnership: 'tpl-pa-1', individual: 'tpl-in-1' } as const;
 
   // ---------------- CPs ----------------
   const bank = (holder: string, acc: string, ifsc: string, bankName: string, branch: string) => ({ holderName: holder, accountNumber: acc, ifsc, bankName, branch });
@@ -192,7 +194,21 @@ export function buildSeed(): Database {
     cp({ id: 'CP-0010', type: 'individual', legalName: 'Ramesh Chandra Yadav', pan: 'AEYPY4455F', contactPerson: 'Ramesh Chandra Yadav', mobile: '9812098120', email: 'ramesh.yadav@gmail.com', residenceAddress: 'Village Dhankot, Tehsil Gurugram, Haryana 122505', businessAddress: '', gstRegistered: false, bank: bank('Ramesh Chandra Yadav', '9900112233', 'CNRB0001234', 'Canara Bank', 'Gurugram'), aadhaarLast4: '4455', typeFields: { fatherName: 'Shri Mahavir Yadav', dob: '1981-06-14' }, at: -40 }),
     cp({ id: 'CP-0011', type: 'individual', legalName: 'Kavita Joshi', pan: 'BHNPJ6677G', contactPerson: 'Kavita Joshi', mobile: '9820098200', email: 'kavita.joshi@outlook.com', residenceAddress: 'Flat 1203, Sea Breeze, Sector 20, Kharghar, Navi Mumbai 410210', businessAddress: '', gstRegistered: false, bank: bank('Kavita Joshi', '5566778899', 'HDFC0000999', 'HDFC Bank', 'Kharghar'), aadhaarLast4: '6677', typeFields: { fatherName: 'Shri Prakash Joshi', dob: '1986-11-02' }, by: 'u-neha', at: -700 }),
     cp({ id: 'CP-0012', type: 'individual', legalName: 'Mohammed Irfan', pan: 'CQRPI8899H', contactPerson: 'Mohammed Irfan', mobile: '9958099580', email: 'irfan.m@gmail.com', residenceAddress: 'House 9, Old Faridabad, Haryana 121002', businessAddress: '', gstRegistered: false, bank: bank('Mohammed Irfan', '1122334455', 'IDIB000F012', 'Indian Bank', 'Old Faridabad'), aadhaarLast4: '8899', typeFields: { fatherName: 'Shri Abdul Rashid', dob: '1978-03-21' }, at: -800 }),
+    cp({ id: 'CP-0013', type: 'proprietorship', legalName: 'Gyan Path Career Point', pan: 'AAJFG4321K', contactPerson: 'Neeraj Gupta', mobile: '9811055443', email: 'neeraj@gyanpath.in', residenceAddress: 'C-41, Sector 50, Noida, Uttar Pradesh 201301', businessAddress: 'Shop 12, Sector 18 Market, Noida, Uttar Pradesh 201301', gstRegistered: false, bank: bank('Gyan Path Career Point', '40512398765', 'PUNB0456700', 'Punjab National Bank', 'Sector 18, Noida'), aadhaarLast4: '5521', typeFields: { ownerName: 'Neeraj Gupta', ownerPan: 'BQGPG5566M', msmeNumber: 'UDYAM-UP-28-0045123', businessRegistration: 'Trade licence TL/NOIDA/2021/0456' }, at: -25 }),
   ];
+  // Fields added with the 2026 KYC checklist, for the CPs above.
+  const checklistFields: Record<string, CpMaster['typeFields']> = {
+    'CP-0001': { msmeNumber: 'UDYAM-HR-05-0012345', shopLicenceNumber: 'S&E/GGN/2019/7781' },
+    'CP-0002': { msmeNumber: 'UDYAM-HR-12-0034567' },
+    'CP-0003': { msmeNumber: 'UDYAM-HR-03-0056789' },
+    'CP-0004': { ownerPan: 'AQBPB4412R', incorporationDate: d(-2900) },
+    'CP-0005': { ownerPan: 'ARRPA7731K', incorporationDate: d(-2400) },
+    'CP-0006': { ownerPan: 'BHSPS2208D', incorporationDate: d(-2600) },
+    'CP-0007': { ownerPan: 'AGLPG9921H' },
+    'CP-0008': { ownerPan: 'ACRPR3310N' },
+    'CP-0009': { ownerPan: 'ADJPJ6654Q' },
+  };
+  for (const c of cps) Object.assign(c.typeFields, checklistFields[c.id]);
   const cpById = Object.fromEntries(cps.map((c) => [c.id, c]));
 
   // ---------------- Agreements ----------------
@@ -261,10 +277,9 @@ export function buildSeed(): Database {
     const verified = !['CP-0006', 'CP-0005', 'CP-0004', 'CP-0007'].includes(c.id);
     const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-arjun', verifiedOn: c.createdAt, verificationMethod: 'manual' as const } : {};
     const days = Math.round((Date.parse(c.createdAt) - Date.parse(T)) / 86400000);
-    doc('cp', c.id, 'pan', `PAN_${c.id}.jpg`, c.createdById, days, v);
-    doc('cp', c.id, 'aadhaar_masked', `Aadhaar_masked_${c.id}.jpg`, c.createdById, days, v);
-    doc('cp', c.id, 'cancelled_cheque', `Cheque_${c.id}.jpg`, c.createdById, days, v);
-    if (c.gstRegistered) doc('cp', c.id, 'gst_certificate', `GST_${c.id}.pdf`, c.createdById, days, v);
+    // Every document the KYC checklist requires for this CP's category.
+    for (const k of requiredKyc(c.type, c.gstRegistered)) doc('cp', c.id, k.type, `${k.type}_${c.id}.${k.type === 'pan' || k.type === 'owner_pan' || k.type === 'aadhaar_masked' || k.type === 'cancelled_cheque' ? 'jpg' : 'pdf'}`, c.createdById, days, v);
+    if (c.typeFields.shopLicenceNumber) doc('cp', c.id, 'shop_establishment', `shop_establishment_${c.id}.pdf`, c.createdById, days, v);
   }
   for (const a of agreements) {
     // Signed agreements: live and closed ones, ones with Legal/Admin (signed before review), and legacy scans.
@@ -376,7 +391,7 @@ export function buildSeed(): Database {
       allowedDomains: ['apeejay.edu', 'apeejay.org'],
       simulateErrors: false,
     },
-    counters: { cp: 12, agreement: 17, doc: docN, task: taskN, audit: auditN, dev: 4, notif: 6, email: 0, batch: 1 },
+    counters: { cp: cps.length, agreement: 17, doc: docN, task: taskN, audit: auditN, dev: 4, notif: 6, email: 0, batch: 1 },
   };
 }
 

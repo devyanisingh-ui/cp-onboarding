@@ -6,6 +6,7 @@ import { runScheduledJobs } from '../api/scheduler';
 import { shiftDays, today } from '@/lib/dates';
 import type { CpFormValues } from '@/lib/schemas';
 import { DEMO_PASSWORD } from '@/data/seed';
+import { requiredKyc } from '@/lib/kyc';
 
 const as = (email: string) => api.auth.signIn(email, DEMO_PASSWORD);
 const KAVYA = 'kavya.iyer@apeejay.edu';
@@ -25,7 +26,7 @@ const newCp: CpFormValues = {
   gstin: '',
   bank: { holderName: 'Ravi Kumar', accountNumber: '50100123456789', ifsc: 'HDFC0001234', bankName: 'HDFC Bank', branch: 'Sector 29' },
   aadhaarLast4: '1234',
-  typeFields: { proprietorName: 'Ravi Kumar' },
+  typeFields: { proprietorName: 'Ravi Kumar', msmeNumber: 'UDYAM-HR-05-0012345' },
   consentGiven: true,
 };
 
@@ -34,8 +35,8 @@ const file = (name: string, type = 'application/pdf') => ({ file: new Blob(['x']
 async function createReadyDraft() {
   await as(KAVYA);
   const { agreementId, cpId } = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: newCp });
-  for (const [type, name] of [['pan', 'pan.pdf'], ['aadhaar_masked', 'aadhaar_masked.pdf'], ['cancelled_cheque', 'cheque.pdf']] as const)
-    await api.documents.upload({ ownerType: 'cp', ownerId: cpId, type, ...file(name) });
+  // Everything the KYC checklist requires from a Sole Proprietorship Firm.
+  for (const k of requiredKyc('sole_prop', false)) await api.documents.upload({ ownerType: 'cp', ownerId: cpId, type: k.type, ...file(`${k.type}_masked.pdf`) });
   await api.agreements.saveFields(agreementId, { executionDate: shiftDays(today(), 3), executionPlace: 'Gurugram', startDate: shiftDays(today(), 4), endDate: shiftDays(today(), 368) });
   return { agreementId, cpId };
 }
@@ -127,8 +128,29 @@ describe('new CP onboarding (PRD 6.1)', () => {
 
   it('does not block a CP whose PAN holder type differs from the CP type (advisory only)', async () => {
     await as(KAVYA);
-    const cp = { ...newCp, type: 'partnership' as const, pan: 'ABCPQ5678R', typeFields: { partners: 'A One, B Two', deedDate: '2020-01-01', authorisedPartner: 'A One' } };
+    const cp = { ...newCp, type: 'partnership' as const, pan: 'ABCPQ5678R', typeFields: { partners: 'A One, B Two', deedDate: '2020-01-01', authorisedPartner: 'A One', ownerPan: 'ABCPO1234N' } };
     await expect(api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp })).resolves.toMatchObject({ agreementId: expect.any(String) });
+  });
+
+  it('asks for the fields and KYC documents of each CP category (checklist 2026)', async () => {
+    await as(KAVYA);
+    const firm = { ...newCp, type: 'proprietorship' as const, pan: 'AAJFR1234K', legalName: 'Ravi Career Point', typeFields: {} };
+    const err = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: firm }).catch((e) => e);
+    expect(Object.keys(err.fieldErrors)).toEqual(expect.arrayContaining(['typeFields.ownerName', 'typeFields.ownerPan', 'typeFields.msmeNumber', 'typeFields.businessRegistration']));
+    const ok = { ...firm, typeFields: { ownerName: 'Ravi Kumar', ownerPan: 'ABCPK1234L', msmeNumber: 'UDYAM-HR-05-0099999', businessRegistration: 'Trade licence TL/2021/1' } };
+    const { cpId } = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: ok });
+    expect(getDb().cps.find((c) => c.id === cpId)!.typeFields.ownerPan).toBe('ABCPK1234L');
+    // The CP view never shows the owner's full PAN.
+    expect(((await api.cps.get(cpId)).cp as { typeFields?: { ownerPan?: string } }).typeFields?.ownerPan).toBe('ABCPK••••L');
+
+    const company = { ...newCp, type: 'pvt_ltd' as const, pan: 'AABCZ1234K', legalName: 'Zeta Learning Pvt Ltd', residenceAddress: '', typeFields: { cin: 'U80900DL2018PTC334455', incorporationDate: '2018-04-01', registeredOffice: 'B-12, Lajpat Nagar II, New Delhi', authorisedSignatory: 'Z Director, Director', boardResolutionDate: '2026-01-10', ownerPan: 'ABCPZ1234K' } };
+    const { agreementId } = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: company });
+    await expect(api.agreements.submit(agreementId)).rejects.toThrow(/Certificate of incorporation.*PAN card of the director/);
+
+    // Individuals aren't GST registered on the checklist.
+    const person = { ...newCp, type: 'individual' as const, pan: 'ABCPI1234K', gstRegistered: true, gstin: 'bad', typeFields: { fatherName: 'Shri A', dob: '1980-01-01' } };
+    const ind = await api.agreements.saveCpAndDraft({ institutionId: 'inst-asu', locationId: 'loc-asu-main', cp: person });
+    expect(getDb().cps.find((c) => c.id === ind.cpId)!.gstRegistered).toBe(false);
   });
 
   it('blocks submission when fields or KYC are missing', async () => {
@@ -240,7 +262,7 @@ describe('new CP onboarding (PRD 6.1)', () => {
   it('requires an Admin override for a warning-flagged CP', async () => {
     await as(KAVYA);
     const horizon = getDb().cps.find((c) => c.id === 'CP-0009')!;
-    const cp = { ...newCp, type: 'partnership' as const, pan: horizon.pan, legalName: horizon.legalName, typeFields: { partners: 'Deepak Jain, Nitin Jain', deedDate: '2020-01-01', authorisedPartner: 'Deepak Jain' } };
+    const cp = { ...newCp, type: 'partnership' as const, pan: horizon.pan, legalName: horizon.legalName, typeFields: { partners: 'Deepak Jain, Nitin Jain', deedDate: '2020-01-01', authorisedPartner: 'Deepak Jain', ownerPan: 'ADJPJ6654Q' } };
     await expect(api.agreements.saveCpAndDraft({ existingCpId: horizon.id, institutionId: 'inst-asu', locationId: 'loc-asu-main', cp })).rejects.toThrow(/override/);
     const { agreementId } = await api.agreements.saveCpAndDraft({ existingCpId: horizon.id, institutionId: 'inst-asu', locationId: 'loc-asu-main', cp, overrideReason: 'Breach was at another institution; new owners' });
     expect(getDb().agreements.find((a) => a.id === agreementId)!.override?.status).toBe('pending');

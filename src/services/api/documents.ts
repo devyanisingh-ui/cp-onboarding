@@ -1,6 +1,7 @@
 import type { DocumentRecord, DocumentType, User } from '@/types';
 import { formatDate, shiftDays, today } from '@/lib/dates';
 import { maskAccount, maskGstin, maskPan } from '@/lib/mask';
+import { CP_TYPE_LABELS } from '@/lib/format';
 import { MOCK_DOC_TYPES, mockDocumentSvg, type MockDocData, type MockDocType } from '@/lib/mockDocuments';
 import { can } from '@/lib/permissions';
 import { conflict, forbidden, invalid, notFound } from '../errors';
@@ -119,12 +120,12 @@ function specimenData(doc: DocumentRecord): MockDocData | null {
   const cp = d.cps.find((c) => c.id === (a ? a.cpId : doc.ownerId));
   if (!cp) return null;
   const t = cp.typeFields;
-  const person = (t.proprietorName || t.authorisedSignatory?.split(',')[0] || t.authorisedPartner || (cp.type === 'individual' ? cp.legalName : '') || cp.contactPerson).trim();
+  const person = (t.proprietorName || t.ownerName || t.authorisedSignatory?.split(',')[0] || t.authorisedPartner || (cp.type === 'individual' ? cp.legalName : '') || cp.contactPerson).trim();
   const inst = a ? d.institutions.find((i) => i.id === a.institutionId) : undefined;
   return {
     cpName: cp.legalName,
     personName: person,
-    panHolder: cp.type === 'pvt_ltd' || cp.type === 'partnership' ? cp.legalName : undefined,
+    panHolder: cp.type === 'pvt_ltd' || cp.type === 'partnership' || cp.type === 'proprietorship' ? cp.legalName : undefined,
     fatherName: t.fatherName || undefined,
     dob: t.dob ? formatDate(t.dob) : undefined,
     panMasked: maskPan(cp.pan),
@@ -132,6 +133,19 @@ function specimenData(doc: DocumentRecord): MockDocData | null {
     address: cp.residenceAddress || cp.businessAddress,
     bank: { holderName: cp.bank.holderName, accountMasked: maskAccount(cp.bank.accountNumber), ifsc: cp.bank.ifsc, bankName: cp.bank.bankName, branch: cp.bank.branch },
     gstin: cp.gstin ? maskGstin(cp.gstin) : undefined,
+    extra: {
+      cpTypeLabel: CP_TYPE_LABELS[cp.type],
+      ownerPanMasked: t.ownerPan ? maskPan(t.ownerPan) : undefined,
+      msmeNumber: t.msmeNumber,
+      shopLicenceNumber: t.shopLicenceNumber,
+      businessRegistration: t.businessRegistration,
+      partners: t.partners,
+      deedDate: t.deedDate ? formatDate(t.deedDate) : undefined,
+      cin: t.cin,
+      incorporationDate: t.incorporationDate ? formatDate(t.incorporationDate) : undefined,
+      registeredOffice: t.registeredOffice,
+      businessAddress: cp.businessAddress || undefined,
+    },
     agreement:
       a && inst
         ? {

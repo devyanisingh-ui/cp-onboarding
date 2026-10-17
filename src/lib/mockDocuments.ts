@@ -9,7 +9,20 @@
  * Self-contained (no app imports) so `scripts/make-demo-documents.ts` can reuse it.
  */
 
-export type MockDocType = 'pan' | 'aadhaar_masked' | 'cancelled_cheque' | 'gst_certificate' | 'stamp_paper_scan' | 'signed_copy';
+export type MockDocType =
+  | 'pan'
+  | 'owner_pan'
+  | 'aadhaar_masked'
+  | 'cancelled_cheque'
+  | 'gst_certificate'
+  | 'msme_certificate'
+  | 'office_address_proof'
+  | 'shop_establishment'
+  | 'business_registration'
+  | 'partnership_deed'
+  | 'incorporation_certificate'
+  | 'stamp_paper_scan'
+  | 'signed_copy';
 
 export interface MockDocData {
   cpName: string;
@@ -24,6 +37,20 @@ export interface MockDocData {
   address?: string;
   bank?: { holderName: string; accountMasked: string; ifsc: string; bankName: string; branch: string };
   gstin?: string;
+  /** Category-specific details for the registration specimens (numbers already masked where needed). */
+  extra?: {
+    cpTypeLabel?: string;
+    ownerPanMasked?: string;
+    msmeNumber?: string;
+    shopLicenceNumber?: string;
+    businessRegistration?: string;
+    partners?: string;
+    deedDate?: string;
+    cin?: string;
+    incorporationDate?: string;
+    registeredOffice?: string;
+    businessAddress?: string;
+  };
   agreement?: {
     id: string;
     institutionName: string;
@@ -40,7 +67,21 @@ export interface MockDocData {
   };
 }
 
-export const MOCK_DOC_TYPES: MockDocType[] = ['pan', 'aadhaar_masked', 'cancelled_cheque', 'gst_certificate', 'stamp_paper_scan', 'signed_copy'];
+export const MOCK_DOC_TYPES: MockDocType[] = [
+  'pan',
+  'owner_pan',
+  'aadhaar_masked',
+  'cancelled_cheque',
+  'gst_certificate',
+  'msme_certificate',
+  'office_address_proof',
+  'shop_establishment',
+  'business_registration',
+  'partnership_deed',
+  'incorporation_certificate',
+  'stamp_paper_scan',
+  'signed_copy',
+];
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ENTITIES[c]!);
@@ -236,6 +277,24 @@ ${signature(a?.signatoryName ?? 'Signatory', 470, sigY, 200, '#0f172a')}
   );
 }
 
+/** A registration certificate / record page: title, a list of fields, a seal and a signature. */
+function certificate(title: string, subtitle: string, rows: [string, string][], d: MockDocData): string {
+  const w = 800, h = 1060;
+  return page(
+    w,
+    h,
+    title,
+    subtitle,
+    `${rows.map(([k, v], i) => `<text x="70" y="${232 + i * 70}" ${FONT} font-size="12" fill="#64748b" letter-spacing="0.6">${esc(k.toUpperCase())}</text>${wrap(v || '—', 58).slice(0, 2).map((l, j) => `<text x="70" y="${258 + i * 70 + j * 22}" ${FONT} font-size="18" font-weight="600" fill="#0f172a">${esc(l)}</text>`).join('')}`).join('')}
+<circle cx="${w - 170}" cy="${h - 220}" r="62" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="4 3" opacity="0.7"/>
+<text x="${w - 170}" y="${h - 224}" ${FONT} font-size="13" font-weight="700" fill="#7c3aed" text-anchor="middle" opacity="0.8">SPECIMEN</text>
+<text x="${w - 170}" y="${h - 206}" ${FONT} font-size="11" fill="#7c3aed" text-anchor="middle" opacity="0.8">not issued</text>
+${signature(d.personName, 70, h - 210, 180)}
+<line x1="70" y1="${h - 186}" x2="300" y2="${h - 186}" stroke="#94a3b8"/>
+<text x="70" y="${h - 166}" ${FONT} font-size="12" fill="#64748b">Authorised signature</text>`,
+  );
+}
+
 /** A document page with a header band. */
 function page(w: number, h: number, title: string, subtitle: string, body: string): string {
   return svg(
@@ -297,6 +356,21 @@ export function mockDocumentSvg(type: MockDocType, d: MockDocData): string {
   switch (type) {
     case 'pan':
       return pan(d);
+    case 'owner_pan':
+      // The owner's / partner's / director's own PAN card.
+      return pan({ ...d, panHolder: undefined, fatherName: undefined, panMasked: d.extra?.ownerPanMasked ?? '—' });
+    case 'msme_certificate':
+      return certificate('Udyam registration certificate', 'MSME · demo specimen', [['Udyam registration number', d.extra?.msmeNumber ?? '—'], ['Name of enterprise', d.cpName], ['Type of organisation', d.extra?.cpTypeLabel ?? '—'], ['Name of owner', d.personName], ['Official address of enterprise', d.extra?.businessAddress ?? d.address ?? '—']], d);
+    case 'office_address_proof':
+      return certificate('Office address proof', 'Rent agreement / utility bill · demo specimen', [['In the name of', d.cpName], ['Premises address', d.extra?.businessAddress ?? '—'], ['Document', 'Rent agreement (specimen)'], ['Occupant', d.personName]], d);
+    case 'shop_establishment':
+      return certificate('Shop & Establishment registration', 'Demo specimen', [['Registration number', d.extra?.shopLicenceNumber ?? '—'], ['Name of establishment', d.cpName], ['Name of employer', d.personName], ['Address of establishment', d.extra?.businessAddress ?? '—']], d);
+    case 'business_registration':
+      return certificate('Business registration', 'Trade licence / registration · demo specimen', [['Registration', d.extra?.businessRegistration ?? '—'], ['Name of business', d.cpName], ['Proprietor', d.personName], ['Business address', d.extra?.businessAddress ?? '—']], d);
+    case 'partnership_deed':
+      return certificate('Deed of partnership', 'Demo specimen', [['Name of the firm', d.cpName], ['Partners', d.extra?.partners ?? '—'], ['Date of deed', d.extra?.deedDate ?? '—'], ['Principal place of business', d.extra?.businessAddress ?? '—'], ['Authorised partner', d.personName]], d);
+    case 'incorporation_certificate':
+      return certificate('Certificate of incorporation', 'Demo specimen · not issued by any Registrar', [['Corporate identity number (CIN)', d.extra?.cin ?? '—'], ['Name of the company', d.cpName], ['Date of incorporation', d.extra?.incorporationDate ?? '—'], ['Registered office', d.extra?.registeredOffice ?? '—'], ['PAN of the company', d.panMasked]], d);
     case 'aadhaar_masked':
       return aadhaar(d);
     case 'cancelled_cheque':

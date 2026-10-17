@@ -9,6 +9,7 @@
  */
 import type { Agreement, DocRequest, DocumentType } from '@/types';
 import { can } from '@/lib/permissions';
+import { kycLabel } from '@/lib/kyc';
 import { conflict, forbidden, invalid, notFound } from '../errors';
 import { nextId } from '../db';
 import { sendExternalEmail } from '../notificationChannels';
@@ -16,14 +17,8 @@ import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, firstUser
 import { storeDocument } from './documents';
 import { sendToLegal } from './agreements';
 
-const DOC_LABELS: Partial<Record<DocumentType, string>> = {
-  pan: 'PAN copy',
-  aadhaar_masked: 'Masked Aadhaar',
-  cancelled_cheque: 'Cancelled cheque',
-  gst_certificate: 'GST certificate',
-  other: 'Other document',
-};
-const label = (t: DocumentType) => DOC_LABELS[t] ?? t.replace(/_/g, ' ');
+/** The document's name in the KYC checklist for this CP's category. */
+const label = (t: DocumentType, a: Agreement) => kycLabel(cpOf(a).type, t);
 
 function token(): string {
   const bytes = new Uint8Array(16);
@@ -56,7 +51,7 @@ export async function requestDocChanges(agreementId: string, items: { documentId
   const docs = items.map((it) => {
     const doc = d.documents.find((x) => x.id === it.documentId && x.ownerType === 'cp' && x.ownerId === a.cpId);
     if (!doc) throw notFound('Document');
-    if (!it.remark.trim()) throw invalid(`Add a remark for the ${label(doc.type)}.`);
+    if (!it.remark.trim()) throw invalid(`Add a remark for the ${label(doc.type, a)}.`);
     return { doc, remark: it.remark.trim() };
   });
   const before = { status: a.status };
@@ -69,7 +64,7 @@ export async function requestDocChanges(agreementId: string, items: { documentId
     requestedById: user.id,
     requestedAt: now(),
   };
-  const summary = docs.map(({ doc, remark }) => `${label(doc.type)}: ${remark}`).join('; ');
+  const summary = docs.map(({ doc, remark }) => `${label(doc.type, a)}: ${remark}`).join('; ');
   a.docRequest = req;
   a.status = 'signed_copy_uploaded';
   a.lastRejection = { gate: 1, byId: user.id, at: now(), comment: req.note ? `${req.note} — ${summary}` : `Documents to correct — ${summary}` };
@@ -107,7 +102,7 @@ export async function sendDocRequestLink(agreementId: string, email: string): Pr
   const link = `/cp-documents/${req.token}`;
   sendExternalEmail(to, {
     title: `Please re-upload documents for your Channel Partner Agreement ${a.id}`,
-    body: `Dear ${cp.contactPerson || cp.legalName},\n\nApeejay's Legal team reviewed your documents for agreement ${a.id} and needs the following corrected:\n\n${req.items.map((it) => `• ${label(it.documentType)}: ${it.remark}`).join('\n')}\n\nUse the link to upload the corrected documents. This link is personal to you. Do not forward it.`,
+    body: `Dear ${cp.contactPerson || cp.legalName},\n\nApeejay's Legal team reviewed your documents for agreement ${a.id} and needs the following corrected:\n\n${req.items.map((it) => `• ${label(it.documentType, a)}: ${it.remark}`).join('\n')}\n\nUse the link to upload the corrected documents. This link is personal to you. Do not forward it.`,
     link,
     kind: 'task',
   });
@@ -167,7 +162,7 @@ export async function getCpDocSession(t: string): Promise<CpDocSession> {
     note: req.note,
     items: req.items.map((it) => ({
       documentType: it.documentType,
-      label: label(it.documentType),
+      label: label(it.documentType, a),
       remark: it.remark,
       previousFileName: d.documents.find((x) => x.id === it.documentId)?.fileName ?? '',
       uploadedFileName: it.replacementId ? d.documents.find((x) => x.id === it.replacementId)?.fileName : undefined,
@@ -185,7 +180,7 @@ export async function uploadCpDoc(t: string, documentType: DocumentType, file: B
   const owner = getDb().users.find((u) => u.id === a.ownerId) ?? firstUserWithRole('admin')!;
   const { document } = await storeDocument(owner, 'cp', a.cpId, documentType, file, fileName);
   item.replacementId = document.id;
-  audit(cpActor(a), 'upload', 'document', document.id, `CP re-uploaded ${label(documentType)} (${fileName}) from their link`);
+  audit(cpActor(a), 'upload', 'document', document.id, `CP re-uploaded ${label(documentType, a)} (${fileName}) from their link`);
   commit();
 }
 
@@ -194,7 +189,7 @@ export async function submitCpDocs(t: string, note?: string): Promise<void> {
   const { a, req } = findByToken(t);
   if (req.status !== 'sent_to_cp') throw conflict('This upload link is no longer active.');
   const missing = req.items.filter((it) => !it.replacementId);
-  if (missing.length) throw invalid(`Upload every requested document first: ${missing.map((it) => label(it.documentType)).join(', ')}.`);
+  if (missing.length) throw invalid(`Upload every requested document first: ${missing.map((it) => label(it.documentType, a)).join(', ')}.`);
   req.status = 'cp_submitted';
   req.cpSubmittedAt = now();
   req.cpNote = note?.trim() || undefined;

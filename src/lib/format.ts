@@ -6,11 +6,13 @@ export const ROLE_LABELS: Record<Role, string> = {
   admin: 'Admin',
 };
 
+/** In the order of the KYC checklist. */
 export const CP_TYPE_LABELS: Record<CpType, string> = {
-  sole_prop: 'Sole Proprietorship',
-  pvt_ltd: 'Pvt. Ltd',
-  partnership: 'Partnership',
   individual: 'Individual',
+  sole_prop: 'Sole Proprietorship Firm',
+  proprietorship: 'Proprietorship Firm',
+  partnership: 'Partnership Firm',
+  pvt_ltd: 'Company (Pvt. Ltd / Ltd)',
 };
 
 export const CP_TYPES = Object.keys(CP_TYPE_LABELS) as CpType[];

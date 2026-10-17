@@ -13,6 +13,7 @@ import { useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
 import { agreementFormSchema, cpFormSchema, cpTypesForPan, panTypeHint, type AgreementFormValues, type CpFormValues } from '@/lib/schemas';
 import { CP_TYPE_LABELS, CP_TYPES, INSTITUTION_GROUPS } from '@/lib/format';
+import { kycDocsFor, kycLabel } from '@/lib/kyc';
 import { formatDate, shiftDays, timeAgo, today } from '@/lib/dates';
 import { isValidPan } from '@/lib/validation';
 import { maskPan } from '@/lib/mask';
@@ -37,16 +38,17 @@ import {
   Textarea,
   useToast,
 } from '@/components/ui';
-import { ActionBar, AgreementHtml, FileDrop, PageHeader, VerificationBadge, WarningBanner, docLabel } from '@/components/common';
+import { ActionBar, AgreementHtml, FileDrop, PageHeader, VerificationBadge, WarningBanner } from '@/components/common';
 import { CpFields } from '@/components/CpFields';
 
 const STEPS = ['PAN check', 'Institution & type', 'CP details', 'Agreement details', 'KYC documents', 'Review & preview'];
 
 const CP_TYPE_HELP: Record<CpType, string> = {
-  sole_prop: 'One owner trading under a firm name',
-  pvt_ltd: 'Company registered with the MCA (has a CIN)',
-  partnership: 'Firm with two or more partners under a deed',
-  individual: 'A person acting in their own name',
+  individual: 'A person acting in their own name · Aadhaar, PAN, bank',
+  sole_prop: 'One owner trading under a firm name, on the owner’s PAN · MSME, office address, bank',
+  proprietorship: 'Firm with its own PAN and business registration · firm + owner’s PAN, MSME',
+  partnership: 'Firm with two or more partners under a deed · firm PAN, deed, partner’s KYC',
+  pvt_ltd: 'Private or public limited company (has a CIN) · incorporation certificate, director’s KYC',
 };
 
 const emptyCp = (pan: string, type: CpType): CpFormValues => ({
@@ -732,13 +734,6 @@ function StepAgreement({ form, inst }: { form: UseFormReturn<AgreementFormValues
 
 // ---------------- Step 5 ----------------
 
-const KYC: { type: DocumentType; label: string; hint: string }[] = [
-  { type: 'pan', label: 'PAN copy', hint: 'PDF or photo, max 10 MB' },
-  { type: 'aadhaar_masked', label: 'Masked Aadhaar', hint: 'The first 8 digits must be hidden' },
-  { type: 'cancelled_cheque', label: 'Cancelled cheque', hint: 'Account holder name must be visible' },
-  { type: 'gst_certificate', label: 'GST certificate', hint: 'Required because the CP is GST registered' },
-];
-
 function StepKyc({ agreementId }: { agreementId: string }) {
   const { data, loading, error, reload } = useApi(() => api.agreements.get(agreementId), [agreementId]);
   const [uploading, setUploading] = useState<DocumentType | null>(null);
@@ -747,7 +742,8 @@ function StepKyc({ agreementId }: { agreementId: string }) {
   if (loading && !data) return <Spinner label="Loading documents" />;
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
   if (!data) return null;
-  const needed = KYC.filter((k) => k.type !== 'gst_certificate' || data.cp.gstRegistered);
+  // Documents from the KYC checklist for this CP category (GST certificate only if registered).
+  const needed = kycDocsFor(data.cp.type, data.cp.gstRegistered);
   const upload = async (type: DocumentType, files: File[]) => {
     const f = files[0];
     if (!f) return;
@@ -755,7 +751,7 @@ function StepKyc({ agreementId }: { agreementId: string }) {
     try {
       const res = await api.documents.upload({ ownerType: 'cp', ownerId: data.cp.id, type, file: f, fileName: f.name });
       setWarnings((w) => ({ ...w, [type]: res.warnings[0] }));
-      toast.success(`${docLabel(type)} uploaded`);
+      toast.success(`${kycLabel(data.cp.type, type)} uploaded`);
     } catch (e) {
       toast.error('Upload failed', errorMessage(e));
     } finally {
@@ -765,8 +761,8 @@ function StepKyc({ agreementId }: { agreementId: string }) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">KYC documents</h2>
-        <p className="mt-1 text-sm text-muted">On a phone you can photograph documents directly. Files are stored encrypted and every view is logged.</p>
+        <h2 className="text-lg font-semibold">KYC documents · {CP_TYPE_LABELS[data.cp.type]}</h2>
+        <p className="mt-1 text-sm text-muted">The documents the KYC checklist asks for from a {CP_TYPE_LABELS[data.cp.type]}. On a phone you can photograph documents directly. Files are stored encrypted and every view is logged.</p>
       </div>
       <div className="grid gap-5 md:grid-cols-2">
         {needed.map((k) => {
@@ -776,9 +772,9 @@ function StepKyc({ agreementId }: { agreementId: string }) {
             <div key={k.type} className={cn('rounded-xl border p-4', latest ? 'border-green-200 bg-success-50/40' : 'border-line')}>
               <div className="mb-3 flex items-center justify-between gap-2">
                 <p className="text-sm font-semibold">
-                  {k.label} <span className="text-danger-600" aria-hidden>*</span>
+                  {k.label} {k.when === 'optional' ? <span className="font-normal text-muted">(if applicable)</span> : <span className="text-danger-600" aria-hidden>*</span>}
                 </p>
-                {latest ? <VerificationBadge status={latest.verificationStatus} /> : <Badge tone="grey">Missing</Badge>}
+                {latest ? <VerificationBadge status={latest.verificationStatus} /> : <Badge tone="grey">{k.when === 'optional' ? 'Optional' : 'Missing'}</Badge>}
               </div>
               {latest && (
                 <p className="mb-3 flex items-center gap-1.5 truncate text-xs text-muted">
@@ -861,7 +857,7 @@ function StepReview({ agreementId, onEdit }: { agreementId: string; onEdit: (ste
             ['Signatory', `${a.signatoryName}, ${a.signatoryDesignation}`],
           ]}
         />
-        <ReviewBlock title="KYC" onEdit={() => onEdit(4)} items={d.cpDocuments.length ? [...new Set(d.cpDocuments.map((x) => x.type))].map((t) => [docLabel(t), '✓ Uploaded'] as [string, string]) : [['Documents', 'None uploaded']]} />
+        <ReviewBlock title="KYC" onEdit={() => onEdit(4)} items={d.cpDocuments.length ? [...new Set(d.cpDocuments.map((x) => x.type))].map((t) => [kycLabel(d.cp.type, t), '✓ Uploaded'] as [string, string]) : [['Documents', 'None uploaded']]} />
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-muted">Need different rates or a clause change?</span>

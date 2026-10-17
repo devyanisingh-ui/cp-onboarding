@@ -2,9 +2,26 @@ import type { UseFormReturn } from 'react-hook-form';
 import type { CpFormValues } from '@/lib/schemas';
 import { CONSENT_STATEMENT } from '@/data/seed';
 import { CP_TYPE_LABELS } from '@/lib/format';
+import { PAN_OF, PERSON_ROLE } from '@/lib/kyc';
+import type { CpType } from '@/types';
 import { Checkbox, Field, FormSection, Input, Textarea, Toggle } from '@/components/ui';
 
 type Errors = Record<string, string | undefined>;
+
+const NAME_LABEL: Record<CpType, string> = {
+  individual: 'Full name (as on PAN)',
+  sole_prop: 'Name of the firm',
+  proprietorship: 'Name of the firm (as on the firm’s PAN)',
+  partnership: 'Name of the firm (as on the firm’s PAN)',
+  pvt_ltd: 'Name of the company (as on the certificate of incorporation)',
+};
+const RESIDENCE_LABEL: Partial<Record<CpType, string>> = {
+  individual: 'Residence address',
+  sole_prop: 'Residence address of the sole proprietor',
+  proprietorship: 'Residence address of the firm owner',
+  partnership: 'Residence address of the authorised partner',
+};
+const BANK_OF: Record<CpType, string> = { individual: 'the individual', sole_prop: 'the firm', proprietorship: 'the firm', partnership: 'the firm', pvt_ltd: 'the company' };
 
 function flatten(errors: UseFormReturn<CpFormValues>['formState']['errors'], server: Record<string, string>): Errors {
   const out: Errors = { ...server };
@@ -41,33 +58,63 @@ export function CpFields({
 
   return (
     <div className="space-y-8">
-      <FormSection title={`${CP_TYPE_LABELS[type]} details`} description="Enter details exactly as they appear on the PAN and registration documents.">
+      <FormSection title={`${CP_TYPE_LABELS[type]} details`} description="Enter details exactly as they appear on the PAN and registration documents. The fields follow the KYC checklist for this CP category.">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label={type === 'individual' ? 'Full name (as on PAN)' : 'Legal name of the firm / company'} required error={e.legalName} className="sm:col-span-2">
+          <Field label={NAME_LABEL[type]} required error={e.legalName} className="sm:col-span-2">
             <Input {...register('legalName')} autoComplete="organization" />
           </Field>
-          <Field label="PAN" required error={e.pan} hint={existing ? 'PAN cannot be changed — it identifies the CP.' : undefined}>
+          <Field label={PAN_OF[type]} required error={e.pan} hint={existing ? 'PAN cannot be changed — it identifies the CP.' : undefined}>
             <Input {...register('pan')} readOnly className="font-mono uppercase" />
           </Field>
-          <Field label="Aadhaar — last 4 digits only" required error={e.aadhaarLast4} hint="Never enter the full Aadhaar number.">
+          <Field label={`Aadhaar of the ${PERSON_ROLE[type]} — last 4 digits`} required error={e.aadhaarLast4} hint="Never enter the full Aadhaar number.">
             <Input {...register('aadhaarLast4')} inputMode="numeric" maxLength={4} autoComplete="off" />
           </Field>
 
           {type === 'sole_prop' && (
-            <Field label="Name of the proprietor" required error={e['typeFields.proprietorName']} className="sm:col-span-2">
-              <Input {...register('typeFields.proprietorName')} autoComplete="name" />
-            </Field>
+            <>
+              <Field label="Name of the sole proprietor" required error={e['typeFields.proprietorName']} className="sm:col-span-2">
+                <Input {...register('typeFields.proprietorName')} autoComplete="name" />
+              </Field>
+              <Field label="MSME (Udyam) registration number" required error={e['typeFields.msmeNumber']} hint="e.g. UDYAM-HR-05-0012345">
+                <Input {...register('typeFields.msmeNumber')} className="font-mono uppercase" />
+              </Field>
+              <Field label="Shop & Establishment / trade licence no." optional error={e['typeFields.shopLicenceNumber']} hint="If the firm has one">
+                <Input {...register('typeFields.shopLicenceNumber')} />
+              </Field>
+            </>
+          )}
+          {type === 'proprietorship' && (
+            <>
+              <Field label="Name of the firm owner" required error={e['typeFields.ownerName']}>
+                <Input {...register('typeFields.ownerName')} autoComplete="name" />
+              </Field>
+              <Field label="PAN of the firm owner" required error={e['typeFields.ownerPan']} hint={existing ? 'Leave as is to keep it' : 'e.g. ABCPK1234L'}>
+                <Input {...register('typeFields.ownerPan')} className="font-mono uppercase" maxLength={10} />
+              </Field>
+              <Field label="MSME (Udyam) registration number" required error={e['typeFields.msmeNumber']} hint="e.g. UDYAM-UP-28-0045123">
+                <Input {...register('typeFields.msmeNumber')} className="font-mono uppercase" />
+              </Field>
+              <Field label="Other business registration" required error={e['typeFields.businessRegistration']} hint="Type and number, e.g. Trade licence TL/2021/0456">
+                <Input {...register('typeFields.businessRegistration')} />
+              </Field>
+            </>
           )}
           {type === 'pvt_ltd' && (
             <>
-              <Field label="CIN" required error={e['typeFields.cin']} hint="21 characters, e.g. U80900DL2018PTC334455">
+              <Field label="CIN (from the certificate of incorporation)" required error={e['typeFields.cin']} hint="21 characters, e.g. U80900DL2018PTC334455">
                 <Input {...register('typeFields.cin')} className="font-mono uppercase" maxLength={21} />
+              </Field>
+              <Field label="Date of incorporation" required error={e['typeFields.incorporationDate']}>
+                <Input type="date" {...register('typeFields.incorporationDate')} />
+              </Field>
+              <Field label="Director / authorised signatory" required error={e['typeFields.authorisedSignatory']}>
+                <Input {...register('typeFields.authorisedSignatory')} placeholder="Name, designation" />
+              </Field>
+              <Field label="PAN of the director" required error={e['typeFields.ownerPan']} hint={existing ? 'Leave as is to keep it' : 'e.g. ABCPK1234L'}>
+                <Input {...register('typeFields.ownerPan')} className="font-mono uppercase" maxLength={10} />
               </Field>
               <Field label="Board resolution date" required error={e['typeFields.boardResolutionDate']}>
                 <Input type="date" {...register('typeFields.boardResolutionDate')} />
-              </Field>
-              <Field label="Director / authorised signatory" required error={e['typeFields.authorisedSignatory']} className="sm:col-span-2">
-                <Input {...register('typeFields.authorisedSignatory')} placeholder="Name, designation" />
               </Field>
               <Field label="Registered office" required error={e['typeFields.registeredOffice']} className="sm:col-span-2">
                 <Textarea rows={2} {...register('typeFields.registeredOffice')} />
@@ -84,6 +131,9 @@ export function CpFields({
               </Field>
               <Field label="Authorised partner" required error={e['typeFields.authorisedPartner']}>
                 <Input {...register('typeFields.authorisedPartner')} />
+              </Field>
+              <Field label="PAN of the authorised partner" required error={e['typeFields.ownerPan']} hint={existing ? 'Leave as is to keep it' : 'e.g. ABCPK1234L'}>
+                <Input {...register('typeFields.ownerPan')} className="font-mono uppercase" maxLength={10} />
               </Field>
             </>
           )}
@@ -112,24 +162,26 @@ export function CpFields({
             <Input type="email" {...register('email')} autoComplete="email" />
           </Field>
           {type !== 'pvt_ltd' && (
-            <Field label={type === 'sole_prop' ? 'Place of residence of the proprietor' : 'Residence address'} required error={e.residenceAddress} className="sm:col-span-2">
+            <Field label={RESIDENCE_LABEL[type]} required error={e.residenceAddress} className="sm:col-span-2">
               <Textarea rows={2} {...register('residenceAddress')} autoComplete="street-address" />
             </Field>
           )}
           {type !== 'individual' && (
-            <Field label="Place of business as per documents" required error={e.businessAddress} className="sm:col-span-2">
+            <Field label={type === 'sole_prop' ? 'Office address (as on the address proof)' : 'Place of business as per documents'} required error={e.businessAddress} className="sm:col-span-2">
               <Textarea rows={2} {...register('businessAddress')} />
             </Field>
           )}
         </div>
       </FormSection>
 
-      <FormSection title="Tax and bank details" description="Changing the name or bank details later requires re-verification by Admin.">
+      <FormSection title={type === 'individual' ? 'Bank details' : 'Tax and bank details'} description={`Bank account of ${BANK_OF[type]}. Changing the name or bank details later requires re-verification by Admin.`}>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <Toggle checked={gst} onChange={(v) => setValue('gstRegistered', v, { shouldValidate: formState.isSubmitted })} label="GST registered" description="A GST certificate upload becomes mandatory." />
-          </div>
-          {gst && (
+          {type !== 'individual' && (
+            <div className="sm:col-span-2">
+              <Toggle checked={gst} onChange={(v) => setValue('gstRegistered', v, { shouldValidate: formState.isSubmitted })} label="GST registered" description={`A GST certificate of ${BANK_OF[type]} becomes mandatory.`} />
+            </div>
+          )}
+          {gst && type !== 'individual' && (
             <Field label="GSTIN" required error={e.gstin} hint="15 characters; characters 3–12 are the PAN" className="sm:col-span-2">
               <Input {...register('gstin')} className="font-mono uppercase" maxLength={15} />
             </Field>

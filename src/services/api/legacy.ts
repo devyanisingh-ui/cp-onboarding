@@ -31,9 +31,15 @@ export type LegacyRow = Partial<Record<(typeof LEGACY_COLUMNS)[number]['key'], s
 
 const TYPE_BY_LABEL: Record<string, CpType> = {
   'sole proprietorship': 'sole_prop',
+  'sole proprietorship firm': 'sole_prop',
+  'proprietorship firm': 'proprietorship',
+  proprietorship: 'proprietorship',
   'pvt. ltd': 'pvt_ltd',
   'pvt ltd': 'pvt_ltd',
+  company: 'pvt_ltd',
+  'company (pvt. ltd / ltd)': 'pvt_ltd',
   partnership: 'partnership',
+  'partnership firm': 'partnership',
   individual: 'individual',
 };
 
@@ -54,7 +60,7 @@ export function validateLegacyRows(rows: LegacyRow[]): RowValidation[] {
     const inst = d.institutions.find((x) => x.shortCode === (r.institution_code ?? '').trim().toUpperCase());
     if (!inst) errors.push(`Unknown institution code "${r.institution_code ?? ''}"`);
     const type = TYPE_BY_LABEL[(r.cp_type ?? '').trim().toLowerCase()];
-    if (!type) errors.push('CP type must be Sole Proprietorship, Pvt. Ltd, Partnership or Individual');
+    if (!type) errors.push('CP type must be Individual, Sole Proprietorship Firm, Proprietorship Firm, Partnership Firm or Company');
     if (!(r.legal_name ?? '').trim()) errors.push('CP legal name is required');
     if (!PAN_RE.test(pan)) errors.push('PAN format must be AAAAA9999A');
     if (r.mobile && !MOBILE_RE.test(r.mobile.trim())) errors.push('Mobile must be 10 digits');

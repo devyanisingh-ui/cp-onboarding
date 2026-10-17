@@ -134,6 +134,7 @@ export function toCpDTO(cp: CpMaster): CpDTO {
   const { accountNumber, ...bankRest } = bank;
   return {
     ...structuredClone(rest),
+    typeFields: { ...structuredClone(rest.typeFields), ownerPan: rest.typeFields.ownerPan ? maskPan(rest.typeFields.ownerPan) : undefined },
     gstin: rest.gstin ? maskGstin(rest.gstin) : undefined,
     panMasked: maskPan(pan),
     bank: { ...bankRest, accountMasked: maskAccount(accountNumber) },

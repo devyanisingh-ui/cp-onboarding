@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Circle,
 } from 'lucide-react';
-import type { AuditEvent, DocumentRecord } from '@/types';
+import type { AuditEvent, DocumentRecord, DocumentType } from '@/types';
+import { DOC_TYPE_LABELS } from '@/lib/kyc';
 import { api } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
 import { cn } from '@/lib/cn';
@@ -228,19 +229,7 @@ export function FileDrop({
 
 // ---------- Documents ----------
 
-const DOC_LABELS: Record<string, string> = {
-  pan: 'PAN card',
-  aadhaar_masked: 'Aadhaar (masked)',
-  cancelled_cheque: 'Cancelled cheque',
-  gst_certificate: 'GST certificate',
-  draft: 'Draft agreement',
-  signed_copy: 'Signed agreement',
-  stamp_paper_scan: 'Stamp paper scan',
-  termination_notice: 'Termination notice',
-  template_docx: 'Template DOCX',
-  other: 'Other',
-};
-export const docLabel = (t: string) => DOC_LABELS[t] ?? t;
+export const docLabel = (t: string) => DOC_TYPE_LABELS[t as DocumentType] ?? t;
 
 export function VerificationBadge({ status }: { status: DocumentRecord['verificationStatus'] }) {
   if (status === 'verified')

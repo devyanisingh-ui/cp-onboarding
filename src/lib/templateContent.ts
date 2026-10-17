@@ -6,6 +6,8 @@ import { FIELD_BY_KEY, fieldApplies, tokensIn, type FieldDef } from './templateF
 const PARTY: Record<CpType, string> = {
   sole_prop:
     'M/s {{cp.legal_name}}, a sole proprietorship firm acting through its proprietor {{cp.proprietor_name}}, residing at {{cp.residence_address}}, having its place of business at {{cp.business_address}}, holding PAN {{cp.pan}} (the “Channel Partner”), of the **Second Part**.',
+  proprietorship:
+    'M/s {{cp.legal_name}}, a proprietorship firm registered as {{cp.business_registration}} (MSME {{cp.msme_number}}), owned by {{cp.owner_name}}, residing at {{cp.residence_address}}, having its place of business at {{cp.business_address}}, holding PAN {{cp.pan}} (the “Channel Partner”), of the **Second Part**.',
   pvt_ltd:
     '{{cp.legal_name}}, a company incorporated under the Companies Act, 2013, with CIN {{cp.cin}}, having its registered office at {{cp.registered_office}} and place of business at {{cp.business_address}}, holding PAN {{cp.pan}}, acting through {{cp.authorised_signatory}} under a board resolution dated {{cp.board_resolution_date}} (the “Channel Partner”), of the **Second Part**.',
   partnership:
