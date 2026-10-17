@@ -79,7 +79,7 @@ describe('authentication', () => {
     await expect(as('nobody')).rejects.toThrow(/Incorrect username or password/);
     await expect(api.auth.signIn('kavya.iyer', 'wrong')).rejects.toThrow(/Incorrect username or password/);
     await expect(api.auth.signIn('', DEMO_PASSWORD)).rejects.toThrow(/Enter your username/);
-    await expect(api.auth.signIn(' Neha.Kapoor ', DEMO_PASSWORD)).resolves.toMatchObject({ id: 'u-neha' });
+    await expect(api.auth.signIn(' Kavya.Iyer ', DEMO_PASSWORD)).resolves.toMatchObject({ id: 'u-neha' });
     await expect(as(KAVYA)).resolves.toMatchObject({ id: 'u-neha' });
   });
 });
