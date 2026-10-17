@@ -276,7 +276,8 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
           </ol>
         )}
       </Card>
-      <ActionBar>
+      {/* Mobile: the button floats on its own, without the bar's glass background. */}
+      <ActionBar className="pointer-events-none border-0! bg-transparent! shadow-none! backdrop-blur-none! [&>*]:pointer-events-auto">
         <Button icon={<Send className="size-4" />} loading={send.loading} onClick={submit}>
           Send {changedCount ? `${changedCount} change${changedCount === 1 ? '' : 's'} ` : ''}to Legal
         </Button>
