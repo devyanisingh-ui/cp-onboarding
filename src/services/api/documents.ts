@@ -48,6 +48,14 @@ export interface UploadResult {
   warnings: string[];
 }
 
+/** Throws unless the file can be stored (size and type); returns its MIME type. */
+export function assertUploadable(file: Blob, fileName: string): string {
+  if (file.size > MAX_FILE_BYTES) throw invalid(`${fileName} is larger than 10 MB.`);
+  const mime = file.type || 'application/octet-stream';
+  if (!ALLOWED_MIME.includes(mime)) throw invalid(`${fileName}: only PDF, JPG, PNG, WEBP or DOCX files are accepted.`);
+  return mime;
+}
+
 /** Internal upload used by several workflows; caller commits. */
 export async function storeDocument(
   user: User,
@@ -57,9 +65,7 @@ export async function storeDocument(
   file: Blob,
   fileName: string,
 ): Promise<UploadResult> {
-  if (file.size > MAX_FILE_BYTES) throw invalid(`${fileName} is larger than 10 MB.`);
-  const mime = file.type || 'application/octet-stream';
-  if (!ALLOWED_MIME.includes(mime)) throw invalid(`${fileName}: only PDF, JPG, PNG, WEBP or DOCX files are accepted.`);
+  const mime = assertUploadable(file, fileName);
   const id = nextId('doc', 'DOC-');
   const blobKey = `blob-${id}`;
   await putBlob(blobKey, file);

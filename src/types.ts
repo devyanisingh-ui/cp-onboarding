@@ -329,6 +329,8 @@ export interface Deviation {
   decidedById?: string;
   decidedAt?: ISODateTime;
   legalComment?: string;
+  /** Supporting documents the BD attached to the request (agreement documents of type deviation_support). */
+  documentIds?: string[];
 }
 
 export const SLABS = ['1-10', '11-15', '16-20', '21+'] as const;
@@ -430,6 +432,7 @@ export type DocumentType =
   | 'stamp_paper_scan'
   | 'termination_notice'
   | 'template_docx'
+  | 'deviation_support'
   | 'other';
 
 export interface DocumentRecord {

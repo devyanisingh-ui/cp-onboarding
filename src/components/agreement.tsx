@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { ArrowRight, Download, FileDown, Printer } from 'lucide-react';
-import type { Deviation } from '@/types';
+import { ArrowRight, Download, FileDown, Paperclip, Printer } from 'lucide-react';
+import type { Deviation, DocumentRecord } from '@/types';
 import { api } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
 import { formatInr } from '@/lib/format';
@@ -9,11 +9,14 @@ import { isHostedViewer, printAgreement, saveFile } from '@/lib/download';
 import { buildDocx, buildPdf, toDocxSignatures, toPdfSignatures } from '@/lib/docExport';
 import { cn } from '@/lib/cn';
 import { Badge, Button, Menu, useToast } from '@/components/ui';
+import { DocumentViewer } from '@/components/common';
 
 /** Side-by-side standard vs agreed values (PRD §6.2, screen 7). */
-export function DeviationCompare({ deviations, names }: { deviations: Deviation[]; names: Record<string, string> }) {
+export function DeviationCompare({ deviations, names, docs = [] }: { deviations: Deviation[]; names: Record<string, string>; docs?: DocumentRecord[] }) {
+  const [viewing, setViewing] = useState<DocumentRecord | null>(null);
   if (!deviations.length) return null;
   return (
+    <>
     <ul className="divide-y divide-line">
       {deviations.map((d) => {
         const fmt = (v?: string) => (d.type === 'rate' ? formatInr(Number(v)) : v);
@@ -41,6 +44,25 @@ export function DeviationCompare({ deviations, names }: { deviations: Deviation[
             <p className="mt-2 text-xs text-muted">
               <span className="font-medium text-ink-soft">Reason:</span> {d.reason} — {names[d.requestedById] ?? '—'}, {formatShortDate(d.requestedAt)}
             </p>
+            {!!d.documentIds?.length && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-medium text-ink-soft">Supporting documents:</span>
+                {d.documentIds.map((id) => {
+                  const doc = docs.find((x) => x.id === id);
+                  return doc ? (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setViewing(doc)}
+                      className="hit-area inline-flex max-w-full items-center gap-1 rounded-md border border-line bg-white px-2 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-50"
+                    >
+                      <Paperclip className="size-3 shrink-0" aria-hidden />
+                      <span className="truncate">{doc.fileName}</span>
+                    </button>
+                  ) : null;
+                })}
+              </div>
+            )}
             {d.legalComment && (
               <p className="mt-1 text-xs text-muted">
                 <span className="font-medium text-ink-soft">Legal:</span> {d.legalComment} — {names[d.decidedById ?? ''] ?? '—'}, {formatShortDate(d.decidedAt)}
@@ -50,6 +72,8 @@ export function DeviationCompare({ deviations, names }: { deviations: Deviation[
         );
       })}
     </ul>
+    <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
+    </>
   );
 }
 

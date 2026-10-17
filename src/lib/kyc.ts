@@ -93,6 +93,7 @@ export const DOC_TYPE_LABELS: Record<DocumentType, string> = {
   stamp_paper_scan: 'Stamp paper scan',
   termination_notice: 'Termination notice',
   template_docx: 'Template DOCX',
+  deviation_support: 'Deviation supporting document',
   other: 'Other',
 };
 

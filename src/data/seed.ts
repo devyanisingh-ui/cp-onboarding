@@ -378,6 +378,7 @@ export function buildSeed(): Database {
         { id: 'stamp_paper_scan', label: 'Stamp paper scan' },
         { id: 'termination_notice', label: 'Termination notice' },
         { id: 'template_docx', label: 'Template DOCX' },
+        { id: 'deviation_support', label: 'Deviation supporting document' },
         { id: 'other', label: 'Other' },
       ],
       stampStates: ['Delhi', 'Haryana', 'Maharashtra', 'Punjab', 'Uttar Pradesh', 'Rajasthan', 'Karnataka'],

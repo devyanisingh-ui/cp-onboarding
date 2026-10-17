@@ -30,7 +30,7 @@ import {
 } from './core';
 import { toCpDTO, toSummary, type AgreementActions, type AgreementDetail, type AgreementSummary } from './dto';
 import { upsertCp } from './cps';
-import { storeDocument } from './documents';
+import { assertUploadable, storeDocument } from './documents';
 
 // ---------------- Helpers ----------------
 
@@ -559,23 +559,39 @@ export function activateAgreement(a: Agreement, by: User | 'system') {
 
 // ---------------- Deviations ----------------
 
+export interface DeviationFile {
+  file: Blob;
+  name: string;
+}
+
 export interface DeviationRequestItem {
   type: 'rate' | 'clause';
   ref: string;
   proposedValue: string;
+  /** This change's own reason; falls back to the request's shared reason. */
+  reason?: string;
+  /** Supporting documents for this change only; when left out the shared `files` apply. */
+  files?: DeviationFile[];
 }
 
-export async function requestDeviation(id: string, items: DeviationRequestItem[], reason: string): Promise<void> {
+/**
+ * Sends one or more deviations to Legal. Each item carries its own reason and supporting documents,
+ * or uses the shared `reason` and `files` (stored once and linked to every item without its own list).
+ */
+export async function requestDeviation(id: string, items: DeviationRequestItem[], reason?: string, files: DeviationFile[] = []): Promise<void> {
   await delay('write');
   const user = ctx();
   assertCan(user, 'deviation.request');
   const a = load(id, user);
   if (a.status !== 'draft') throw conflict('Deviations can only be requested on drafts.');
   if (!items.length) throw invalid('Change at least one rate or clause.');
-  const why = requireComment(reason, 'a reason for the deviation');
+  const refs = items.map((it) => it.ref);
+  if (new Set(refs).size !== refs.length) throw invalid('The same rate cell or clause is changed twice. Combine them into one change.');
+  for (const f of [...files, ...items.flatMap((it) => it.files ?? [])]) assertUploadable(f.file, f.name);
   const d = getDb();
   const m = mergeContext(a);
   const clauses = clausesFor(m.institution, m.template);
+  const devs: { dev: Deviation; files?: DeviationFile[] }[] = [];
   for (const it of items) {
     let label = '';
     let standard = '';
@@ -602,23 +618,39 @@ export async function requestDeviation(id: string, items: DeviationRequestItem[]
       label = `Clause ${clauses.indexOf(c) + 1} · ${c.title}`;
       standard = c.text(m.institution);
     }
+    const why = requireComment(it.reason?.trim() ? it.reason : reason, `a reason for the change to ${label}`);
+    devs.push({
+      files: it.files,
+      dev: {
+        id: '',
+        agreementId: id,
+        type: it.type,
+        ref: it.ref,
+        label,
+        standardValue: standard,
+        proposedValue: it.type === 'rate' ? String(Number(it.proposedValue)) : it.proposedValue.trim(),
+        reason: why,
+        requestedById: user.id,
+        requestedAt: now(),
+        status: 'pending',
+      },
+    });
+  }
+  if (!devs.length) throw invalid('Change at least one rate or clause.');
+  const store = async (list: DeviationFile[]) => {
+    const ids: string[] = [];
+    for (const f of list) ids.push((await storeDocument(user, 'agreement', id, 'deviation_support', f.file, f.name)).document.id);
+    return ids;
+  };
+  const shared = devs.some((x) => x.files === undefined) ? await store(files) : [];
+  for (const { dev, files: own } of devs) {
+    const docIds = own === undefined ? shared : await store(own);
+    dev.id = nextId('dev', 'DEV-');
+    if (docIds.length) dev.documentIds = docIds;
     // Replace any open request on the same cell/clause.
-    d.deviations = d.deviations.filter((x) => !(x.agreementId === id && x.ref === it.ref && x.status === 'pending'));
-    const dev: Deviation = {
-      id: nextId('dev', 'DEV-'),
-      agreementId: id,
-      type: it.type,
-      ref: it.ref,
-      label,
-      standardValue: standard,
-      proposedValue: it.type === 'rate' ? String(Number(it.proposedValue)) : it.proposedValue.trim(),
-      reason: why,
-      requestedById: user.id,
-      requestedAt: now(),
-      status: 'pending',
-    };
+    d.deviations = d.deviations.filter((x) => !(x.agreementId === id && x.ref === dev.ref && x.status === 'pending'));
     d.deviations.push(dev);
-    audit(user, 'request', 'deviation', dev.id, `Requested ${dev.type} deviation on ${id}: ${label}`, { value: standard }, { value: dev.proposedValue });
+    audit(user, 'request', 'deviation', dev.id, `Requested ${dev.type} deviation on ${id}: ${dev.label}${docIds.length ? ` (${docIds.length} supporting document${docIds.length === 1 ? '' : 's'})` : ''}`, { value: dev.standardValue }, { value: dev.proposedValue });
   }
   touch(a);
   const legal = firstUserWithRole('legal', a.institutionId);

@@ -128,7 +128,7 @@ export function DraftPreview() {
                 ))}
               </ul>
             ) : devs.length ? (
-              <DeviationCompare deviations={devs} names={d.names} />
+              <DeviationCompare deviations={devs} names={d.names} docs={d.documents} />
             ) : (
               <p className="px-5 py-6 text-sm text-muted">Standard terms — no deviations on this agreement.</p>
             )}

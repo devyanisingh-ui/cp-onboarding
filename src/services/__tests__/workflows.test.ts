@@ -318,6 +318,44 @@ describe('deviations (PRD 6.2)', () => {
     // Master rate card untouched
     expect(getDb().rateCards.find((r) => r.id === 'rc-asu-2')!.rows[0]!.slabs['1-10']).toBe(16000);
   });
+
+  it('Several deviations in one request, each with its own reason and supporting documents', async () => {
+    const { agreementId } = await createReadyDraft();
+    const pdf = (name: string) => ({ file: new Blob(['x'], { type: 'application/pdf' }), name });
+    const wording = 'Payment shall be made within 30 days of the close of each admission month against a valid invoice.';
+    await api.agreements.requestDeviation(
+      agreementId,
+      [
+        { type: 'rate', ref: 'r-eng:1-10', proposedValue: '20000' },
+        { type: 'rate', ref: 'r-eng:11-15', proposedValue: '21000' },
+        { type: 'clause', ref: 'c4', proposedValue: wording, reason: 'Partner payroll runs monthly', files: [pdf('partner_email.pdf')] },
+        { type: 'clause', ref: 'c5', proposedValue: `${wording} Extended.`, reason: 'Matches the competitor contract', files: [] },
+      ],
+      'Competing offer in Gurugram',
+      [pdf('competitor_offer.pdf')],
+    );
+    const devs = getDb().deviations.filter((d) => d.agreementId === agreementId);
+    expect(devs).toHaveLength(4);
+    const docName = (id: string) => getDb().documents.find((x) => x.id === id)!.fileName;
+    const rates = devs.filter((d) => d.type === 'rate');
+    expect(rates.map((d) => d.reason)).toEqual(['Competing offer in Gurugram', 'Competing offer in Gurugram']);
+    // The shared document is stored once and linked to both rate changes.
+    expect(rates[0]!.documentIds).toEqual(rates[1]!.documentIds);
+    expect(rates[0]!.documentIds!.map(docName)).toEqual(['competitor_offer.pdf']);
+    const c4 = devs.find((d) => d.ref === 'c4')!;
+    expect(c4.reason).toBe('Partner payroll runs monthly');
+    expect(c4.documentIds!.map(docName)).toEqual(['partner_email.pdf']);
+    expect(devs.find((d) => d.ref === 'c5')!.documentIds).toBeUndefined();
+    expect(getDb().documents.filter((x) => x.ownerId === agreementId && x.type === 'deviation_support')).toHaveLength(2);
+    // Every change needs a reason, and a clause can only be changed once per request.
+    await expect(api.agreements.requestDeviation(agreementId, [{ type: 'clause', ref: 'c4', proposedValue: wording }])).rejects.toThrow(/reason/);
+    await expect(
+      api.agreements.requestDeviation(agreementId, [
+        { type: 'clause', ref: 'c4', proposedValue: wording, reason: 'First reason' },
+        { type: 'clause', ref: 'c4', proposedValue: wording, reason: 'Second reason' },
+      ]),
+    ).rejects.toThrow(/twice/);
+  });
 });
 
 describe('renewal (PRD 6.4) and termination (PRD 6.5)', () => {

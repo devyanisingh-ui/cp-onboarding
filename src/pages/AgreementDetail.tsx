@@ -220,7 +220,7 @@ export function AgreementDetail() {
           {d.deviations.length > 0 && (
             <Card>
               <CardHeader title="Deviations" icon={<Scale />} action={<ButtonLink to={`/agreements/${a.id}/deviation`} variant="link" size="sm">Open panel</ButtonLink>} />
-              <DeviationCompare deviations={d.deviations} names={d.names} />
+              <DeviationCompare deviations={d.deviations} names={d.names} docs={d.documents} />
             </Card>
           )}
           <Card>
