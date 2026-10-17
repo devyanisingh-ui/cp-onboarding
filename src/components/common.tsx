@@ -269,7 +269,8 @@ export function DocumentList({ docs, names, onVerify, empty = 'No documents uplo
     try {
       const res = await api.documents.open(d.id, 'download');
       if (!res.url) return toast.info('Sample record', 'Seed documents have no file attached in this prototype. The download was still logged.');
-      await saveFile(await (await fetch(res.url)).blob(), d.fileName);
+      // Seeded records download their demo specimen as an SVG.
+      await saveFile(await (await fetch(res.url)).blob(), res.specimen ? `${d.fileName.replace(/\.[^.]+$/, '')}_specimen.svg` : d.fileName);
     } catch (e) {
       toast.error('Download failed', errorMessage(e));
     }
@@ -342,13 +343,13 @@ export function DocumentViewer({ doc, onClose }: { doc: DocumentRecord | null; o
 }
 
 export function DocumentFrame({ doc, specimen }: { doc: DocumentRecord; specimen?: ReactNode }) {
-  const [state, setState] = useState<{ url: string | null; loaded: boolean; error?: string }>({ url: null, loaded: false });
+  const [state, setState] = useState<{ url: string | null; loaded: boolean; error?: string; mime?: string; specimen?: boolean }>({ url: null, loaded: false });
   useEffect(() => {
     let alive = true;
     setState({ url: null, loaded: false });
     api.documents
       .open(doc.id, 'view')
-      .then((r) => alive && setState({ url: r.url, loaded: true }))
+      .then((r) => alive && setState({ url: r.url, loaded: true, mime: r.mimeType, specimen: r.specimen }))
       .catch((e) => alive && setState({ url: null, loaded: true, error: errorMessage(e) }));
     return () => {
       alive = false;
@@ -366,8 +367,15 @@ export function DocumentFrame({ doc, specimen }: { doc: DocumentRecord; specimen
         </div>
       )
     );
-  if (doc.mimeType.startsWith('image/')) return <img src={state.url} alt={docLabel(doc.type)} className="mx-auto max-h-[70vh] rounded-md" />;
-  if (doc.mimeType === 'application/pdf') return <iframe src={state.url} title={doc.fileName} className="h-[70vh] w-full rounded-md border border-line" />;
+  const mime = state.mime ?? doc.mimeType;
+  if (mime.startsWith('image/'))
+    return (
+      <figure>
+        <img src={state.url} alt={docLabel(doc.type)} className="mx-auto max-h-[70vh] rounded-md shadow-card" />
+        {state.specimen && <figcaption className="mt-2 text-center text-xs text-muted">Demo specimen generated from this record — seeded data has no real file.</figcaption>}
+      </figure>
+    );
+  if (mime === 'application/pdf') return <iframe src={state.url} title={doc.fileName} className="h-[70vh] w-full rounded-md border border-line" />;
   const url = state.url;
   return (
     <button type="button" onClick={() => void fetch(url).then((r) => r.blob()).then((b) => saveFile(b, doc.fileName))} className="text-sm font-semibold text-primary-700 underline">

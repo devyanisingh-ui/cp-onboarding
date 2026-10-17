@@ -1,5 +1,7 @@
 import type { DocumentRecord, DocumentType, User } from '@/types';
 import { formatDate, shiftDays, today } from '@/lib/dates';
+import { maskAccount, maskGstin, maskPan } from '@/lib/mask';
+import { MOCK_DOC_TYPES, mockDocumentSvg, type MockDocData, type MockDocType } from '@/lib/mockDocuments';
 import { can } from '@/lib/permissions';
 import { conflict, forbidden, invalid, notFound } from '../errors';
 import { nextId } from '../db';
@@ -104,11 +106,62 @@ export interface FileAccess {
   url: string | null;
   expiresAt: string;
   document: DocumentRecord;
+  /** Type of the file behind `url` (a specimen is an SVG image whatever the record says). */
+  mimeType?: string;
+  /** True when `url` is a generated demo specimen, not an uploaded file. */
+  specimen?: boolean;
+}
+
+/** Data for a seeded record's demo specimen, from the CP (and agreement) it belongs to. Numbers stay masked. */
+function specimenData(doc: DocumentRecord): MockDocData | null {
+  const d = getDb();
+  const a = doc.ownerType === 'agreement' ? d.agreements.find((x) => x.id === doc.ownerId) : undefined;
+  const cp = d.cps.find((c) => c.id === (a ? a.cpId : doc.ownerId));
+  if (!cp) return null;
+  const t = cp.typeFields;
+  const person = (t.proprietorName || t.authorisedSignatory?.split(',')[0] || t.authorisedPartner || (cp.type === 'individual' ? cp.legalName : '') || cp.contactPerson).trim();
+  const inst = a ? d.institutions.find((i) => i.id === a.institutionId) : undefined;
+  return {
+    cpName: cp.legalName,
+    personName: person,
+    panHolder: cp.type === 'pvt_ltd' || cp.type === 'partnership' ? cp.legalName : undefined,
+    fatherName: t.fatherName || undefined,
+    dob: t.dob ? formatDate(t.dob) : undefined,
+    panMasked: maskPan(cp.pan),
+    aadhaarLast4: cp.aadhaarLast4,
+    address: cp.residenceAddress || cp.businessAddress,
+    bank: { holderName: cp.bank.holderName, accountMasked: maskAccount(cp.bank.accountNumber), ifsc: cp.bank.ifsc, bankName: cp.bank.bankName, branch: cp.bank.branch },
+    gstin: cp.gstin ? maskGstin(cp.gstin) : undefined,
+    agreement:
+      a && inst
+        ? {
+            id: a.id,
+            institutionName: inst.legalName,
+            signatoryName: a.signatoryName,
+            signatoryDesignation: a.signatoryDesignation,
+            cpSignerName: person,
+            executionPlace: a.executionPlace,
+            startDate: a.startDate ? formatDate(a.startDate) : undefined,
+            endDate: a.endDate ? formatDate(a.endDate) : undefined,
+            signedOn: a.signedOn ? formatDate(a.signedOn) : undefined,
+            electronic: a.esign?.status === 'completed',
+            stamp: a.stampPaper ? { ...a.stampPaper, purchaseDate: formatDate(a.stampPaper.purchaseDate) } : undefined,
+          }
+        : undefined,
+  };
+}
+
+function specimenUrl(doc: DocumentRecord): string | null {
+  if (!(MOCK_DOC_TYPES as string[]).includes(doc.type) || typeof URL.createObjectURL !== 'function') return null;
+  const data = specimenData(doc);
+  if (!data) return null;
+  return URL.createObjectURL(new Blob([mockDocumentSvg(doc.type as MockDocType, data)], { type: 'image/svg+xml' }));
 }
 
 /**
  * Short-lived access link (PRD §11: 5 minutes). Every view and download is logged.
- * Returns url=null for seeded records, which have metadata but no file.
+ * Seeded records have metadata but no file: they get a generated, clearly marked demo specimen
+ * (url=null if there is none for that document type).
  */
 export async function openDocument(id: string, mode: 'view' | 'download'): Promise<FileAccess> {
   await delay();
@@ -116,11 +169,18 @@ export async function openDocument(id: string, mode: 'view' | 'download'): Promi
   const doc = getDb().documents.find((x) => x.id === id);
   if (!doc || !canAccessOwner(user, doc.ownerType, doc.ownerId)) throw notFound('Document');
   const blob = doc.blobKey ? await getBlob(doc.blobKey) : undefined;
-  const url = blob ? URL.createObjectURL(blob) : null;
+  const specimen = !blob ? specimenUrl(doc) : null;
+  const url = blob ? URL.createObjectURL(blob) : specimen;
   if (url) setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
   audit(user, mode, 'document', id, `${mode === 'view' ? 'Viewed' : 'Downloaded'} ${doc.fileName}`);
   commit();
-  return { url, expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(), document: doc };
+  return {
+    url,
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+    document: doc,
+    mimeType: specimen ? 'image/svg+xml' : blob?.type || doc.mimeType,
+    specimen: !!specimen,
+  };
 }
 
 /** Hard delete is blocked until the retention date (PRD §4, §11). */
