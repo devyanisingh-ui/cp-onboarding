@@ -308,7 +308,9 @@ function WizardInner({
         goto(5);
       }
     } catch (e) {
-      toast.error('Something went wrong', errorMessage(e));
+      if ((e as { status?: number }).status === 404)
+        toast.error('This draft no longer exists', 'The demo data was reset (for example after an app update, or by another open tab). Close other tabs of the app and start the agreement again.');
+      else toast.error('Something went wrong', errorMessage(e));
     } finally {
       setBusy(null);
     }
