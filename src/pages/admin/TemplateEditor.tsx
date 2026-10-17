@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
   AlertTriangle,
@@ -9,6 +9,8 @@ import {
   Check,
   CheckCircle2,
   Copy,
+  Download,
+  FileUp,
   GripVertical,
   Heading,
   ListOrdered,
@@ -35,6 +37,7 @@ import { FIELDS, FIELD_BY_KEY, FIELD_GROUPS, fieldApplies, token, tokensIn, type
 import { blockText, isRequired, newBlockId, usedFieldKeys, validateContent } from '@/lib/templateContent';
 import { sampleContext } from '@/lib/templateSample';
 import { cn } from '@/lib/cn';
+import { saveFile } from '@/lib/download';
 import { Alert, Badge, Button, Card, Drawer, EmptyState, ErrorState, Field, IconButton, Input, Menu, Modal, PageSkeleton, SearchInput, Select, Tabs, Textarea, Toggle, useToast } from '@/components/ui';
 import { AgreementHtml, CommentDialog, PageHeader } from '@/components/common';
 
@@ -81,6 +84,11 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [rejecting, setRejecting] = useState(false);
+  // Notes from importing a Word document (passed from the Templates page, or from Import here).
+  const location = useLocation();
+  const [importNotes, setImportNotes] = useState<string[] | null>(() => (location.state as { importNotes?: string[] } | null)?.importNotes ?? null);
+  const [importing, setImporting] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   // ≥1536: palette | canvas | panel. 1280–1535: canvas | panel (palette is a panel tab). Below: tabs.
   const wide = useMediaQuery('(min-width: 1280px)');
   const ultra = useMediaQuery('(min-width: 1536px)');
@@ -187,6 +195,31 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
       toast.error('Could not send', errorMessage(e));
     }
   };
+  const importDocx = async (file: File) => {
+    if (dirty && !window.confirm('Importing replaces the text of this draft, including your unsaved changes. Continue?')) return;
+    setImporting(true);
+    try {
+      const res = await api.config.importTemplateDocx(template.id, file, file.name);
+      setContent(structuredClone(res.template.content!));
+      setDirty(false);
+      setSelected(null);
+      setImportNotes(res.notes);
+      toast.success('Word document imported', 'Check the clauses and fields, then save or send to Legal.');
+    } catch (e) {
+      toast.error('Could not import', errorMessage(e));
+    } finally {
+      setImporting(false);
+    }
+  };
+  const downloadSource = async () => {
+    if (!template.sourceDocumentId) return;
+    try {
+      const res = await api.documents.open(template.sourceDocumentId, 'download');
+      if (res.url) await saveFile(await (await fetch(res.url)).blob(), template.fileName);
+    } catch (e) {
+      toast.error('Download failed', errorMessage(e));
+    }
+  };
   const discard = useAction(() => api.config.discardTemplateDraft(template.id), { success: 'Draft discarded', onSuccess: () => (setDirty(false), navigate('/admin/templates')) });
   const approve = useAction(() => api.config.decideTemplate(template.id, 'approve'), { success: 'Approved — Admin can now publish', onSuccess: () => navigate('/admin/templates') });
   const reject = useAction((c: string) => api.config.decideTemplate(template.id, 'reject', c), { success: 'Returned to Admin', onSuccess: () => navigate('/admin/templates') });
@@ -236,6 +269,20 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
                     Discard
                   </Button>
                 )}
+                <Button variant="secondary" icon={<FileUp className="size-4" />} loading={importing} onClick={() => fileInput.current?.click()}>
+                  Import Word document
+                </Button>
+                <input
+                  ref={fileInput}
+                  type="file"
+                  accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = '';
+                    if (f) void importDocx(f);
+                  }}
+                />
                 <Button variant="secondary" icon={<Save className="size-4" />} loading={save.loading} disabled={!dirty} onClick={() => void save.run()}>
                   Save draft
                 </Button>
@@ -264,6 +311,30 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
       />
 
       <div className="mb-5 space-y-3">
+        {importNotes && editable && (
+          <Alert tone="info" title="Imported from your Word document — review before sending to Legal"
+            action={
+              <Button size="sm" variant="ghost" onClick={() => setImportNotes(null)}>
+                Dismiss
+              </Button>
+            }
+          >
+            <ul className="mt-1 list-disc space-y-0.5 pl-4">
+              <li>Each numbered or bold heading became a clause, text before the first clause became the preamble, and “IN WITNESS WHEREOF” became the signatures block. Edit, reorder or add blocks below.</li>
+              {importNotes.map((n) => (
+                <li key={n}>{n}</li>
+              ))}
+            </ul>
+          </Alert>
+        )}
+        {template.sourceDocumentId && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
+            <FileUp className="size-4" aria-hidden /> Text imported from <span className="font-medium text-ink-soft">{template.fileName}</span>
+            <button type="button" className="inline-flex items-center gap-1 font-semibold text-primary-700 hover:underline" onClick={() => void downloadSource()}>
+              <Download className="size-3.5" aria-hidden /> Download original
+            </button>
+          </p>
+        )}
         {template.rejectComment && template.status === 'draft' && (
           <Alert tone="error" title="Returned by Legal">
             {template.rejectComment}

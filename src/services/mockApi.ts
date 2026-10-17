@@ -102,6 +102,7 @@ export const api = {
     submitTemplate: config.submitTemplate,
     discardTemplateDraft: config.discardTemplateDraft,
     uploadTemplate: config.uploadTemplate,
+    importTemplateDocx: config.importTemplateDocx,
     decideTemplate: config.decideTemplate,
     publishTemplate: config.publishTemplate,
   },

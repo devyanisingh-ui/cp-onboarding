@@ -9,6 +9,7 @@ import { nextId } from '../db';
 import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, diff, firstUserWithRole, getDb, notify, now } from './core';
 import { storeDocument } from './documents';
 import { contentFor, validateContent } from '@/lib/templateContent';
+import { docxToTemplate } from '@/lib/docxImport';
 import type { TemplateContent } from '@/types';
 
 // ---------------- Lookups (any signed-in user) ----------------
@@ -296,38 +297,68 @@ export async function listTemplates(): Promise<TemplateVersion[]> {
   return structuredClone(getDb().templates.slice().sort((a, b) => a.cpType.localeCompare(b.cpType) || b.version - a.version));
 }
 
-export async function uploadTemplate(input: { cpType: CpType; institutionId: string | null; effectiveFrom: string; changeNote: string; file: Blob; fileName: string }): Promise<TemplateVersion> {
+/**
+ * Upload an existing agreement as a Word document: its text is imported into a new draft version
+ * (clauses, preamble, signatures, annexure and recognised merge fields), which the admin then edits
+ * in the template editor and sends to Legal like any other draft. The file is kept for reference.
+ */
+export async function uploadTemplate(input: { cpType: CpType; institutionId: string | null; effectiveFrom: string; changeNote: string; file: Blob; fileName: string }): Promise<{ template: TemplateVersion; notes: string[] }> {
   await delay('write');
   const user = ctx();
   assertCan(user, 'template.manage');
-  if (!/\.docx$/i.test(input.fileName)) throw invalid('Upload the Legal-vetted template as a .docx file.');
-  if (!input.changeNote.trim()) throw invalid('Describe what changed in this version.');
+  if (!/\.docx$/i.test(input.fileName)) throw invalid('Upload the agreement as a Word (.docx) file. Save older .doc files as .docx first.');
   const d = getDb();
+  const open = inProgress(input.cpType, input.institutionId);
+  if (open) throw conflict(`${CP_TYPE_LABELS[input.cpType]} v${open.version} is already in progress. Open it and use “Import Word document”, or finish or discard it first.`);
+  const imported = await readDocx(input.file);
   const same = d.templates.filter((t) => t.cpType === input.cpType && t.institutionId === input.institutionId);
-  if (same.some((t) => t.status === 'pending_approval' || t.status === 'draft' || t.status === 'approved')) throw conflict('A version of this template is already in progress.');
   const version = Math.max(0, ...same.map((t) => t.version)) + 1;
   const tpl: TemplateVersion = {
     id: nextId('tpl', 'tpl-n'),
-    // The uploaded DOCX is kept as the Legal reference; the body carries over from the latest version.
-    content: structuredClone(contentFor(baseTemplate(input.cpType, input.institutionId))),
+    content: imported.content,
     cpType: input.cpType,
     institutionId: input.institutionId,
     version,
     fileName: input.fileName,
-    effectiveFrom: input.effectiveFrom,
-    status: 'pending_approval',
+    effectiveFrom: input.effectiveFrom || today(),
+    status: 'draft',
     changeNote: input.changeNote.trim(),
     uploadedById: user.id,
     uploadedAt: now(),
   };
   const { document } = await storeDocument(user, 'template', tpl.id, 'template_docx', input.file, input.fileName);
   tpl.blobKey = document.blobKey;
+  tpl.sourceDocumentId = document.id;
   d.templates.push(tpl);
-  const legal = firstUserWithRole('legal');
-  if (legal) createTask({ type: 'template_approval', title: `Approve template: ${CP_TYPE_LABELS[tpl.cpType]} v${version}`, assigneeId: legal.id, slaDays: d.settings.sla.versionApprovalDays, refId: tpl.id });
-  audit(user, 'create', 'template', tpl.id, `Uploaded template ${CP_TYPE_LABELS[tpl.cpType]} v${version} and sent to Legal`);
+  audit(user, 'create', 'template', tpl.id, `Imported ${input.fileName} as template ${CP_TYPE_LABELS[tpl.cpType]} v${version} (draft)`);
   commit();
-  return tpl;
+  return { template: structuredClone(tpl), notes: imported.notes };
+}
+
+/** Replace a draft's body with the text of an uploaded Word document. */
+export async function importTemplateDocx(id: string, file: Blob, fileName: string): Promise<{ template: TemplateVersion; notes: string[] }> {
+  await delay('write');
+  const user = ctx();
+  assertCan(user, 'template.manage');
+  const t = getDb().templates.find((x) => x.id === id);
+  if (!t) throw notFound('Template');
+  if (t.status !== 'draft') throw conflict('Only draft versions can be replaced. Approved and published versions are never changed.');
+  if (!/\.docx$/i.test(fileName)) throw invalid('Upload the agreement as a Word (.docx) file.');
+  const imported = await readDocx(file);
+  const before = { blocks: contentFor(t).blocks.length, fileName: t.fileName };
+  const { document } = await storeDocument(user, 'template', t.id, 'template_docx', file, fileName);
+  Object.assign(t, { content: imported.content, fileName, blobKey: document.blobKey, sourceDocumentId: document.id });
+  audit(user, 'update', 'template', t.id, `Imported ${fileName} into template ${CP_TYPE_LABELS[t.cpType]} v${t.version}`, before, { blocks: imported.content.blocks.length, fileName });
+  commit();
+  return { template: structuredClone(t), notes: imported.notes };
+}
+
+async function readDocx(file: Blob) {
+  try {
+    return await docxToTemplate(file);
+  } catch (e) {
+    throw invalid((e as Error).message || 'Could not read this Word document.');
+  }
 }
 
 export async function decideTemplate(id: string, decision: 'approve' | 'reject', comment?: string): Promise<void> {

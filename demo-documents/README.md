@@ -12,6 +12,7 @@ numbers are masked, and no government emblems, bank logos or security features a
 | `gst-certificate.png` | Wizard step 5 (KYC) → GST certificate (only if you tick "GST registered") |
 | `signed-agreement.pdf` / `.png` | Agreement → Upload signed copy → Signed agreement |
 | `stamp-paper.pdf` / `.png` | Agreement → Upload signed copy → Stamp paper scan |
+| `sample-agreement-template.docx` | Admin → Templates → Upload agreement (Word): imports into an editable draft template |
 | `pan-card-blurry.png` | A "bad" PAN copy, to show Legal flagging a mismatch and the CP re-uploading `pan-card.png` from their link |
 
 `svg/` has the same documents as SVG. Regenerate them with

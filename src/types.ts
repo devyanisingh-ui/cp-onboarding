@@ -376,6 +376,8 @@ export interface TemplateVersion {
   publishedAt?: ISODateTime;
   /** Editable template body. Absent on older versions, which render the built-in default. */
   content?: TemplateContent;
+  /** The Word document this version's text was imported from (kept for reference and download). */
+  sourceDocumentId?: string;
 }
 
 /**

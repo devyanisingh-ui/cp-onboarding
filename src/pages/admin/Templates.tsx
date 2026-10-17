@@ -34,11 +34,11 @@ export function Templates() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted">One template per CP type. Build new versions in the editor; Legal approves, Admin publishes. Old versions are never edited, and existing agreements keep their version.</p>
+        <p className="text-sm text-muted">One template per CP type. Build new versions in the editor, or upload an existing agreement in Word and edit it there; Legal approves, Admin publishes. Old versions are never edited, and existing agreements keep their version.</p>
         {can('template.manage') && (
           <div className="flex shrink-0 gap-2">
             <Button variant="secondary" icon={<Upload className="size-4" />} onClick={() => setUploading(true)}>
-              Upload DOCX
+              Upload agreement (Word)
             </Button>
             <Button icon={<FilePlus2 className="size-4" />} onClick={() => setCreating(true)}>
               New version
@@ -105,28 +105,29 @@ export function Templates() {
 }
 
 function UploadModal({ insts, onClose }: { insts: { id: string; shortCode: string }[]; onClose: () => void }) {
+  const navigate = useNavigate();
   const [cpType, setCpType] = useState<CpType>('sole_prop');
   const [scope, setScope] = useState('');
   const [effective, setEffective] = useState(today());
   const [note, setNote] = useState('');
   const [file, setFile] = useState<File[]>([]);
   const up = useAction(() => api.config.uploadTemplate({ cpType, institutionId: scope || null, effectiveFrom: effective, changeNote: note, file: file[0]!, fileName: file[0]!.name }), {
-    success: 'Uploaded and sent to Legal',
-    onSuccess: onClose,
+    success: 'Imported — review it in the editor',
+    onSuccess: (r) => (onClose(), navigate(`/admin/templates/${r.template.id}`, { state: { importNotes: r.notes } })),
   });
   return (
     <Modal
       open
       onClose={onClose}
-      title="Upload template version"
-      description="Upload the Legal-vetted DOCX with merge fields. Legal approves before you can publish."
+      title="Upload an existing agreement"
+      description="Upload your agreement as a Word (.docx) file. Its text is imported into a new draft version that you can edit in the template editor (clauses, merge fields, signatures, annexure), then send to Legal. The original file is kept for reference."
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button loading={up.loading} disabled={!file.length || !note.trim()} onClick={() => void up.run()}>
-            Upload and send to Legal
+          <Button loading={up.loading} disabled={!file.length} onClick={() => void up.run()}>
+            Import and open editor
           </Button>
         </>
       }
@@ -156,10 +157,10 @@ function UploadModal({ insts, onClose }: { insts: { id: string; shortCode: strin
             <Input type="date" value={effective} onChange={(e) => setEffective(e.target.value)} />
           </Field>
         </div>
-        <Field label="What changed" required>
+        <Field label="What changed" optional hint="Needed before you send it to Legal; you can add it in the editor.">
           <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
-        <FileDrop label="Template file (.docx)" required camera={false} accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" files={file} onFiles={(f) => setFile(f.slice(0, 1))} onRemove={() => setFile([])} />
+        <FileDrop label="Agreement file (.docx)" hint="Tip: mark fields as «CP legal name», [PAN] or {{cp.pan}} and they become merge fields" required camera={false} accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" files={file} onFiles={(f) => setFile(f.slice(0, 1))} onRemove={() => setFile([])} />
       </div>
     </Modal>
   );
