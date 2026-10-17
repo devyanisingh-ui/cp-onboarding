@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Mail, Play, RotateCcw, Send } from 'lucide-react';
+import { Eraser, Mail, Play, RotateCcw, Send } from 'lucide-react';
 import { api } from '@/services/mockApi';
 import { getDb } from '@/services/db';
 import { channels } from '@/services/notificationChannels';
@@ -17,11 +17,13 @@ export function System() {
   const emails = useApi(() => api.inbox.emails(), []);
   const [simulate, setSimulate] = useState(getDb().settings.simulateErrors);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const report = (r: Awaited<ReturnType<typeof api.system.runJobs>>) => `${r.reminders} reminders · ${r.escalations} escalations · ${r.renewalTasks} renewal tasks · ${r.statusChanges} status changes · ${r.digests} digests`;
   const jobs = useAction(() => api.system.runJobs(false), { success: (r) => `Jobs run: ${report(r)}` });
   const digest = useAction(() => api.system.runJobs(true), { success: (r) => `Digest sent to ${r.digests} user(s)` });
   const reset = useAction(() => api.system.reset(), { success: 'Demo data reset', onSuccess: () => (setConfirmReset(false), ROUTER_MODE === 'memory' ? window.location.reload() : window.location.assign(ROUTER_MODE === 'hash' ? `${window.location.pathname}#/` : '/')) });
+  const clear = useAction(() => api.system.clearRecords(), { success: 'All records deleted', onSuccess: () => (setConfirmClear(false), ROUTER_MODE === 'memory' ? window.location.reload() : window.location.assign(ROUTER_MODE === 'hash' ? `${window.location.pathname}#/` : '/')) });
   const manage = can('config.manage');
 
   return (
@@ -108,6 +110,15 @@ export function System() {
             />
             <div className="flex items-center justify-between gap-4 border-t border-line pt-4">
               <div className="text-sm">
+                <p className="font-medium">Clear all records</p>
+                <p className="text-muted">Deletes every CP, agreement, document, task, notification and audit event to test from scratch. Users, institutions, templates and rate cards stay.</p>
+              </div>
+              <Button variant="danger" icon={<Eraser className="size-4" />} onClick={() => setConfirmClear(true)}>
+                Clear
+              </Button>
+            </div>
+            <div className="flex items-center justify-between gap-4 border-t border-line pt-4">
+              <div className="text-sm">
                 <p className="font-medium">Reset demo data</p>
                 <p className="text-muted">Restores the seed data and deletes files uploaded in this browser.</p>
               </div>
@@ -118,6 +129,24 @@ export function System() {
           </CardBody>
         </Card>
       )}
+
+      <Modal
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        title="Delete all records?"
+        description="Every CP, agreement, deviation, uploaded document, task, notification, email and audit event in this browser is deleted, and numbering starts again from 1. Users, institutions, templates, rate cards and settings are kept. To get the sample data back later, use Reset demo data."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmClear(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" loading={clear.loading} onClick={() => void clear.run()}>
+              Delete all records
+            </Button>
+          </>
+        }
+      />
 
       <Modal
         open={confirmReset}

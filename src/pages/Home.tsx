@@ -83,7 +83,8 @@ export function Home() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-[repeat(var(--tiles),minmax(0,1fr))] xl:gap-6" style={{ ['--tiles' as string]: Math.min(tiles.length, 6) }}>
+      {/* Up to 4 tiles share one row; more split evenly over two rows (6 tiles → 3 + 3) so labels don't squeeze. */}
+      <div className="grid auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-[repeat(var(--tiles),minmax(0,1fr))] xl:gap-6" style={{ ['--tiles' as string]: tiles.length <= 4 ? tiles.length : Math.ceil(tiles.length / 2) }}>
         {tiles}
       </div>
 

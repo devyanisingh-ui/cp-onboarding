@@ -117,6 +117,7 @@ export const api = {
     runJobs: session.runJobsNow,
     setSimulateErrors: session.setSimulateErrors,
     reset: session.resetDemoData,
+    clearRecords: session.clearAllRecords,
   },
   /** Public signing links (signers have no app account; the link token is their credential). */
   signing: {

@@ -615,3 +615,22 @@ describe('digital signatures (DSC and drawn/typed via email link)', () => {
     await expect(api.signing.sign(tokenOf(id, 'cp'), { kind: 'typed', image: PNG, typedName: 'Ravi Kumar', consent: true })).rejects.toThrow(/no longer active/);
   });
 });
+
+describe('clear all records', () => {
+  it('Admin deletes every record but keeps the set-up, and numbering restarts', async () => {
+    await as(ARJUN);
+    await api.system.clearRecords();
+    const d = getDb();
+    expect([d.cps, d.agreements, d.deviations, d.notifications, d.emails, d.legacyBatches].every((x) => x.length === 0)).toBe(true);
+    expect(d.documents.every((x) => x.ownerType === 'template')).toBe(true);
+    expect(d.users.length).toBeGreaterThan(0);
+    expect(d.templates.length).toBeGreaterThan(0);
+    expect(d.rateCards.length).toBeGreaterThan(0);
+    expect(await api.agreements.list()).toHaveLength(0);
+    const { agreementId, cpId } = await createReadyDraft();
+    expect(cpId).toBe('CP-0001');
+    expect(agreementId).toMatch(/-0001$/);
+    await as(KAVYA);
+    await expect(api.system.clearRecords()).rejects.toThrow();
+  });
+});

@@ -2,7 +2,7 @@ import type { Role, User } from '@/types';
 import { DEMO_PASSWORD } from '@/data/seed';
 import { ApiError, invalid } from '../errors';
 import { resetDb } from '../db';
-import { clearBlobs } from '../blobStore';
+import { clearBlobs, deleteBlob } from '../blobStore';
 import { assertCan, audit, commit, ctx, delay, getDb, getSessionUserId, setSessionUserId } from './core';
 import { runScheduledJobs } from './scheduler';
 
@@ -97,5 +97,34 @@ export async function resetDemoData() {
   await clearBlobs();
   if (id && !getDb().users.some((u) => u.id === id)) setSessionUserId(null);
   runScheduledJobs();
+  commit();
+}
+
+/**
+ * Deletes every record (CPs, agreements, deviations, their documents, tasks, notifications, emails,
+ * audit events, legacy imports and saved wizard drafts) so testing can start from scratch. Keeps the
+ * set-up: users, institutions, regions, templates, rate cards, routing, master lists and settings.
+ */
+export async function clearAllRecords() {
+  await delay('write');
+  const user = ctx();
+  assertCan(user, 'config.manage');
+  const d = getDb();
+  const removed = d.documents.filter((x) => x.ownerType !== 'template');
+  for (const doc of removed) if (doc.blobKey) await deleteBlob(doc.blobKey);
+  d.documents = d.documents.filter((x) => x.ownerType === 'template');
+  d.cps = [];
+  d.agreements = [];
+  d.deviations = [];
+  // Template and rate-card approvals are set-up work, not records: keep those that are still open.
+  d.tasks = d.tasks.filter((t) => t.status === 'open' && !t.agreementId && !t.cpId && (t.type === 'template_approval' || t.type === 'rate_card_approval'));
+  d.notifications = [];
+  d.emails = [];
+  d.audit = [];
+  d.legacyBatches = [];
+  d.wizardDrafts = [];
+  // New CPs and agreements are numbered from 1 again.
+  Object.assign(d.counters, { cp: 0, agreement: 0, dev: 0, batch: 0 });
+  audit(user, 'config_change', 'system', 'clear_records', 'Cleared all CPs, agreements and their records to start testing from scratch');
   commit();
 }
