@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/cn';
 import { AGREEMENT_PAGES } from './SubHeader';
@@ -41,9 +41,34 @@ export function AgreementTabs() {
     void document.fonts?.ready.then(reveal);
   }, [pathname]);
 
+  // Pinned under the app header and sub-header; once stuck it gets the sub-header's frosted band.
+  const band = useRef<HTMLDivElement>(null);
+  const [stuck, setStuck] = useState(false);
+  useEffect(() => {
+    const on = () => {
+      const el = band.current;
+      if (el) setStuck(el.getBoundingClientRect().top <= parseFloat(getComputedStyle(el).top) + 0.5 && window.scrollY > 0);
+    };
+    on();
+    window.addEventListener('scroll', on, { passive: true });
+    window.addEventListener('resize', on);
+    return () => {
+      window.removeEventListener('scroll', on);
+      window.removeEventListener('resize', on);
+    };
+  }, [pathname]);
+
   if (!tabs.length) return null;
   return (
-    <nav ref={tabsRef} aria-label="Agreement sections" className="mt-4 max-w-full overflow-x-auto [scrollbar-width:none]">
+    <div
+      ref={band}
+      className={cn(
+        // Bleeds to the edges of the content column (same gutters as <main>) so the band spans it.
+        'sticky top-[calc(4rem+var(--subheader-h,0px))] z-10 -mx-4 -mt-3 mb-4 border-b px-4 py-2 transition-[background-color,box-shadow,border-color] duration-200 ease-out sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:-mx-10 xl:px-10',
+        stuck ? 'border-line/80 bg-[rgb(255_255_255/0.94)] shadow-[0_6px_20px_-12px_rgb(22_28_56/0.18)] backdrop-blur-xl backdrop-saturate-150' : 'border-transparent',
+      )}
+    >
+    <nav ref={tabsRef} aria-label="Agreement sections" className="max-w-full overflow-x-auto [scrollbar-width:none]">
       <ul className="inline-flex gap-1 rounded-lg border border-line/70 bg-sunken/60 p-1">
         {tabs.map((t) => (
           <li key={t.to} className="shrink-0">
@@ -63,5 +88,6 @@ export function AgreementTabs() {
         ))}
       </ul>
     </nav>
+    </div>
   );
 }

@@ -47,6 +47,7 @@ export function PageHeader({
   badges?: ReactNode;
 }) {
   return (
+    <>
     <div className="mb-6">
       {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -56,8 +57,6 @@ export function PageHeader({
             {badges}
           </div>
           {subtitle && <div className="mt-1 text-sm text-muted">{subtitle}</div>}
-          {/* Agreement screens: Overview / Preview / Deviations tabs under the agreement's details. */}
-          <AgreementTabs />
         </div>
         {actions && (
           // Phones: buttons fill each row evenly, and filled (primary/decision) buttons come first at full width.
@@ -67,6 +66,10 @@ export function PageHeader({
         )}
       </div>
     </div>
+    {/* Agreement screens: Overview / Preview / Deviations tabs under the agreement's details, pinned while scrolling.
+        A sibling of the header (not inside it) so it stays stuck for the whole page. */}
+    <AgreementTabs />
+    </>
   );
 }
 

@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
 import { useUser } from '@/context/SessionContext';
@@ -85,11 +86,26 @@ export function SubHeader() {
   const scrolled = useScrolled();
   const crumbs = crumbsFor(pathname, user);
   const parent = crumbs.at(-2);
+  // Publish the bar's height (--subheader-h) so content can stick just below it (agreement tabs).
+  const bar = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = bar.current;
+    const root = document.documentElement;
+    if (!el) return root.style.setProperty('--subheader-h', '0px');
+    const set = () => root.style.setProperty('--subheader-h', `${el.offsetHeight}px`);
+    set();
+    if (typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [pathname === '/']);
+
   // The dashboard (Home) is the top of the app: nothing to go back to, so no sub-header.
   if (pathname === '/') return null;
 
   return (
     <div
+      ref={bar}
       className={cn(
         'z-[15] border-b px-4 transition-[background-color,box-shadow,border-color] duration-200 ease-out sticky top-16 sm:px-6 lg:px-8 xl:px-10',
         scrolled
