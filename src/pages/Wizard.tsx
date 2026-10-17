@@ -831,7 +831,7 @@ function StepReview({ agreementId, onEdit }: { agreementId: string; onEdit: (ste
       </div>
       <p className="text-sm text-muted">
         Need different rates or clause wording for this partner? Request a deviation before submitting. Once Legal agrees it, the agreement
-        becomes non-standard and goes to Legal for approval when you submit.
+        becomes non-standard; after signing, Legal reviews it with the agreed deviations shown side by side.
       </p>
       {r.blockers.length ? (
         <Alert tone="warning" title="Before you can submit">
