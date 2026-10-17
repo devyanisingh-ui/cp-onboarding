@@ -309,7 +309,17 @@ export async function uploadTemplate(input: { cpType: CpType; institutionId: str
   if (!/\.docx$/i.test(input.fileName)) throw invalid('Upload the agreement as a Word (.docx) file. Save older .doc files as .docx first.');
   const d = getDb();
   const open = inProgress(input.cpType, input.institutionId);
-  if (open) throw conflict(`${CP_TYPE_LABELS[input.cpType]} v${open.version} is already in progress. Open it and use “Import Word document”, or finish or discard it first.`);
+  if (open && open.status === 'draft') {
+    // A draft for this template already exists: put the uploaded text into it instead of refusing.
+    const res = await importInto(user, open, input.file, input.fileName);
+    if (input.changeNote.trim()) open.changeNote = input.changeNote.trim();
+    commit();
+    return { template: structuredClone(open), notes: [`Your existing draft v${open.version} was updated with this document.`, ...res.notes] };
+  }
+  if (open)
+    throw conflict(
+      `${CP_TYPE_LABELS[input.cpType]} v${open.version} is ${open.status === 'pending_approval' ? 'waiting for Legal' : 'approved and waiting to be published'}. ${open.status === 'pending_approval' ? 'Open it and use “Withdraw & discard”, then upload again.' : 'Publish it first, then upload the new version.'}`,
+    );
   const imported = await readDocx(input.file);
   const same = d.templates.filter((t) => t.cpType === input.cpType && t.institutionId === input.institutionId);
   const version = Math.max(0, ...same.map((t) => t.version)) + 1;
@@ -344,13 +354,18 @@ export async function importTemplateDocx(id: string, file: Blob, fileName: strin
   if (!t) throw notFound('Template');
   if (t.status !== 'draft') throw conflict('Only draft versions can be replaced. Approved and published versions are never changed.');
   if (!/\.docx$/i.test(fileName)) throw invalid('Upload the agreement as a Word (.docx) file.');
+  const res = await importInto(user, t, file, fileName);
+  commit();
+  return { template: structuredClone(t), notes: res.notes };
+}
+
+async function importInto(user: User, t: TemplateVersion, file: Blob, fileName: string) {
   const imported = await readDocx(file);
   const before = { blocks: contentFor(t).blocks.length, fileName: t.fileName };
   const { document } = await storeDocument(user, 'template', t.id, 'template_docx', file, fileName);
   Object.assign(t, { content: imported.content, fileName, blobKey: document.blobKey, sourceDocumentId: document.id });
   audit(user, 'update', 'template', t.id, `Imported ${fileName} into template ${CP_TYPE_LABELS[t.cpType]} v${t.version}`, before, { blocks: imported.content.blocks.length, fileName });
-  commit();
-  return { template: structuredClone(t), notes: imported.notes };
+  return imported;
 }
 
 async function readDocx(file: Blob) {
@@ -479,17 +494,24 @@ export async function submitTemplate(id: string): Promise<void> {
   commit();
 }
 
-/** A draft that was never sent to Legal or used by any agreement can be discarded. */
+/**
+ * Discard a version that was never approved or used: a draft, or one waiting for Legal (which is
+ * withdrawn from Legal first). Discarding one that is already gone is a no-op.
+ */
 export async function discardTemplateDraft(id: string): Promise<void> {
   await delay('write');
   const user = ctx();
   assertCan(user, 'template.manage');
   const d = getDb();
   const t = d.templates.find((x) => x.id === id);
-  if (!t || t.status !== 'draft') throw conflict('Only unsent drafts can be discarded.');
+  if (!t) return; // already discarded (e.g. a second click or another tab)
+  if (t.status !== 'draft' && t.status !== 'pending_approval')
+    throw conflict(t.status === 'approved' ? 'Legal has approved this version, so it can’t be discarded. Publish it, or start a new version.' : 'Published and retired versions are kept for history and can’t be discarded.');
   if (t.approvedById || d.agreements.some((a) => a.templateVersionId === id)) throw conflict('This version has history and cannot be discarded.');
+  const withdrawn = t.status === 'pending_approval';
+  if (withdrawn) closeTasks({ refId: id, types: ['template_approval'] }, user, 'cancelled');
   d.templates = d.templates.filter((x) => x.id !== id);
-  audit(user, 'delete', 'template', id, `Discarded draft template ${CP_TYPE_LABELS[t.cpType]} v${t.version}`);
+  audit(user, 'delete', 'template', id, `${withdrawn ? 'Withdrew from Legal and discarded' : 'Discarded draft'} template ${CP_TYPE_LABELS[t.cpType]} v${t.version}`);
   commit();
 }
 

@@ -427,6 +427,17 @@ describe('template editor', () => {
     await expect(api.config.createTemplateDraft('individual', null)).rejects.toThrow(/already in progress/);
     await api.config.discardTemplateDraft(d.id);
     expect(getDb().templates.some((t) => t.id === d.id)).toBe(false);
+    // A second discard (double click, another tab) is a no-op, not an error.
+    await expect(api.config.discardTemplateDraft(d.id)).resolves.toBeUndefined();
+  });
+
+  it('lets Admin withdraw a version waiting for Legal and discard it, but not a published one', async () => {
+    await as(ARJUN);
+    // Seed: Partnership v2 (tpl-pa-2) is waiting for Legal.
+    await api.config.discardTemplateDraft('tpl-pa-2');
+    expect(getDb().templates.some((t) => t.id === 'tpl-pa-2')).toBe(false);
+    expect(getDb().tasks.find((t) => t.refId === 'tpl-pa-2' && t.type === 'template_approval')!.status).toBe('cancelled');
+    await expect(api.config.discardTemplateDraft('tpl-pa-1')).rejects.toThrow(/kept for history/);
   });
 });
 

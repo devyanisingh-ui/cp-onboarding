@@ -220,7 +220,10 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
       toast.error('Download failed', errorMessage(e));
     }
   };
-  const discard = useAction(() => api.config.discardTemplateDraft(template.id), { success: 'Draft discarded', onSuccess: () => (setDirty(false), navigate('/admin/templates')) });
+  const discard = useAction(() => api.config.discardTemplateDraft(template.id), {
+    success: template.status === 'pending_approval' ? 'Withdrawn from Legal and discarded' : 'Draft discarded',
+    onSuccess: () => (setConfirmDiscard(false), setDirty(false), navigate('/admin/templates')),
+  });
   const approve = useAction(() => api.config.decideTemplate(template.id, 'approve'), { success: 'Approved — Admin can now publish', onSuccess: () => navigate('/admin/templates') });
   const reject = useAction((c: string) => api.config.decideTemplate(template.id, 'reject', c), { success: 'Returned to Admin', onSuccess: () => navigate('/admin/templates') });
   const publish = useAction(() => api.config.publishTemplate(template.id), { success: 'Published — new drafts use this version', onSuccess: () => navigate('/admin/templates') });
@@ -290,6 +293,11 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
                   Send to Legal
                 </Button>
               </>
+            )}
+            {template.status === 'pending_approval' && can('template.manage') && !template.approvedById && (
+              <Button variant="ghost" icon={<Trash2 className="size-4" />} onClick={() => setConfirmDiscard(true)}>
+                Withdraw & discard
+              </Button>
             )}
             {template.status === 'pending_approval' && can('template.approve') && (
               <>
@@ -418,15 +426,15 @@ function EditorInner({ template, institutions, rateCards }: { template: Template
         open={confirmDiscard}
         onClose={() => setConfirmDiscard(false)}
         size="sm"
-        title="Discard this draft?"
-        description="The draft version is removed. Published versions are not affected."
+        title={template.status === 'pending_approval' ? 'Withdraw from Legal and discard?' : 'Discard this draft?'}
+        description={`${template.status === 'pending_approval' ? 'Legal’s approval task is cancelled and this version is removed.' : 'The draft version is removed.'} Published versions are not affected. You can upload or start a new version afterwards.`}
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirmDiscard(false)}>
               Keep editing
             </Button>
-            <Button variant="danger" loading={discard.loading} onClick={() => void discard.run()}>
-              Discard draft
+            <Button variant="danger" loading={discard.loading} disabled={discard.loading} onClick={() => void discard.run()}>
+              {template.status === 'pending_approval' ? 'Withdraw & discard' : 'Discard draft'}
             </Button>
           </>
         }
