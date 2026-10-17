@@ -381,7 +381,7 @@ function WizardInner({
             Back
           </Button>
         )}
-        <Button variant="ghost" icon={<Save className="size-4" />} loading={busy === 'save'} onClick={() => void saveDraft()} className="max-sm:hidden">
+        <Button variant="ghost" icon={<Save className="size-4" />} loading={busy === 'save'} onClick={() => void saveDraft()} className="max-sm:hidden max-md:border max-md:border-line-strong/80 max-md:bg-white max-md:shadow-xs">
           Save as draft
         </Button>
         {step < 5 ? (

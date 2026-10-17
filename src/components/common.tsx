@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import {
   Camera,
   CheckCircle2,
@@ -73,15 +74,32 @@ export function PageHeader({
  * sidebar however long the page is (long forms such as the new-agreement wizard).
  */
 export function ActionBar({ children, className, pinned = false }: { children: ReactNode; className?: string; pinned?: boolean }) {
+  // On mobile the bar is fixed over the page; a spacer as tall as the bar lets the last content scroll clear of it.
+  const bar = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const el = bar.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const ro = new ResizeObserver(() => setHeight(el.offsetHeight));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   return (
     <>
+      {/* At the end of <main>, wherever the bar sits in the page. */}
+      {typeof document !== 'undefined' && document.getElementById('main') && createPortal(<div aria-hidden className="md:hidden" style={{ height }} />, document.getElementById('main')!)}
       <div
+        ref={bar}
         className={cn(
-          'glass-3 fixed inset-x-0 bottom-16 z-20 flex gap-2 border-t border-white/80 px-4 py-3 shadow-[0_-8px_24px_-14px_rgb(22_28_56/0.2)] [&>*]:flex-1 md:mt-6 md:justify-end md:[&>*]:flex-none',
+          // Mobile: the buttons float over the page with no bar behind them; taps between them reach the page.
+          // Buttons wrap to a second row rather than run off a narrow screen, and disabled ones are solid grey
+          // (not faded) so the page doesn't show through them.
+          'pointer-events-none fixed inset-x-0 bottom-16 z-20 flex flex-wrap gap-2 px-4 py-3 [&>*]:pointer-events-auto [&>*]:flex-1 md:mt-6 md:flex-nowrap md:justify-end md:[&>*]:flex-none',
+          'max-md:[&>*:disabled]:border max-md:[&>*:disabled]:border-line max-md:[&>*:disabled]:bg-sunken max-md:[&>*:disabled]:bg-none max-md:[&>*:disabled]:text-subtle max-md:[&>*:disabled]:opacity-100 max-md:[&>*:disabled]:shadow-none',
           pinned
             ? // Same insets as the content column (right of the sidebar), flush with the window bottom.
-              'md:bottom-0 md:left-[72px] md:border-line/70 md:px-6 md:py-3 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] lg:left-60 lg:px-8 xl:px-10'
-            : 'md:static md:z-auto md:border-0 md:bg-transparent md:p-0 md:shadow-none md:backdrop-blur-none',
+              'md:glass-3 md:pointer-events-auto md:bottom-0 md:left-[72px] md:border-t md:border-line/70 md:px-6 md:py-3 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:shadow-[0_-8px_24px_-14px_rgb(22_28_56/0.2)] lg:left-60 lg:px-8 xl:px-10'
+            : 'md:pointer-events-auto md:static md:z-auto md:p-0',
           className,
         )}
       >
