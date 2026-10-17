@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
 import { useUser } from '@/context/SessionContext';
 import { getDb } from '@/services/db';
@@ -15,7 +14,7 @@ interface Crumb {
   to?: string;
 }
 
-const AGREEMENT_PAGES: Record<string, string> = {
+export const AGREEMENT_PAGES: Record<string, string> = {
   edit: 'Edit draft',
   preview: 'Preview',
   deviation: 'Deviations',
@@ -75,23 +74,9 @@ export function crumbsFor(pathname: string, user: User): Crumb[] {
   return crumbs;
 }
 
-/** Section tabs for one agreement: its main pages, plus the action page currently open. */
-function agreementTabs(pathname: string): { to: string; label: string; end?: boolean }[] {
-  const [section, id, sub] = pathname.split('/').filter(Boolean);
-  if (section !== 'agreements' || !id || id === 'new') return [];
-  const base = `/agreements/${id}`;
-  const tabs = [
-    { to: base, label: 'Overview', end: true },
-    { to: `${base}/preview`, label: 'Preview' },
-    { to: `${base}/deviation`, label: 'Deviations' },
-  ];
-  if (sub && !['preview', 'deviation'].includes(sub) && AGREEMENT_PAGES[sub]) tabs.push({ to: `${base}/${sub}`, label: AGREEMENT_PAGES[sub] });
-  return tabs;
-}
-
 /**
- * Second bar under the app header on every screen: a back button, where you are (breadcrumbs),
- * and — on agreement screens — tabs to move between that agreement's pages.
+ * Second bar under the app header on every screen: a back button and where you are (breadcrumbs).
+ * Agreement screens show their section tabs under the page title instead (AgreementTabs).
  */
 export function SubHeader() {
   const { pathname } = useLocation();
@@ -100,24 +85,6 @@ export function SubHeader() {
   const scrolled = useScrolled();
   const crumbs = crumbsFor(pathname, user);
   const parent = crumbs.at(-2);
-  const tabs = agreementTabs(pathname);
-  const tabsRef = useRef<HTMLElement>(null);
-  // Phones: the tab row scrolls sideways; keep the current tab in view.
-  useEffect(() => {
-    const reveal = () => {
-      const nav = tabsRef.current;
-      const active = nav?.querySelector<HTMLElement>('[aria-current="page"]');
-      if (!nav || !active || nav.scrollWidth <= nav.clientWidth) return;
-      const n = nav.getBoundingClientRect();
-      const a = active.getBoundingClientRect();
-      if (a.right > n.right) nav.scrollLeft += a.right - n.right + 8;
-      else if (a.left < n.left) nav.scrollLeft -= n.left - a.left + 8;
-    };
-    reveal();
-    // Tab widths change once the web font loads; check again then.
-    void document.fonts?.ready.then(reveal);
-  }, [pathname]);
-
   // The dashboard (Home) is the top of the app: nothing to go back to, so no sub-header.
   if (pathname === '/') return null;
 
@@ -131,8 +98,7 @@ export function SubHeader() {
       )}
     >
       <div className="flex min-h-11 flex-wrap items-center gap-x-4 gap-y-1 py-1.5">
-        {/* Keeps room for the breadcrumb; when the tabs don’t fit beside it they wrap to a second row. */}
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:min-w-[24rem]">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {parent?.to && (
             <button
               type="button"
@@ -168,28 +134,6 @@ export function SubHeader() {
             </ol>
           </nav>
         </div>
-        {tabs.length > 0 && (
-          <nav ref={tabsRef} aria-label="Agreement sections" className="-mx-1 max-w-full overflow-x-auto px-1 [scrollbar-width:none] max-sm:w-full">
-            <ul className="flex gap-1">
-              {tabs.map((t) => (
-                <li key={t.to} className="shrink-0">
-                  <NavLink
-                    to={t.to}
-                    end={t.end}
-                    className={({ isActive }) =>
-                      cn(
-                        'inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors',
-                        isActive ? 'bg-white text-primary-800 shadow-card ring-1 ring-line' : 'text-ink-soft hover:bg-white/70 hover:text-ink',
-                      )
-                    }
-                  >
-                    {t.label}
-                  </NavLink>
-                </li>
-              ))}
-            </ul>
-          </nav>
-        )}
       </div>
     </div>
   );

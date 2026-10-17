@@ -29,6 +29,7 @@ import { saveFile } from '@/lib/download';
 import type { AgreementStatus } from '@/types';
 import { Badge, Breadcrumbs, Button, Field, IconButton, Modal, Spinner, Textarea, useToast } from '@/components/ui';
 import { DOC_CSS } from '@/lib/agreementTemplate';
+import { AgreementTabs } from '@/components/layout/AgreementTabs';
 
 // ---------- Page header ----------
 
@@ -55,6 +56,8 @@ export function PageHeader({
             {badges}
           </div>
           {subtitle && <div className="mt-1 text-sm text-muted">{subtitle}</div>}
+          {/* Agreement screens: Overview / Preview / Deviations tabs under the agreement's details. */}
+          <AgreementTabs />
         </div>
         {actions && (
           // Phones: buttons fill each row evenly, and filled (primary/decision) buttons come first at full width.
