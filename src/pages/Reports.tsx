@@ -20,7 +20,8 @@ export function Reports() {
   return (
     <div>
       <PageHeader title="Reports" subtitle="Seven operational reports. Filter by institution, region, CP type, owner and dates, then export to Excel." />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      {/* auto-rows-fr: every row is as tall as the tallest card, so all cards match. */}
+      <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {api.reports.list.map((r) => (
           <Link key={r.id} to={`/reports/${r.id}`} className="surface surface-interactive group flex items-start gap-3 rounded-xl p-5">
             <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700">
