@@ -87,7 +87,9 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const mismatches = mismatched.length;
   // Legal: document mismatches can go back to the CP; anything else in the agreement means Reject.
   const docMismatches = mismatched.filter((f) => f.doc && d!.cpDocuments.some((x) => x.type === f.doc));
-  const canAskDocs = legal && docMismatches.length > 0 && docMismatches.length === mismatches;
+  // Enabled as soon as any CP document is marked Mismatch; remarks are collected in the dialog.
+  const canAskDocs = legal && docMismatches.length > 0;
+  const otherMismatches = mismatched.filter((f) => !docMismatches.includes(f));
 
 
   return (
@@ -190,8 +192,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               <Button
                 variant="secondary"
                 icon={<FileWarning className="size-4" />}
-                disabled={!canAskDocs || docMismatches.some((f) => !checks[f.key]?.remark?.trim())}
-                title={!canAskDocs ? 'Mark Mismatch on the CP documents that need correcting (and nothing else)' : 'Add a remark on each mismatched document'}
+                disabled={!canAskDocs}
+                title={!canAskDocs ? 'Mark Mismatch on a CP document (PAN, Aadhaar, cancelled cheque or GST) first' : undefined}
                 onClick={() => setAskingDocs(true)}
               >
                 Request document changes{docMismatches.length ? ` (${docMismatches.length})` : ''}
@@ -201,7 +203,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               {legal ? 'Approve & send to Admin' : 'Approve — make Active'}
             </Button>
           </ActionBar>
-          {legal && mismatches > 0 && !canAskDocs && (
+          {legal && mismatches > 0 && docMismatches.length === 0 && (
             <p className="text-sm text-muted">Something other than a CP document doesn’t match, so the agreement needs to be rejected and signed again.</p>
           )}
         </div>
@@ -228,6 +230,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               <Button
                 loading={askDocs.loading}
                 icon={<FileWarning className="size-4" />}
+                disabled={docMismatches.some((f) => !checks[f.key]?.remark?.trim())}
                 onClick={async () => {
                   const items = docMismatches.map((f) => ({ documentId: d!.cpDocuments.find((x) => x.type === f.doc)!.id, remark: checks[f.key]!.remark!.trim() }));
                   if ((await askDocs.run(items, note)).ok) setAskingDocs(false);
@@ -238,14 +241,25 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
             </>
           }
         >
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {docMismatches.map((f) => (
-              <li key={f.key} className="rounded-lg border border-line px-3 py-2.5">
-                <p className="text-sm font-semibold">{docLabel(f.doc!)}</p>
-                <p className="text-sm text-danger-700">{checks[f.key]?.remark}</p>
+              <li key={f.key} className="rounded-lg border border-line p-3">
+                <Field label={`${docLabel(f.doc!)} — what needs to change`} required>
+                  <Textarea
+                    rows={2}
+                    value={checks[f.key]?.remark ?? ''}
+                    placeholder="e.g. The scan is blurred — upload a clear copy of the original."
+                    onChange={(e) => set(f.key, { remark: e.target.value })}
+                  />
+                </Field>
               </li>
             ))}
           </ul>
+          {otherMismatches.length > 0 && (
+            <Alert tone="warning" className="mt-4" title="Other items also don’t match">
+              {otherMismatches.map((f) => f.label).join(' · ')}. Corrected CP documents won’t fix these; if the signed agreement itself is wrong, reject it instead.
+            </Alert>
+          )}
           <Field label="Note for the BD Executive" optional className="mt-4">
             <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>
