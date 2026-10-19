@@ -40,31 +40,33 @@ export function WorkflowStrip({ title, description, steps }: { title: string; de
   return (
     <Card>
       <CardHeader title={title} description={description} icon={<ArrowRight />} />
-      <ol className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-[repeat(var(--steps),minmax(0,1fr))] sm:gap-0 sm:p-4" style={{ ['--steps' as string]: steps.length }}>
+      {/* Phones 2 columns, tablets 3, one row from lg up. The gap keeps every step in its own box; the arrows sit in it. */}
+      <ol className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-[repeat(var(--steps),minmax(0,1fr))] lg:gap-5" style={{ ['--steps' as string]: steps.length }}>
         {steps.map((s, i) => {
           const hot = s.yours && s.count > 0;
           return (
-            <li key={s.key} className={cn('relative flex items-stretch', steps.length % 2 === 1 && 'max-sm:last:col-span-2')}>
+            <li key={s.key} className={cn('relative flex min-w-0 items-stretch', steps.length % 2 === 1 && 'max-sm:last:col-span-2')}>
               <StepLink
                 to={s.to}
                 className={cn(
-                  'group flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors sm:flex-col sm:items-start sm:gap-2 sm:px-4',
-                  hot ? 'bg-primary-50 ring-1 ring-primary-200 hover:bg-primary-100/70' : 'hover:bg-[var(--surface-hover)]',
+                  'group flex w-full min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 transition-colors sm:flex-col sm:items-start sm:gap-2 sm:px-3.5',
+                  hot ? 'bg-primary-50 ring-primary-200 hover:bg-primary-100/70' : 'bg-white/40 ring-line/60 hover:bg-[var(--surface-hover)]',
                 )}
               >
                 <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', hot ? 'bg-white text-primary-700 ring-primary-200' : s.done ? 'bg-green-50 text-green-700 ring-green-200' : 'bg-slate-50 text-slate-500 ring-slate-200')}>
                   {s.icon}
                 </span>
-                <span className="min-w-0">
-                  {/* Phones: the label sits under the count so it is never cut off. */}
-                  <span className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-2">
+                <span className="min-w-0 max-w-full">
+                  {/* The label sits under the count and wraps inside the box, so it never runs into the next step. */}
+                  <span className="flex flex-col gap-1">
                     <span className="text-2xl font-semibold leading-none tabular-nums text-ink">{s.count}</span>
-                    <span className="text-sm font-medium leading-tight text-ink-soft sm:truncate">{s.label}</span>
+                    <span className="break-words text-sm font-medium leading-tight text-ink-soft">{s.label}</span>
                   </span>
-                  <span className={cn('mt-1 block text-xs', hot ? 'font-semibold text-primary-700' : 'text-subtle')}>{s.who}</span>
+                  <span className={cn('mt-1 block break-words text-xs', hot ? 'font-semibold text-primary-700' : 'text-subtle')}>{s.who}</span>
                 </span>
               </StepLink>
-              {i < steps.length - 1 && <ChevronRight className="pointer-events-none absolute -right-2 top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle sm:block" aria-hidden />}
+              {/* Centred in the 20px gap to the next step; only when all steps share one row. */}
+              {i < steps.length - 1 && <ChevronRight className="pointer-events-none absolute -right-[18px] top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle lg:block" aria-hidden />}
             </li>
           );
         })}
