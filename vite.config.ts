@@ -5,6 +5,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
+import { reticle } from '@reticlehq/vite-plugin';
 /**
  * `vite build --mode mobile` produces one self-contained HTML file (scripts, styles, fonts and
  * icon inlined) that runs when opened directly from a phone's storage — no server needed.
@@ -25,7 +26,7 @@ function inlineHeadAssets(): Plugin {
 export default defineConfig(({ mode }) => {
   const mobile = mode === 'mobile';
   return {
-    plugins: [react(), tailwindcss(), ...(mobile ? [inlineHeadAssets(), viteSingleFile()] : [])],
+    plugins: [reticle(), react(), tailwindcss(), ...(mobile ? [inlineHeadAssets(), viteSingleFile()] : [])],
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     build: mobile
       ? {
