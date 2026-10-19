@@ -1,0 +1,58 @@
+{
+  "intents": {
+    "legal-home-deviations": {
+      "declaredAt": 1792389178866,
+      "id": "legal-home-deviations",
+      "state": "declared",
+      "statement": "Legal’s Home lists draft agreements with deviation requests awaiting Legal’s decision, with the number of rate and clause changes and who requested them, opening the deviation panel.",
+      "status": "proposed",
+      "subject": "legal-dashboard",
+      "surface": {
+        "flow": "legal-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792389178908
+    },
+    "legal-home-docs-sent-back": {
+      "declaredAt": 1792389178866,
+      "id": "legal-home-docs-sent-back",
+      "state": "declared",
+      "statement": "When Legal asks for corrected CP documents, the agreement appears on Legal’s Home under Documents sent back with where it is (with BD, with CP, BD checking) and how long it has been out.",
+      "status": "proposed",
+      "subject": "legal-dashboard",
+      "surface": {
+        "flow": "legal-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792389178922
+    },
+    "legal-home-review-queue": {
+      "declaredAt": 1792389178866,
+      "id": "legal-home-review-queue",
+      "state": "declared",
+      "statement": "Legal’s Home lists signed agreements waiting for Legal review, overdue first, each showing standard or non-standard terms (with how many deviations to check), how it was signed and how long it has waited, and opens the Legal review checklist.",
+      "status": "proposed",
+      "subject": "legal-dashboard",
+      "surface": {
+        "flow": "legal-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792389178891
+    },
+    "legal-home-workflow": {
+      "declaredAt": 1792389178866,
+      "id": "legal-home-workflow",
+      "state": "declared",
+      "statement": "Legal’s Home shows Legal’s part of the workflow with counts: deviations to decide (before signing), signed agreements to review, documents sent back to the BD/CP, with Admin, and active; Legal’s own steps are highlighted.",
+      "status": "proposed",
+      "subject": "legal-dashboard",
+      "surface": {
+        "flow": "legal-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792389178878
+    }
+  },
+  "subject": "legal-dashboard",
+  "version": 1
+}

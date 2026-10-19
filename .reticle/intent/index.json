@@ -55,6 +55,18 @@
       "subject": "drive-bd-home-pipeline"
     },
     {
+      "id": "flow:drive-legal-home-deviations",
+      "statement": "legal-home-deviations",
+      "status": "proposed",
+      "subject": "drive-legal-home-deviations"
+    },
+    {
+      "id": "flow:drive-legal-home-workflow",
+      "statement": "legal-home-workflow",
+      "status": "proposed",
+      "subject": "drive-legal-home-workflow"
+    },
+    {
       "id": "flow:drive-signin-lands-on-dashboard",
       "statement": "signin-lands-on-dashboard",
       "status": "proposed",
@@ -65,6 +77,30 @@
       "statement": "signin-needs-both-fields",
       "status": "proposed",
       "subject": "drive-signin-needs-both-fields"
+    },
+    {
+      "id": "legal-home-deviations",
+      "statement": "Legal’s Home lists draft agreements with deviation requests awaiting Le…",
+      "status": "proposed",
+      "subject": "legal-dashboard"
+    },
+    {
+      "id": "legal-home-docs-sent-back",
+      "statement": "When Legal asks for corrected CP documents, the agreement appears on Le…",
+      "status": "proposed",
+      "subject": "legal-dashboard"
+    },
+    {
+      "id": "legal-home-review-queue",
+      "statement": "Legal’s Home lists signed agreements waiting for Legal review, overdue…",
+      "status": "proposed",
+      "subject": "legal-dashboard"
+    },
+    {
+      "id": "legal-home-workflow",
+      "statement": "Legal’s Home shows Legal’s part of the workflow with counts: deviations…",
+      "status": "proposed",
+      "subject": "legal-dashboard"
     },
     {
       "id": "signin-lands-on-dashboard",

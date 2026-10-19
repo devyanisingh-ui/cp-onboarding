@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "origin": "failed-assert",
+  "expected": "element \"Request document changes\"",
+  "observed": "no 'button' named 'Request document changes'; saw: Institution, Legal Role, Notifications, 3 unread, Account: Priya Sharma, Back to AGR-ASU-2026-0004, Verified, Mismatch, Verified, Mismatch, Verified, Mismatch, Verified, Mismatch, Verified, Mismatch, Verified, Mismatch, Verified, Mismatch, Reveal PAN (this is logged), Verified, Mismatch, Verified, Mismatch, Reveal account number (this is logged), Verified, Mismatch, Verified, Mismatch, Verified, Mismatch, Reject, Request document changes (1), More",
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "testid",
+        "value": "e290",
+        "source": {
+          "file": "src/pages/Verification.tsx",
+          "line": 270,
+          "column": 25
+        }
+      },
+      "action": "click"
+    }
+  ],
+  "id": "1792389204749-click-c5d70131",
+  "createdAt": 1792389204750,
+  "seen": 1,
+  "lastSeenAt": 1792389204750
+}

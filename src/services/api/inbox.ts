@@ -56,6 +56,51 @@ export interface Dashboard {
   wizardDrafts: number;
   /** BD Executive view: their own agreements laid out along the workflow. */
   bd?: BdDashboard;
+  /** Legal view: what is waiting for Legal at each point of the workflow. */
+  legal?: LegalDashboard;
+}
+
+export interface LegalReviewItem {
+  agreement: AgreementSummary;
+  /** Days since it reached Legal. */
+  days: number;
+  since: string;
+  dueDate?: string;
+  overdue: boolean;
+  /** Approved deviations Legal must check against the signed copy. */
+  deviations: number;
+  /** Back after the CP corrected documents Legal had flagged. */
+  resubmitted: boolean;
+  signedBy: 'e-sign' | 'paper';
+}
+
+export interface LegalDeviationItem {
+  agreement: AgreementSummary;
+  rates: number;
+  clauses: number;
+  documents: number;
+  requestedBy: string;
+  since: string;
+  days: number;
+}
+
+export interface LegalDocsItem {
+  agreement: AgreementSummary;
+  /** Where the document request is now. */
+  stage: 'with_bd' | 'sent_to_cp' | 'cp_submitted';
+  items: number;
+  since: string;
+  days: number;
+}
+
+export interface LegalDashboard {
+  stages: { deviations: number; review: number; docs: number; admin: number; active: number };
+  queue: LegalReviewItem[];
+  deviations: LegalDeviationItem[];
+  docs: LegalDocsItem[];
+  /** What this Legal user decided in the last 30 days. */
+  last30: { approved: number; returned: number; docsRequested: number; deviationsDecided: number };
+  nonStandardLive: number;
 }
 
 /** Who an agreement is waiting on when the next move is not the BD Executive's. */
@@ -107,6 +152,78 @@ export async function dashboard(institutionId?: string): Promise<Dashboard> {
     },
     wizardDrafts: d.wizardDrafts.filter((w) => w.userId === user.id).length,
     bd: user.roles.includes('bd_exec') ? bdDashboard(ags.filter((a) => a.ownerId === user.id)) : undefined,
+    legal: user.roles.includes('legal') ? legalDashboard(ags, user.id) : undefined,
+  };
+}
+
+function legalDashboard(ags: ReturnType<typeof getDb>['agreements'], userId: string): LegalDashboard {
+  const d = getDb();
+  const t = today();
+  const day = (iso?: string) => (iso ?? t).slice(0, 10);
+  const age = (iso?: string) => Math.max(0, daysBetween(day(iso), t));
+  const ids = new Set(ags.map((a) => a.id));
+
+  const queue: LegalReviewItem[] = ags
+    .filter((a) => a.status === 'pending_approval')
+    .map((a): LegalReviewItem => {
+      const task = d.tasks.find((x) => x.type === 'gate1_approval' && x.agreementId === a.id && x.status === 'open');
+      const since = task?.createdAt ?? a.updatedAt;
+      return {
+        agreement: toSummary(a),
+        days: age(since),
+        since: day(since),
+        dueDate: task?.dueDate,
+        overdue: !!task && task.dueDate < t,
+        deviations: d.deviations.filter((x) => x.agreementId === a.id && x.status === 'approved').length,
+        resubmitted: a.docRequest?.status === 'closed',
+        signedBy: a.esign?.status === 'completed' ? 'e-sign' : 'paper',
+      };
+    })
+    // Overdue first, then the longest waiting.
+    .sort((a, b) => Number(b.overdue) - Number(a.overdue) || b.days - a.days);
+
+  const pendingDevs = d.deviations.filter((x) => x.status === 'pending' && ids.has(x.agreementId));
+  const deviations: LegalDeviationItem[] = [...new Set(pendingDevs.map((x) => x.agreementId))]
+    .map((id) => {
+      const list = pendingDevs.filter((x) => x.agreementId === id);
+      const first = list.map((x) => x.requestedAt).sort()[0];
+      return {
+        agreement: toSummary(ags.find((a) => a.id === id)!),
+        rates: list.filter((x) => x.type === 'rate').length,
+        clauses: list.filter((x) => x.type === 'clause').length,
+        documents: new Set(list.flatMap((x) => x.documentIds ?? [])).size,
+        requestedBy: userName(list[0]!.requestedById),
+        since: day(first),
+        days: age(first),
+      };
+    })
+    .sort((a, b) => b.days - a.days);
+
+  const docs: LegalDocsItem[] = ags
+    .filter((a) => a.docRequest && a.docRequest.status !== 'closed')
+    .map((a) => ({ agreement: toSummary(a), stage: a.docRequest!.status as LegalDocsItem['stage'], items: a.docRequest!.items.length, since: day(a.docRequest!.requestedAt), days: age(a.docRequest!.requestedAt) }))
+    .sort((a, b) => b.days - a.days);
+
+  const since30 = shiftDays(t, -30);
+  const mine = d.audit.filter((e) => e.actorId === userId && e.at.slice(0, 10) >= since30);
+  return {
+    stages: {
+      deviations: deviations.length,
+      review: queue.length,
+      docs: docs.length,
+      admin: ags.filter((a) => a.status === 'pending_admin_approval').length,
+      active: ags.filter((a) => a.status === 'active' || a.status === 'notice_period').length,
+    },
+    queue,
+    deviations,
+    docs,
+    last30: {
+      approved: mine.filter((e) => e.entityType === 'agreement' && e.action === 'approve' && e.summary.startsWith('Legal approved')).length,
+      returned: mine.filter((e) => e.entityType === 'agreement' && e.action === 'reject' && e.summary.startsWith('Rejected by Legal')).length,
+      docsRequested: mine.filter((e) => e.entityType === 'agreement' && e.summary.startsWith('Legal asked for corrected documents')).length,
+      deviationsDecided: mine.filter((e) => e.entityType === 'deviation' && (e.action === 'approve' || e.action === 'reject')).length,
+    },
+    nonStandardLive: ags.filter((a) => a.nonStandard && (a.status === 'active' || a.status === 'notice_period')).length,
   };
 }
 

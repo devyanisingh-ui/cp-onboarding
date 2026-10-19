@@ -10,6 +10,7 @@ import { ButtonLink, Card, CardHeader, EmptyState, ErrorState, PageSkeleton, Sta
 import { AgreementTable, TaskRow } from '@/components/lists';
 import type { ReactNode } from 'react';
 import { HomeBd } from './HomeBd';
+import { HomeLegal } from './HomeLegal';
 
 export function Home() {
   useDocumentTitle('Home');
@@ -28,6 +29,8 @@ export function Home() {
   if (!data) return null;
   // A BD Executive gets a workflow-shaped dashboard of their own agreements.
   if (isBd && !isLegal && !isAdmin && data.bd) return <HomeBd data={data} greeting={greeting} firstName={user.name.split(' ')[0]!} />;
+  // Legal gets its part of the workflow: deviations, signed agreements to review, documents sent back.
+  if (isLegal && !isBd && !isAdmin && data.legal) return <HomeLegal data={data} greeting={greeting} firstName={user.name.split(' ')[0]!} />;
 
   // Role-specific tiles (after "My pending tasks" and "Overdue").
   const tiles: ReactNode[] = [];

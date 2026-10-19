@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-legal-home-workflow": {
+      "declaredAt": 1792389247724,
+      "id": "flow:drive-legal-home-workflow",
+      "state": "declared",
+      "statement": "legal-home-workflow",
+      "status": "proposed",
+      "subject": "drive-legal-home-workflow",
+      "surface": {
+        "flow": "drive-legal-home-workflow"
+      },
+      "updatedAt": 1792389247730
+    }
+  },
+  "subject": "drive-legal-home-workflow",
+  "version": 1
+}
