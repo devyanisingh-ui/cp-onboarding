@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:bd-home-overdue": {
+      "declaredAt": 1792387897119,
+      "id": "flow:bd-home-overdue",
+      "state": "declared",
+      "statement": "On a BD Executive’s Home, the Overdue count under Needs your action opens just their overdue tasks.",
+      "status": "proposed",
+      "subject": "bd-home-overdue",
+      "surface": {
+        "flow": "bd-home-overdue"
+      },
+      "updatedAt": 1792387897125
+    }
+  },
+  "subject": "bd-home-overdue",
+  "version": 1
+}

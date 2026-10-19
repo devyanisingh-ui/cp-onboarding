@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-bd-home-pipeline": {
+      "declaredAt": 1792387854240,
+      "id": "flow:drive-bd-home-pipeline",
+      "state": "declared",
+      "statement": "bd-home-pipeline",
+      "status": "proposed",
+      "subject": "drive-bd-home-pipeline",
+      "surface": {
+        "flow": "drive-bd-home-pipeline"
+      },
+      "updatedAt": 1792387854248
+    }
+  },
+  "subject": "drive-bd-home-pipeline",
+  "version": 1
+}

@@ -9,6 +9,7 @@ import { ROLE_LABELS } from '@/lib/format';
 import { ButtonLink, Card, CardHeader, EmptyState, ErrorState, PageSkeleton, StatTile } from '@/components/ui';
 import { AgreementTable, TaskRow } from '@/components/lists';
 import type { ReactNode } from 'react';
+import { HomeBd } from './HomeBd';
 
 export function Home() {
   useDocumentTitle('Home');
@@ -25,6 +26,8 @@ export function Home() {
   if (loading && !data) return <PageSkeleton />;
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
   if (!data) return null;
+  // A BD Executive gets a workflow-shaped dashboard of their own agreements.
+  if (isBd && !isLegal && !isAdmin && data.bd) return <HomeBd data={data} greeting={greeting} firstName={user.name.split(' ')[0]!} />;
 
   // Role-specific tiles (after "My pending tasks" and "Overdue").
   const tiles: ReactNode[] = [];

@@ -1,6 +1,60 @@
 {
   "entries": [
     {
+      "id": "bd-home-actions-grouped",
+      "statement": "A BD Executive’s pending tasks on Home are grouped by the kind of work…",
+      "status": "proposed",
+      "subject": "bd-dashboard"
+    },
+    {
+      "id": "bd-home-pipeline",
+      "statement": "A BD Executive’s Home shows their own agreements counted at each workfl…",
+      "status": "proposed",
+      "subject": "bd-dashboard"
+    },
+    {
+      "id": "bd-home-portfolio",
+      "statement": "A BD Executive’s Home shows their own portfolio: active agreements, exp…",
+      "status": "proposed",
+      "subject": "bd-dashboard"
+    },
+    {
+      "id": "bd-home-waiting",
+      "statement": "A BD Executive’s Home lists their agreements waiting on someone else (L…",
+      "status": "proposed",
+      "subject": "bd-dashboard"
+    },
+    {
+      "id": "flow:bd-dashboard",
+      "statement": "A BD Executive’s Home lays out their agreements along the workflow: the…",
+      "status": "proposed",
+      "subject": "bd-dashboard"
+    },
+    {
+      "id": "flow:bd-home-legal-step",
+      "statement": "On a BD Executive’s Home, the Legal review step of the pipeline opens j…",
+      "status": "proposed",
+      "subject": "bd-home-legal-step"
+    },
+    {
+      "id": "flow:bd-home-overdue",
+      "statement": "On a BD Executive’s Home, the Overdue count under Needs your action ope…",
+      "status": "proposed",
+      "subject": "bd-home-overdue"
+    },
+    {
+      "id": "flow:drive-bd-home-actions-grouped",
+      "statement": "bd-home-actions-grouped",
+      "status": "proposed",
+      "subject": "drive-bd-home-actions-grouped"
+    },
+    {
+      "id": "flow:drive-bd-home-pipeline",
+      "statement": "bd-home-pipeline",
+      "status": "proposed",
+      "subject": "drive-bd-home-pipeline"
+    },
+    {
       "id": "flow:drive-signin-lands-on-dashboard",
       "statement": "signin-lands-on-dashboard",
       "status": "proposed",

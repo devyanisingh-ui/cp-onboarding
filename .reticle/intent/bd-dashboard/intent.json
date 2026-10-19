@@ -1,0 +1,70 @@
+{
+  "intents": {
+    "bd-home-actions-grouped": {
+      "declaredAt": 1792387809750,
+      "id": "bd-home-actions-grouped",
+      "state": "declared",
+      "statement": "A BD Executive’s pending tasks on Home are grouped by the kind of work (fix and resubmit, get signed and upload, CP documents, renewal decisions), overdue groups first, with overdue / due this week / later counts.",
+      "status": "proposed",
+      "subject": "bd-dashboard",
+      "surface": {
+        "flow": "bd-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792387809774
+    },
+    "bd-home-pipeline": {
+      "declaredAt": 1792387809750,
+      "id": "bd-home-pipeline",
+      "state": "declared",
+      "statement": "A BD Executive’s Home shows their own agreements counted at each workflow step (Draft, Ready for signing, Legal review, Admin approval, Active), marks the steps that are the BD’s move, and each step opens the list of their agreements at that step.",
+      "status": "proposed",
+      "subject": "bd-dashboard",
+      "surface": {
+        "flow": "bd-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792387809758
+    },
+    "bd-home-portfolio": {
+      "declaredAt": 1792387809750,
+      "id": "bd-home-portfolio",
+      "state": "declared",
+      "statement": "A BD Executive’s Home shows their own portfolio: active agreements, expiring within 60 days, activated in the last 30 days and CPs onboarded, plus their renewals coming up.",
+      "status": "proposed",
+      "subject": "bd-dashboard",
+      "surface": {
+        "flow": "bd-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792387809801
+    },
+    "bd-home-waiting": {
+      "declaredAt": 1792387809750,
+      "id": "bd-home-waiting",
+      "state": "declared",
+      "statement": "A BD Executive’s Home lists their agreements waiting on someone else (Legal, Admin, the CP or signers) with how many days each has waited, longest first.",
+      "status": "proposed",
+      "subject": "bd-dashboard",
+      "surface": {
+        "flow": "bd-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792387809790
+    },
+    "flow:bd-dashboard": {
+      "declaredAt": 1792387865372,
+      "id": "flow:bd-dashboard",
+      "state": "declared",
+      "statement": "A BD Executive’s Home lays out their agreements along the workflow: the Legal review step opens just their agreements with Legal, and the Overdue count opens just their overdue tasks.",
+      "status": "proposed",
+      "subject": "bd-dashboard",
+      "surface": {
+        "flow": "bd-dashboard"
+      },
+      "updatedAt": 1792387865378
+    }
+  },
+  "subject": "bd-dashboard",
+  "version": 1
+}

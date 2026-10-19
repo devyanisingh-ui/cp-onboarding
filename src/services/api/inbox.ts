@@ -1,5 +1,5 @@
 import type { AppNotification, AuditEvent, EmailMessage, Task, TaskType } from '@/types';
-import { daysUntil, today } from '@/lib/dates';
+import { daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
 import { can } from '@/lib/permissions';
 import { taskLink } from '@/lib/links';
 import { IN_PROGRESS_STATUSES } from '@/lib/status';
@@ -54,6 +54,29 @@ export interface Dashboard {
   pendingAdminApproval: AgreementSummary[];
   counts: { active: number; inProgress: number; nonStandard: number; cps: number };
   wizardDrafts: number;
+  /** BD Executive view: their own agreements laid out along the workflow. */
+  bd?: BdDashboard;
+}
+
+/** Who an agreement is waiting on when the next move is not the BD Executive's. */
+export type WaitingOn = 'legal' | 'admin' | 'cp' | 'signers' | 'deviation';
+
+export interface WaitingItem {
+  agreement: AgreementSummary;
+  on: WaitingOn;
+  /** What is happening, in words. */
+  what: string;
+  since: string;
+  days: number;
+}
+
+export interface BdDashboard {
+  /** The BD's agreements at each step of the workflow (counts). */
+  stages: { draft: number; signing: number; legal: number; admin: number; active: number };
+  waiting: WaitingItem[];
+  /** Live agreements owned by the BD, expiring within 60 days (soonest first). */
+  expiring: AgreementSummary[];
+  stats: { active: number; expiring: number; activated30d: number; cps: number; nonStandard: number };
 }
 
 export async function dashboard(institutionId?: string): Promise<Dashboard> {
@@ -83,6 +106,50 @@ export async function dashboard(institutionId?: string): Promise<Dashboard> {
       cps: new Set(ags.map((a) => a.cpId)).size,
     },
     wizardDrafts: d.wizardDrafts.filter((w) => w.userId === user.id).length,
+    bd: user.roles.includes('bd_exec') ? bdDashboard(ags.filter((a) => a.ownerId === user.id)) : undefined,
+  };
+}
+
+function bdDashboard(own: ReturnType<typeof getDb>['agreements']): BdDashboard {
+  const d = getDb();
+  const t = today();
+  const at = (iso?: string) => (iso ?? t).slice(0, 10);
+  const waiting: WaitingItem[] = [];
+  const wait = (a: (typeof own)[number], on: WaitingOn, what: string, since?: string) =>
+    waiting.push({ agreement: toSummary(a), on, what, since: at(since), days: Math.max(0, daysBetween(at(since), t)) });
+  for (const a of own) {
+    if (a.status === 'pending_approval') wait(a, 'legal', 'Legal is reviewing the signed agreement', a.updatedAt);
+    else if (a.status === 'pending_admin_approval') wait(a, 'admin', 'Admin final approval', a.updatedAt);
+    else if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') wait(a, 'signers', 'Out for e-signature', a.esign.sentAt ?? a.updatedAt);
+    else if (a.docRequest?.status === 'sent_to_cp') wait(a, 'cp', 'CP to upload corrected documents', a.docRequest.sentAt);
+    else if (a.status === 'draft' && d.deviations.some((x) => x.agreementId === a.id && x.status === 'pending')) {
+      const first = d.deviations.filter((x) => x.agreementId === a.id && x.status === 'pending').map((x) => x.requestedAt).sort()[0];
+      wait(a, 'deviation', 'Legal is reviewing a deviation request', first);
+    }
+  }
+  const live = own.filter((a) => a.status === 'active' || a.status === 'notice_period');
+  const expiring = own
+    .filter((a) => a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60)
+    .map(toSummary)
+    .sort((a, b) => (a.endDate ?? '').localeCompare(b.endDate ?? ''));
+  const since30 = shiftDays(t, -30);
+  return {
+    stages: {
+      draft: own.filter((a) => a.status === 'draft').length,
+      signing: own.filter((a) => a.status === 'approved_for_signing').length,
+      legal: own.filter((a) => a.status === 'pending_approval' || (a.status === 'signed_copy_uploaded' && a.source === 'app')).length,
+      admin: own.filter((a) => a.status === 'pending_admin_approval').length,
+      active: live.length,
+    },
+    waiting: waiting.sort((a, b) => b.days - a.days),
+    expiring,
+    stats: {
+      active: live.length,
+      expiring: expiring.length,
+      activated30d: own.filter((a) => a.activatedAt && a.activatedAt.slice(0, 10) >= since30).length,
+      cps: new Set(own.map((a) => a.cpId)).size,
+      nonStandard: live.filter((a) => a.nonStandard).length,
+    },
   };
 }
 

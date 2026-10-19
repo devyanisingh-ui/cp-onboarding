@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:bd-home-legal-step": {
+      "declaredAt": 1792387894288,
+      "id": "flow:bd-home-legal-step",
+      "state": "declared",
+      "statement": "On a BD Executive’s Home, the Legal review step of the pipeline opens just their own agreements that are with Legal.",
+      "status": "proposed",
+      "subject": "bd-home-legal-step",
+      "surface": {
+        "flow": "bd-home-legal-step"
+      },
+      "updatedAt": 1792387894296
+    }
+  },
+  "subject": "bd-home-legal-step",
+  "version": 1
+}

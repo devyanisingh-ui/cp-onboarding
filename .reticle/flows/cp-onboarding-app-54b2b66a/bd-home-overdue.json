@@ -1,0 +1,61 @@
+{
+  "version": 2,
+  "name": "bd-home-overdue",
+  "projectId": "cp-onboarding-app-54b2b66a",
+  "createdAt": 1792387897119,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "1 Overdue"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/tasks"
+          },
+          {
+            "kind": "text",
+            "contains": "Rework rejected draft: Sharma & Gill Associates"
+          },
+          {
+            "kind": "text",
+            "contains": "Get signed & upload: Ramesh Chandra Yadav",
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 10000,
+      "page": "/",
+      "endPage": "/tasks",
+      "source": {
+        "file": "src/pages/HomeBd.tsx",
+        "line": 62
+      }
+    }
+  ],
+  "startPath": "/",
+  "intent": "On a BD Executive’s Home, the Overdue count under Needs your action opens just their overdue tasks.",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/tasks"
+    }
+  ],
+  "author": {
+    "agent": "claude-code-shim"
+  },
+  "intentId": "flow:bd-home-overdue"
+}

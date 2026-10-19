@@ -1,0 +1,65 @@
+{
+  "version": 2,
+  "name": "bd-home-legal-step",
+  "projectId": "cp-onboarding-app-54b2b66a",
+  "createdAt": 1792387894288,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "2 Legal review With Legal"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/agreements"
+          },
+          {
+            "kind": "text",
+            "contains": "EduBridge Services Pvt. Ltd"
+          },
+          {
+            "kind": "text",
+            "contains": "Mohammed Irfan"
+          },
+          {
+            "kind": "text",
+            "contains": "Scholars Gateway India Pvt. Ltd",
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 10000,
+      "page": "/",
+      "endPage": "/agreements",
+      "source": {
+        "file": "src/pages/HomeBd.tsx",
+        "line": 195
+      }
+    }
+  ],
+  "startPath": "/",
+  "intent": "On a BD Executive’s Home, the Legal review step of the pipeline opens just their own agreements that are with Legal.",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/agreements"
+    }
+  ],
+  "author": {
+    "agent": "claude-code-shim"
+  },
+  "intentId": "flow:bd-home-legal-step"
+}

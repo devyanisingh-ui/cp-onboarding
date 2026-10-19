@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-bd-home-actions-grouped": {
+      "declaredAt": 1792387865522,
+      "id": "flow:drive-bd-home-actions-grouped",
+      "state": "declared",
+      "statement": "bd-home-actions-grouped",
+      "status": "proposed",
+      "subject": "drive-bd-home-actions-grouped",
+      "surface": {
+        "flow": "drive-bd-home-actions-grouped"
+      },
+      "updatedAt": 1792387865535
+    }
+  },
+  "subject": "drive-bd-home-actions-grouped",
+  "version": 1
+}
