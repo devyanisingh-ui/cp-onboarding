@@ -140,6 +140,26 @@
 
 /* ───────────────────────── Glass & surface utilities ───────────────────────── */
 
+/* App shell surfaces: light gradients that blend white with the canvas colour and a soft teal. */
+@utility shell-sidebar {
+  background-color: var(--glass-1);
+  background-image: linear-gradient(180deg, rgb(255 255 255 / 0.9) 0%, rgb(244 249 251 / 0.82) 45%, rgb(226 240 245 / 0.86) 100%);
+  backdrop-filter: blur(var(--blur-md)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(150%);
+}
+@utility shell-header {
+  background-color: var(--glass-1);
+  background-image: linear-gradient(90deg, rgb(255 255 255 / 0.88) 0%, rgb(243 249 251 / 0.82) 55%, rgb(238 240 253 / 0.82) 100%);
+  backdrop-filter: blur(var(--blur-md)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-md)) saturate(150%);
+}
+@utility shell-header-solid {
+  background-color: rgb(255 255 255 / 0.94);
+  background-image: linear-gradient(90deg, rgb(255 255 255 / 0.96) 0%, rgb(244 250 252 / 0.95) 55%, rgb(241 243 254 / 0.95) 100%);
+  backdrop-filter: blur(var(--blur-lg)) saturate(150%);
+  -webkit-backdrop-filter: blur(var(--blur-lg)) saturate(150%);
+}
+
 @utility glass-1 {
   background-color: var(--glass-1);
   backdrop-filter: blur(var(--blur-md)) saturate(160%);
@@ -239,11 +259,11 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(60rem 42rem at -6% -14%, rgb(18 122 153 / 0.14), transparent 62%),
-      radial-gradient(52rem 38rem at 106% -8%, rgb(99 102 241 / 0.07), transparent 60%),
-      radial-gradient(46rem 34rem at 82% 112%, rgb(18 122 153 / 0.12), transparent 62%),
-      radial-gradient(42rem 32rem at 8% 106%, rgb(120 140 165 / 0.08), transparent 60%),
-      linear-gradient(160deg, #fafcfe 0%, #f2f6f9 38%, var(--color-canvas) 70%, #e6f0f3 100%);
+      radial-gradient(60rem 42rem at -6% -14%, rgb(18 122 153 / 0.12), transparent 62%),
+      radial-gradient(52rem 38rem at 106% -8%, rgb(99 102 241 / 0.09), transparent 60%),
+      radial-gradient(48rem 36rem at 84% 112%, rgb(18 122 153 / 0.16), transparent 62%),
+      radial-gradient(42rem 32rem at 8% 106%, rgb(120 140 165 / 0.1), transparent 60%),
+      linear-gradient(155deg, #fbfdfe 0%, #f3f7fa 30%, var(--color-canvas) 62%, #e3eff3 100%);
   }
   body::after {
     content: '';

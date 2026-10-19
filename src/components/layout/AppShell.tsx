@@ -30,7 +30,7 @@ export function AppShell() {
       </a>
 
       {/* Sidebar: full on desktop, icon rail on tablet, hidden on phone */}
-      <aside className="glass-1 fixed inset-y-0 left-0 z-30 hidden w-[72px] flex-col border-r border-white/70 shadow-[1px_0_0_var(--glass-hairline)] md:flex lg:w-60" aria-label="Main">
+      <aside className="shell-sidebar fixed inset-y-0 left-0 z-30 hidden w-[72px] flex-col border-r border-white/70 shadow-[1px_0_0_var(--glass-hairline)] md:flex lg:w-60" aria-label="Main">
         <div className="flex h-16 items-center px-4 lg:px-5">
           <NavLink to="/" aria-label="CP Onboarding home">
             <span className="lg:hidden">
@@ -132,8 +132,8 @@ function Header() {
       className={cn(
         'sticky top-0 z-20 flex h-16 items-center gap-2 border-b px-4 transition-[background-color,box-shadow,border-color] duration-200 ease-out sm:px-6 lg:px-8 xl:px-10',
         scrolled
-          ? 'border-line/80 bg-[rgb(255_255_255/0.94)] shadow-[0_1px_0_var(--glass-hairline),0_6px_20px_-10px_rgb(22_28_56/0.18)] backdrop-blur-xl backdrop-saturate-150'
-          : 'glass-1 border-white/70 shadow-[0_1px_0_var(--glass-hairline)]',
+          ? 'shell-header-solid border-line/80 shadow-[0_1px_0_var(--glass-hairline),0_6px_20px_-10px_rgb(22_28_56/0.18)]'
+          : 'shell-header border-white/70 shadow-[0_1px_0_var(--glass-hairline)]',
       )}
     >
       <div className="md:hidden">
