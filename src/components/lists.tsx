@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, ChevronRight, Flag, ShieldAlert } from 'lucide-react';
+import { AlarmClock, AlertTriangle, BadgeCheck, Ban, ChevronRight, FilePen, FileSearch, FileSignature, FileUp, FileWarning, Flag, Gavel, RefreshCcw, Scale, ScrollText, ShieldAlert, ShieldCheck, TableProperties } from 'lucide-react';
+import type { ReactNode } from 'react';
+import type { TaskType } from '@/types';
 import type { AgreementSummary, TaskItem } from '@/services/mockApi';
 import { cn } from '@/lib/cn';
 import { formatShortDate, daysUntil } from '@/lib/dates';
@@ -107,13 +109,48 @@ export function AgreementTable({ items, caption, showOwner = true, compact }: { 
   );
 }
 
+/** Icon and colour per task type, so a list reads at a glance. */
+export const TASK_TYPE_META: Record<TaskType, { icon: ReactNode; tone: string }> = {
+  gate1_approval: { icon: <Gavel />, tone: 'bg-amber-50 text-amber-700 ring-amber-200' },
+  deviation_review: { icon: <Scale />, tone: 'bg-orange-50 text-orange-700 ring-orange-200' },
+  fix_rejected: { icon: <FilePen />, tone: 'bg-red-50 text-red-700 ring-red-200' },
+  signing_upload: { icon: <FileSignature />, tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  gate2_verification: { icon: <ShieldCheck />, tone: 'bg-purple-50 text-purple-700 ring-purple-200' },
+  renewal_decision: { icon: <RefreshCcw />, tone: 'bg-teal-50 text-teal-700 ring-teal-200' },
+  non_renewal_confirm: { icon: <Ban />, tone: 'bg-slate-100 text-slate-700 ring-slate-300' },
+  termination_confirm: { icon: <Ban />, tone: 'bg-red-50 text-red-700 ring-red-200' },
+  rate_card_approval: { icon: <TableProperties />, tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
+  template_approval: { icon: <ScrollText />, tone: 'bg-indigo-50 text-indigo-700 ring-indigo-200' },
+  warning_override: { icon: <ShieldAlert />, tone: 'bg-orange-50 text-orange-700 ring-orange-200' },
+  legacy_scan_upload: { icon: <FileUp />, tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
+  rate_review: { icon: <TableProperties />, tone: 'bg-slate-100 text-slate-700 ring-slate-300' },
+  admin_approval: { icon: <BadgeCheck />, tone: 'bg-purple-50 text-purple-700 ring-purple-200' },
+  cp_doc_request: { icon: <FileWarning />, tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
+  cp_doc_review: { icon: <FileSearch />, tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
+};
+
+/** How soon a task is due, as a coloured pill. */
+export function DuePill({ t }: { t: TaskItem }) {
+  const label = t.overdue ? `${-t.daysLeft} day${t.daysLeft === -1 ? '' : 's'} overdue` : t.daysLeft === 0 ? 'Due today' : `Due in ${t.daysLeft} day${t.daysLeft === 1 ? '' : 's'}`;
+  const tone = t.overdue ? 'bg-danger-50 text-danger-700 ring-danger-200' : t.daysLeft <= 1 ? 'bg-amber-50 text-amber-800 ring-amber-200' : t.daysLeft <= 7 ? 'bg-primary-50 text-primary-800 ring-primary-200' : 'bg-slate-50 text-slate-600 ring-slate-200';
+  return (
+    <span className={cn('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset', tone)}>
+      {t.overdue && <AlarmClock className="size-3" aria-hidden />}
+      {label}
+    </span>
+  );
+}
+
 export function TaskRow({ t, compact }: { t: TaskItem; compact?: boolean }) {
+  const meta = TASK_TYPE_META[t.type];
   return (
     <Link
       to={t.link}
-      className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', t.overdue && 'bg-danger-50/50 hover:bg-danger-50')}
+      className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', t.overdue && 'bg-danger-50/40 hover:bg-danger-50/70')}
     >
-      <span className={cn('mt-1 size-2.5 shrink-0 rounded-full', t.overdue ? 'bg-danger-600' : t.daysLeft <= 1 ? 'bg-amber-500' : 'bg-primary-500')} aria-hidden />
+      <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', meta.tone)} aria-hidden>
+        {meta.icon}
+      </span>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-ink group-hover:text-primary-800">{t.title}</p>
         <p className="mt-0.5 text-xs text-muted">
@@ -128,12 +165,11 @@ export function TaskRow({ t, compact }: { t: TaskItem; compact?: boolean }) {
           </p>
         )}
       </div>
-      <div className="shrink-0 text-right">
-        <p className={cn('text-xs font-semibold', t.overdue ? 'text-danger-700' : 'text-ink-soft')}>
-          {t.overdue ? `${-t.daysLeft} day${t.daysLeft === -1 ? '' : 's'} overdue` : t.daysLeft === 0 ? 'Due today' : `Due in ${t.daysLeft} day${t.daysLeft === 1 ? '' : 's'}`}
-        </p>
+      <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+        <DuePill t={t} />
         <p className="text-xs text-subtle">{formatShortDate(t.dueDate)}</p>
       </div>
+      {!compact && <ChevronRight className="mt-2 hidden size-4 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5 group-hover:text-primary-600 sm:block" aria-hidden />}
     </Link>
   );
 }

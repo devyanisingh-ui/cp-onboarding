@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-tasks-summary-cards": {
+      "declaredAt": 1792400173677,
+      "id": "flow:drive-tasks-summary-cards",
+      "state": "declared",
+      "statement": "tasks-summary-cards",
+      "status": "proposed",
+      "subject": "drive-tasks-summary-cards",
+      "surface": {
+        "flow": "drive-tasks-summary-cards"
+      },
+      "updatedAt": 1792400173718
+    }
+  },
+  "subject": "drive-tasks-summary-cards",
+  "version": 1
+}

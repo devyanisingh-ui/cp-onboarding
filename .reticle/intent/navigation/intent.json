@@ -1,0 +1,19 @@
+{
+  "intents": {
+    "breadcrumb-home-badge": {
+      "declaredAt": 1792400148309,
+      "id": "breadcrumb-home-badge",
+      "state": "declared",
+      "statement": "The first breadcrumb on every inner page is a small gradient Home badge that links back to Home.",
+      "status": "proposed",
+      "subject": "navigation",
+      "surface": {
+        "flow": "navigation",
+        "route": "/tasks"
+      },
+      "updatedAt": 1792400148408
+    }
+  },
+  "subject": "navigation",
+  "version": 1
+}

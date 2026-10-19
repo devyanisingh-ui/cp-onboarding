@@ -1,0 +1,149 @@
+{
+  "version": 2,
+  "name": "drive-tasks-summary-cards",
+  "projectId": "cp-onboarding-app-54b2b66a",
+  "createdAt": 1792400173651,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "1 Overdue SLA breached"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/tasks"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "switch",
+              "name": "Overdue only (1)"
+            },
+            "state": "checked"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "region",
+              "name": "Overdue"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "region",
+              "name": "Due today"
+            },
+            "absent": true
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "region",
+              "name": "Later"
+            },
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 8000,
+      "page": "/tasks",
+      "source": {
+        "file": "src/pages/Tasks.tsx",
+        "line": 37
+      }
+    },
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "tab",
+        "name": "Completed"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "role": "heading",
+              "name": "No completed tasks yet"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "text",
+            "contains": "Escalated to you",
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 8000,
+      "page": "/tasks",
+      "source": {
+        "file": "src/components/ui/Data.tsx",
+        "line": 140
+      }
+    },
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "link",
+        "name": "Home",
+        "nth": 1,
+        "of": 3
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "heading",
+              "name": "My agreements pipeline"
+            },
+            "state": "visible"
+          }
+        ]
+      },
+      "timeoutMs": 8000,
+      "page": "/tasks",
+      "endPage": "/"
+    }
+  ],
+  "startPath": "/tasks",
+  "intent": "tasks-summary-cards",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/tasks"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/"
+    }
+  ],
+  "author": {
+    "agent": "claude-code"
+  },
+  "intentId": "flow:drive-tasks-summary-cards"
+}

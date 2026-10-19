@@ -136,7 +136,7 @@ export function SubHeader() {
                   <li key={i} className={cn('flex min-w-0 items-center gap-1', hideOnPhone && 'max-sm:hidden', isLast && 'shrink')}>
                     {i > 0 && <ChevronRight className={cn('size-3.5 shrink-0 text-subtle', i === crumbs.length - 2 && 'max-sm:hidden')} aria-hidden />}
                     {c.to ? (
-                      <Link to={c.to} title={i === 0 ? c.label : undefined} className="hit-area flex min-w-0 items-center truncate rounded text-muted transition-colors hover:text-primary-700">
+                      <Link to={c.to} title={i === 0 ? c.label : undefined} className="group/home hit-area flex min-w-0 items-center truncate rounded text-muted transition-colors hover:text-primary-700">
                         {i === 0 ? <HomeCrumb /> : c.label}
                       </Link>
                     ) : (
@@ -159,7 +159,13 @@ export function SubHeader() {
 function HomeCrumb() {
   return (
     <>
-      <Home className="size-4 shrink-0" aria-hidden />
+      {/* A small gradient badge, so home stands out at the start of the trail. */}
+      <span
+        className="flex size-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-primary-500 via-primary-600 to-accent-500 text-white shadow-[0_2px_6px_-1px_rgb(18_122_153/0.45),inset_0_1px_0_rgb(255_255_255/0.35)] ring-1 ring-white/60 transition-transform duration-200 group-hover/home:-translate-y-px group-hover/home:scale-105"
+        aria-hidden
+      >
+        <Home className="size-3.5" strokeWidth={2.25} />
+      </span>
       <span className="sr-only">Home</span>
     </>
   );

@@ -1,0 +1,45 @@
+{
+  "intents": {
+    "tasks-completed-rows": {
+      "declaredAt": 1792400148309,
+      "id": "tasks-completed-rows",
+      "state": "declared",
+      "statement": "Completed tasks on My Tasks show their task type and a Done date pill.",
+      "status": "proposed",
+      "subject": "my-tasks",
+      "surface": {
+        "flow": "my-tasks",
+        "route": "/tasks"
+      },
+      "updatedAt": 1792400148387
+    },
+    "tasks-grouped-by-urgency": {
+      "declaredAt": 1792400148309,
+      "id": "tasks-grouped-by-urgency",
+      "state": "declared",
+      "statement": "Open tasks on My Tasks are grouped under Overdue, Due today, This week and Later, each row showing an icon for its task type and a coloured due-date pill.",
+      "status": "proposed",
+      "subject": "my-tasks",
+      "surface": {
+        "flow": "my-tasks",
+        "route": "/tasks"
+      },
+      "updatedAt": 1792400148363
+    },
+    "tasks-summary-cards": {
+      "declaredAt": 1792400148309,
+      "id": "tasks-summary-cards",
+      "state": "declared",
+      "statement": "My Tasks opens with summary cards for open tasks, overdue (SLA breached), due this week and escalated to me; the Overdue card switches the list to overdue tasks only.",
+      "status": "proposed",
+      "subject": "my-tasks",
+      "surface": {
+        "flow": "my-tasks",
+        "route": "/tasks"
+      },
+      "updatedAt": 1792400148327
+    }
+  },
+  "subject": "my-tasks",
+  "version": 1
+}

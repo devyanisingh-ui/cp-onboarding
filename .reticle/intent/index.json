@@ -79,6 +79,12 @@
       "subject": "drive-signin-needs-both-fields"
     },
     {
+      "id": "flow:drive-tasks-summary-cards",
+      "statement": "tasks-summary-cards",
+      "status": "proposed",
+      "subject": "drive-tasks-summary-cards"
+    },
+    {
       "id": "legal-home-deviations",
       "statement": "Legal’s Home lists draft agreements with deviation requests awaiting Le…",
       "status": "proposed",
@@ -101,6 +107,30 @@
       "statement": "Legal’s Home shows Legal’s part of the workflow with counts: deviations…",
       "status": "proposed",
       "subject": "legal-dashboard"
+    },
+    {
+      "id": "tasks-completed-rows",
+      "statement": "Completed tasks on My Tasks show their task type and a Done date pill.",
+      "status": "proposed",
+      "subject": "my-tasks"
+    },
+    {
+      "id": "tasks-grouped-by-urgency",
+      "statement": "Open tasks on My Tasks are grouped under Overdue, Due today, This week…",
+      "status": "proposed",
+      "subject": "my-tasks"
+    },
+    {
+      "id": "tasks-summary-cards",
+      "statement": "My Tasks opens with summary cards for open tasks, overdue (SLA breached…",
+      "status": "proposed",
+      "subject": "my-tasks"
+    },
+    {
+      "id": "breadcrumb-home-badge",
+      "statement": "The first breadcrumb on every inner page is a small gradient Home badge…",
+      "status": "proposed",
+      "subject": "navigation"
     },
     {
       "id": "signin-lands-on-dashboard",
