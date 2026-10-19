@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:sign-in-success": {
+      "declaredAt": 1792385507366,
+      "id": "flow:sign-in-success",
+      "state": "declared",
+      "statement": "A BD Executive who types their username in any case with stray spaces and the right password lands on their Home dashboard, greeted by first name with the BD Executive role shown.",
+      "status": "proposed",
+      "subject": "sign-in-success",
+      "surface": {
+        "flow": "sign-in-success"
+      },
+      "updatedAt": 1792385507373
+    }
+  },
+  "subject": "sign-in-success",
+  "version": 1
+}

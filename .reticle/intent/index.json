@@ -1,0 +1,59 @@
+{
+  "entries": [
+    {
+      "id": "flow:drive-signin-lands-on-dashboard",
+      "statement": "signin-lands-on-dashboard",
+      "status": "proposed",
+      "subject": "drive-signin-lands-on-dashboard"
+    },
+    {
+      "id": "flow:drive-signin-needs-both-fields",
+      "statement": "signin-needs-both-fields",
+      "status": "proposed",
+      "subject": "drive-signin-needs-both-fields"
+    },
+    {
+      "id": "signin-lands-on-dashboard",
+      "statement": "A BD Executive who signs in with a valid username and password lands on…",
+      "status": "proposed",
+      "subject": "sign-in"
+    },
+    {
+      "id": "signin-needs-both-fields",
+      "statement": "On the sign-in page, the Sign in button stays disabled until both a use…",
+      "status": "proposed",
+      "subject": "sign-in"
+    },
+    {
+      "id": "signin-username-forgiving",
+      "statement": "Usernames are matched without regard to letter case or surrounding spac…",
+      "status": "proposed",
+      "subject": "sign-in"
+    },
+    {
+      "id": "signin-wrong-password-rejected",
+      "statement": "Signing in with a wrong password keeps the person on the sign-in page a…",
+      "status": "proposed",
+      "subject": "sign-in"
+    },
+    {
+      "id": "flow:sign-in-bd-executive",
+      "statement": "A BD Executive signs in with a username typed in any case and with stra…",
+      "status": "proposed",
+      "subject": "sign-in-bd-executive"
+    },
+    {
+      "id": "flow:sign-in-success",
+      "statement": "A BD Executive who types their username in any case with stray spaces a…",
+      "status": "proposed",
+      "subject": "sign-in-success"
+    },
+    {
+      "id": "flow:sign-in-wrong-password",
+      "statement": "Someone who enters a wrong password is refused: a visible \"Incorrect us…",
+      "status": "proposed",
+      "subject": "sign-in-wrong-password"
+    }
+  ],
+  "version": 1
+}

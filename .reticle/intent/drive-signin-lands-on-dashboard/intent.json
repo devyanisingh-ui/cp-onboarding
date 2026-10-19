@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-signin-lands-on-dashboard": {
+      "declaredAt": 1792385380811,
+      "id": "flow:drive-signin-lands-on-dashboard",
+      "state": "declared",
+      "statement": "signin-lands-on-dashboard",
+      "status": "proposed",
+      "subject": "drive-signin-lands-on-dashboard",
+      "surface": {
+        "flow": "drive-signin-lands-on-dashboard"
+      },
+      "updatedAt": 1792385380846
+    }
+  },
+  "subject": "drive-signin-lands-on-dashboard",
+  "version": 1
+}

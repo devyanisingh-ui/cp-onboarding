@@ -1,0 +1,110 @@
+{
+  "version": 2,
+  "name": "sign-in-success",
+  "projectId": "cp-onboarding-app-54b2b66a",
+  "createdAt": 1792385507366,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "textbox",
+        "name": "Username"
+      },
+      "args": {
+        "value": " Kavya.Iyer "
+      },
+      "action": "fill",
+      "page": "/signin",
+      "source": {
+        "file": "src/components/ui/Form.tsx",
+        "line": 94
+      }
+    },
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "textbox",
+        "name": "Password"
+      },
+      "args": {
+        "value": "<redacted: supply at replay>",
+        "secret": "RETICLE_SECRET_PASSWORD"
+      },
+      "action": "fill",
+      "expect": {
+        "kind": "element",
+        "query": {
+          "role": "button",
+          "name": "Sign in"
+        },
+        "state": "enabled"
+      },
+      "page": "/signin",
+      "source": {
+        "file": "src/components/ui/Form.tsx",
+        "line": 94
+      }
+    },
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "Sign in"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/"
+          },
+          {
+            "kind": "text",
+            "contains": ", Kavya"
+          },
+          {
+            "kind": "text",
+            "contains": "BD Executive"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "role": "heading",
+              "name": "Sign in"
+            },
+            "absent": true
+          }
+        ]
+      },
+      "page": "/signin",
+      "endPage": "/",
+      "source": {
+        "file": "src/components/ui/Button.tsx",
+        "line": 46
+      }
+    }
+  ],
+  "startPath": "/signin",
+  "intent": "A BD Executive who types their username in any case with stray spaces and the right password lands on their Home dashboard, greeted by first name with the BD Executive role shown.",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/signin"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/"
+    }
+  ],
+  "author": {
+    "agent": "claude-code-shim"
+  },
+  "intentId": "flow:sign-in-success"
+}

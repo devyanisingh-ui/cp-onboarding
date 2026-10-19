@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:sign-in-wrong-password": {
+      "declaredAt": 1792385528602,
+      "id": "flow:sign-in-wrong-password",
+      "state": "declared",
+      "statement": "Someone who enters a wrong password is refused: a visible \"Incorrect username or password.\" error appears and they stay on the sign-in page, not signed in.",
+      "status": "proposed",
+      "subject": "sign-in-wrong-password",
+      "surface": {
+        "flow": "sign-in-wrong-password"
+      },
+      "updatedAt": 1792385528604
+    }
+  },
+  "subject": "sign-in-wrong-password",
+  "version": 1
+}

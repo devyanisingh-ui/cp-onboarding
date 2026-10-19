@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-signin-needs-both-fields": {
+      "declaredAt": 1792385356778,
+      "id": "flow:drive-signin-needs-both-fields",
+      "state": "declared",
+      "statement": "signin-needs-both-fields",
+      "status": "proposed",
+      "subject": "drive-signin-needs-both-fields",
+      "surface": {
+        "flow": "drive-signin-needs-both-fields"
+      },
+      "updatedAt": 1792385356782
+    }
+  },
+  "subject": "drive-signin-needs-both-fields",
+  "version": 1
+}

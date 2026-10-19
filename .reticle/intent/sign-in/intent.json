@@ -1,0 +1,58 @@
+{
+  "intents": {
+    "signin-lands-on-dashboard": {
+      "declaredAt": 1792385292341,
+      "id": "signin-lands-on-dashboard",
+      "state": "declared",
+      "statement": "A BD Executive who signs in with a valid username and password lands on their Home dashboard, greeted by first name, with BD Executive shown as their role.",
+      "status": "proposed",
+      "subject": "sign-in",
+      "surface": {
+        "flow": "sign-in",
+        "route": "/signin"
+      },
+      "updatedAt": 1792385299933
+    },
+    "signin-needs-both-fields": {
+      "declaredAt": 1792385292341,
+      "id": "signin-needs-both-fields",
+      "state": "declared",
+      "statement": "On the sign-in page, the Sign in button stays disabled until both a username and a password are entered.",
+      "status": "proposed",
+      "subject": "sign-in",
+      "surface": {
+        "flow": "sign-in",
+        "route": "/signin"
+      },
+      "updatedAt": 1792385299911
+    },
+    "signin-username-forgiving": {
+      "declaredAt": 1792385292341,
+      "id": "signin-username-forgiving",
+      "state": "declared",
+      "statement": "Usernames are matched without regard to letter case or surrounding spaces, so \" Kavya.Iyer \" signs in as kavya.iyer.",
+      "status": "proposed",
+      "subject": "sign-in",
+      "surface": {
+        "flow": "sign-in",
+        "route": "/signin"
+      },
+      "updatedAt": 1792385299923
+    },
+    "signin-wrong-password-rejected": {
+      "declaredAt": 1792385292341,
+      "id": "signin-wrong-password-rejected",
+      "state": "declared",
+      "statement": "Signing in with a wrong password keeps the person on the sign-in page and shows an error; they are not signed in.",
+      "status": "proposed",
+      "subject": "sign-in",
+      "surface": {
+        "flow": "sign-in",
+        "route": "/signin"
+      },
+      "updatedAt": 1792385299917
+    }
+  },
+  "subject": "sign-in",
+  "version": 1
+}
