@@ -229,7 +229,9 @@
     background-color: var(--color-canvas);
     min-height: 100dvh;
   }
-  /* Ambient background: soft light from three corners + very fine grain. Fixed so it never scrolls. */
+  /* Ambient background: a light wash that blends near-white (top left) into the canvas colour and a
+     soft teal-mint (bottom right), with gentle teal and lavender light from the corners and very fine
+     grain. Fixed so it never scrolls. */
   body::before {
     content: '';
     position: fixed;
@@ -237,11 +239,11 @@
     z-index: -1;
     pointer-events: none;
     background:
-      radial-gradient(60rem 42rem at -6% -14%, rgb(18 122 153 / 0.2), transparent 62%),
-      radial-gradient(52rem 38rem at 106% -8%, rgb(120 140 165 / 0.18), transparent 60%),
-      radial-gradient(46rem 34rem at 80% 112%, rgb(18 122 153 / 0.1), transparent 62%),
-      radial-gradient(42rem 32rem at 10% 106%, rgb(120 140 165 / 0.1), transparent 60%),
-      var(--color-canvas);
+      radial-gradient(60rem 42rem at -6% -14%, rgb(18 122 153 / 0.14), transparent 62%),
+      radial-gradient(52rem 38rem at 106% -8%, rgb(99 102 241 / 0.07), transparent 60%),
+      radial-gradient(46rem 34rem at 82% 112%, rgb(18 122 153 / 0.12), transparent 62%),
+      radial-gradient(42rem 32rem at 8% 106%, rgb(120 140 165 / 0.08), transparent 60%),
+      linear-gradient(160deg, #fafcfe 0%, #f2f6f9 38%, var(--color-canvas) 70%, #e6f0f3 100%);
   }
   body::after {
     content: '';

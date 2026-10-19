@@ -1,6 +1,6 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode, type ThHTMLAttributes, type TdHTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/format';
 import { STATUS_META, TONE_CLASSES, type StatusTone } from '@/lib/status';
@@ -282,24 +282,45 @@ export function ProgressSteps({ steps, current, onStepClick, maxReached }: { ste
   );
 }
 
-export function StatTile({ label, value, icon, tone = 'accent', to, hint, hintTone = 'muted' }: { label: string; value: ReactNode; icon: ReactNode; tone?: StatusTone; to?: string; hint?: string; hintTone?: 'muted' | 'danger' }) {
+/** Each tone's light wash (corner glow) and sparkle colour for stat tiles. */
+const TILE_GLOW: Record<StatusTone, { wash: string; mark: string }> = {
+  grey: { wash: 'rgb(148 163 184 / 0.16)', mark: 'text-slate-400' },
+  amber: { wash: 'rgb(251 191 36 / 0.16)', mark: 'text-amber-400' },
+  blue: { wash: 'rgb(96 165 250 / 0.16)', mark: 'text-blue-400' },
+  purple: { wash: 'rgb(192 132 252 / 0.16)', mark: 'text-purple-400' },
+  green: { wash: 'rgb(74 222 128 / 0.16)', mark: 'text-green-500' },
+  orange: { wash: 'rgb(251 146 60 / 0.16)', mark: 'text-orange-400' },
+  dark: { wash: 'rgb(100 116 139 / 0.14)', mark: 'text-slate-400' },
+  red: { wash: 'rgb(248 113 113 / 0.16)', mark: 'text-red-400' },
+  accent: { wash: 'rgb(18 122 153 / 0.14)', mark: 'text-primary-400' },
+};
+
+export function StatTile({ label, value, icon, tone = 'accent', to, hint, hintTone = 'muted' }: { label: ReactNode; value: ReactNode; icon: ReactNode; tone?: StatusTone; to?: string; hint?: ReactNode; hintTone?: 'muted' | 'danger' }) {
+  const glow = TILE_GLOW[tone];
   const inner = (
     <>
+      {/* Decoration: a small sparkle in the corner. */}
+      <Sparkles className={cn('pointer-events-none absolute right-3 top-3 size-3.5 opacity-50', glow.mark)} aria-hidden />
       <div className={cn('flex size-11 shrink-0 items-center justify-center rounded-xl ring-1 ring-inset [&_svg]:size-5', TONE_CLASSES[tone])}>{icon}</div>
       <div className="min-w-0 flex-1">
         <p className="text-[26px] font-semibold leading-none tracking-tight tabular-nums text-ink">{value}</p>
         <p className="mt-1.5 text-sm leading-snug text-muted">{label}</p>
         {hint && <p className={cn('mt-0.5 text-xs font-medium', hintTone === 'danger' ? 'text-danger-700' : 'text-subtle')}>{hint}</p>}
       </div>
-      {to && <ChevronRight className="hidden size-4 shrink-0 text-subtle opacity-0 sm:block transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" aria-hidden />}
+      {/* Floats over the card (no reserved width) so the label and note get the full text column. */}
+      {to && <ChevronRight className="absolute right-2.5 top-1/2 hidden size-4 -translate-y-1/2 text-subtle opacity-0 sm:block transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" aria-hidden />}
     </>
   );
-  const cls = 'surface group flex flex-col items-start gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:gap-4';
+  const cls = 'surface group relative flex flex-col items-start gap-3 overflow-hidden rounded-xl p-4 sm:flex-row sm:items-center sm:gap-4';
+  // Light gradient over the glass: white at the top left, the tone's tint glowing from the bottom right.
+  const style = { backgroundImage: `radial-gradient(14rem 9rem at 100% 100%, ${glow.wash}, transparent 70%), linear-gradient(135deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0))` };
   return to ? (
-    <Link to={to} className={cn(cls, 'surface-interactive')}>
+    <Link to={to} className={cn(cls, 'surface-interactive')} style={style}>
       {inner}
     </Link>
   ) : (
-    <div className={cls}>{inner}</div>
+    <div className={cls} style={style}>
+      {inner}
+    </div>
   );
 }

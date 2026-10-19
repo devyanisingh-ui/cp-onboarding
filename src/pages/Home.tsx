@@ -55,11 +55,24 @@ export function Home() {
       icon={<Inbox />}
       tone="accent"
       to={foldOverdue && data.overdueCount ? '/tasks?overdue=1' : '/tasks'}
-      hint={foldOverdue ? (data.overdueCount ? `${data.overdueCount} overdue (SLA breached)` : 'None overdue') : undefined}
+      hint={
+        foldOverdue ? (
+          data.overdueCount ? (
+            // One line when it fits: the count, then "(SLA breached)" in a smaller, lighter type. On a
+            // narrow tile "(SLA breached)" moves as a whole to the next line, never cut mid-word.
+            <>
+              <span className="whitespace-nowrap">{data.overdueCount} overdue</span>{' '}
+              <span className="whitespace-nowrap text-[10.5px] font-normal opacity-80">(SLA breached)</span>
+            </>
+          ) : (
+            'None overdue'
+          )
+        ) : undefined
+      }
       hintTone={foldOverdue && data.overdueCount ? 'danger' : 'muted'}
     />
   );
-  const overdueTile = <StatTile key="o" label="Overdue (SLA breached)" value={data.overdueCount} icon={<AlarmClock />} tone={data.overdueCount ? 'red' : 'grey'} to="/tasks?overdue=1" />;
+  const overdueTile = <StatTile key="o" label="Overdue" hint="SLA breached" hintTone={data.overdueCount ? 'danger' : 'muted'} value={data.overdueCount} icon={<AlarmClock />} tone={data.overdueCount ? 'red' : 'grey'} to="/tasks?overdue=1" />;
   tiles.unshift(...(foldOverdue ? [pendingTile] : [pendingTile, overdueTile]));
   if (tiles.length % 2 === 1 && !tiles.includes(activeTile)) tiles.push(activeTile);
 
