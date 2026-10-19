@@ -34,12 +34,12 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
 
       <WorkflowStrip
         title="Legal’s part of the workflow"
-        description="Highlighted steps are waiting for you: deviations are decided before signing, signed agreements after. Documents sent back are with the BD or CP."
+        description="Highlighted steps are waiting for you. Documents sent back are with the BD or CP."
         steps={[
-          { key: 'deviations', label: 'Deviations to decide', who: 'Your move', yours: true, count: lg.stages.deviations, to: '#deviations', icon: <Scale /> },
+          { key: 'deviations', label: 'Deviations to decide', who: 'Your move · before signing', yours: true, count: lg.stages.deviations, to: '#deviations', icon: <Scale /> },
           { key: 'review', label: 'Signed, to review', who: 'Your move', yours: true, count: lg.stages.review, to: '/agreements?status=pending_approval', icon: <FileSignature /> },
-          { key: 'docs', label: 'Documents sent back', who: 'With BD / CP', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning />, tone: 'blue' },
-          { key: 'admin', label: 'Admin approval', who: 'With Admin', yours: false, count: lg.stages.admin, to: '/agreements?status=pending_admin_approval', icon: <ShieldCheck />, tone: 'purple' },
+          { key: 'docs', label: 'Documents sent back', who: 'With BD / CP', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning /> },
+          { key: 'admin', label: 'Admin approval', who: 'With Admin', yours: false, count: lg.stages.admin, to: '/agreements?status=pending_admin_approval', icon: <ShieldCheck /> },
           { key: 'active', label: 'Active', who: 'Live', yours: false, count: lg.stages.active, to: '/agreements?status=active', icon: <CheckCircle2 />, done: true },
         ]}
       />

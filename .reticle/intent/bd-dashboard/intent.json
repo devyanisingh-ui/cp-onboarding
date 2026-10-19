@@ -63,19 +63,6 @@
         "flow": "bd-dashboard"
       },
       "updatedAt": 1792387865378
-    },
-    "workflow-stepper": {
-      "declaredAt": 1792406219560,
-      "id": "workflow-stepper",
-      "state": "declared",
-      "statement": "The dashboard workflow is a connected stepper: numbered icon circles joined by a line, each step showing its count, label and who holds it (the viewer's own steps highlighted), with a bar underneath showing how the agreements split across the steps and how many wait on the viewer.",
-      "status": "proposed",
-      "subject": "bd-dashboard",
-      "surface": {
-        "flow": "bd-dashboard",
-        "route": "/"
-      },
-      "updatedAt": 1792406219568
     }
   },
   "subject": "bd-dashboard",
