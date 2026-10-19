@@ -5,7 +5,20 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
 
-import { reticle } from '@reticlehq/vite-plugin';
+/**
+ * Reticle (in-app verification, dev only) is optional: if `@reticlehq/vite-plugin` is not
+ * installed — e.g. `npm install` was not re-run after pulling — the app still starts, without it.
+ */
+async function reticlePlugins(): Promise<Plugin[]> {
+  try {
+    const { reticle } = await import('@reticlehq/vite-plugin');
+    return [reticle() as Plugin];
+  } catch {
+    console.warn('[vite] @reticlehq/vite-plugin is not installed; starting without Reticle. Run `npm install` to enable it.');
+    return [];
+  }
+}
+
 /**
  * `vite build --mode mobile` produces one self-contained HTML file (scripts, styles, fonts and
  * icon inlined) that runs when opened directly from a phone's storage — no server needed.
@@ -23,10 +36,10 @@ function inlineHeadAssets(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode }) => {
   const mobile = mode === 'mobile';
   return {
-    plugins: [reticle(), react(), tailwindcss(), ...(mobile ? [inlineHeadAssets(), viteSingleFile()] : [])],
+    plugins: [...(mobile ? [] : await reticlePlugins()), react(), tailwindcss(), ...(mobile ? [inlineHeadAssets(), viteSingleFile()] : [])],
     resolve: { alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) } },
     build: mobile
       ? {
