@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "name": "drive-reports-by-status",
+  "projectId": "cp-onboarding-app-54b2b66a",
+  "createdAt": 1792406214838,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "Scroll right"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "console",
+        "level": "error",
+        "absent": true
+      },
+      "timeoutMs": 5000,
+      "page": "/reports/by_status"
+    }
+  ],
+  "startPath": "/reports/by_status",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/reports/by_status"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/reports/by_status"
+    }
+  ],
+  "author": {
+    "agent": "claude-code"
+  }
+}
