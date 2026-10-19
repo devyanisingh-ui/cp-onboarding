@@ -1,0 +1,23 @@
+{
+  "intents": {
+    "inline:on-the-agreements-by-status-report-the-status-ca-abea570a": {
+      "binding": {
+        "kind": "element",
+        "query": {
+          "name": "Scroll left",
+          "role": "button"
+        },
+        "state": "visible"
+      },
+      "declaredAt": 1792404419910,
+      "id": "inline:on-the-agreements-by-status-report-the-status-ca-abea570a",
+      "state": "bound",
+      "statement": "On the Agreements by status report, the status cards sit in one horizontally scrollable row with scroll buttons.",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1792404419943
+    }
+  },
+  "subject": "unsorted",
+  "version": 1
+}
