@@ -113,16 +113,16 @@ export function MiniStat({ label, value, to, icon, tone }: { label: string; valu
     </>
   );
   return to ? (
-    <Link to={to} className="block bg-white/80 px-5 py-3.5 hover:bg-white">
+    <Link to={to} className="flex flex-col justify-center bg-white/80 px-5 py-3.5 hover:bg-white">
       {body}
     </Link>
   ) : (
-    <div className="bg-white/80 px-5 py-3.5">{body}</div>
+    <div className="flex flex-col justify-center bg-white/80 px-5 py-3.5">{body}</div>
   );
 }
 
-export function StatGrid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-2 gap-px bg-line/60">{children}</div>;
+export function StatGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('grid auto-rows-fr grid-cols-2 gap-px bg-line/60', className)}>{children}</div>;
 }
 
 export const TILE = {

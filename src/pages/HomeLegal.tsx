@@ -43,55 +43,72 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
         ]}
       />
 
-      {/* Both columns are flex columns whose last card stretches, so the two end on the same line. */}
+      {/* Row 1: the review queue and the 30-day stats, the same height. Row 2: the other lists; the
+          last card in each column stretches so both end on the same line. Phones keep the reading
+          order: queue, deviations, templates, stats, documents. */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader
-              title="Review queue"
-              description="Signed agreements waiting for your Legal review, overdue first"
-              icon={<FileCheck2 />}
-              action={
-                <ButtonLink to="/agreements?status=pending_approval" variant="link" size="sm">
-                  View all
-                </ButtonLink>
-              }
-            />
-            {lg.queue.length ? (
-              <>
-                <div className="flex flex-wrap gap-2 border-b border-line/70 px-5 py-3">
-                  <UrgencyChip tone="red" count={overdue} label="Overdue" />
-                  <UrgencyChip tone="amber" count={dueSoon} label="Due this week" />
-                  <UrgencyChip tone="grey" count={lg.queue.length - overdue - dueSoon} label="Later" />
-                </div>
-                <ul className="divide-y divide-line">
-                  {lg.queue.map((q) => (
-                    <DashRow
-                      key={q.agreement.id}
-                      to={`/agreements/${q.agreement.id}/legal-review`}
-                      icon={<FileSignature />}
-                      tile={q.overdue ? TILE.red : TILE.primary}
-                      urgent={q.overdue}
-                      title={q.agreement.cpName}
-                      sub={<><span className="font-mono">{q.agreement.id}</span> · {q.agreement.institutionCode} · {q.signedBy === 'e-sign' ? 'E-signed' : 'Signed on paper'}</>}
-                      badges={
-                        <>
-                          {q.agreement.nonStandard ? <Badge tone="orange">Non-standard · {q.deviations} deviation{q.deviations === 1 ? '' : 's'} to check</Badge> : <Badge tone="grey">Standard terms</Badge>}
-                          {q.resubmitted && <Badge tone="blue">Corrected documents re-submitted</Badge>}
-                        </>
-                      }
-                      pill={<Pill tone={q.overdue ? 'red' : q.dueDate && daysUntil(q.dueDate) <= 1 ? 'amber' : 'grey'}>{dueLabel(q.dueDate)}</Pill>}
-                      when={`waiting ${q.days} day${q.days === 1 ? '' : 's'}`}
-                      action="Review"
-                    />
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <EmptyState compact icon={<CheckCircle2 />} title="Review queue is empty" description="Signed agreements come here for Legal review. Your approval makes them Active." />
-            )}
-          </Card>
+        <Card className="max-xl:order-1">
+          <CardHeader
+            title="Review queue"
+            description="Signed agreements waiting for your Legal review, overdue first"
+            icon={<FileCheck2 />}
+            action={
+              <ButtonLink to="/agreements?status=pending_approval" variant="link" size="sm">
+                View all
+              </ButtonLink>
+            }
+          />
+          {lg.queue.length ? (
+            <>
+              <div className="flex flex-wrap gap-2 border-b border-line/70 px-5 py-3">
+                <UrgencyChip tone="red" count={overdue} label="Overdue" />
+                <UrgencyChip tone="amber" count={dueSoon} label="Due this week" />
+                <UrgencyChip tone="grey" count={lg.queue.length - overdue - dueSoon} label="Later" />
+              </div>
+              <ul className="divide-y divide-line">
+                {lg.queue.map((q) => (
+                  <DashRow
+                    key={q.agreement.id}
+                    to={`/agreements/${q.agreement.id}/legal-review`}
+                    icon={<FileSignature />}
+                    tile={q.overdue ? TILE.red : TILE.primary}
+                    urgent={q.overdue}
+                    title={q.agreement.cpName}
+                    sub={<><span className="font-mono">{q.agreement.id}</span> · {q.agreement.institutionCode} · {q.signedBy === 'e-sign' ? 'E-signed' : 'Signed on paper'}</>}
+                    badges={
+                      <>
+                        {q.agreement.nonStandard ? <Badge tone="orange">Non-standard · {q.deviations} deviation{q.deviations === 1 ? '' : 's'} to check</Badge> : <Badge tone="grey">Standard terms</Badge>}
+                        {q.resubmitted && <Badge tone="blue">Corrected documents re-submitted</Badge>}
+                      </>
+                    }
+                    pill={<Pill tone={q.overdue ? 'red' : q.dueDate && daysUntil(q.dueDate) <= 1 ? 'amber' : 'grey'}>{dueLabel(q.dueDate)}</Pill>}
+                    when={`waiting ${q.days} day${q.days === 1 ? '' : 's'}`}
+                    action="Review"
+                  />
+                ))}
+              </ul>
+            </>
+          ) : (
+            <EmptyState compact icon={<CheckCircle2 />} title="Review queue is empty" description="Signed agreements come here for Legal review. Your approval makes them Active." />
+          )}
+        </Card>
 
+        <Card className="flex flex-col max-xl:order-3">
+          <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} action={<ButtonLink to="/reports" variant="link" size="sm">Reports</ButtonLink>} />
+          <StatGrid className="flex-1">
+            <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />
+            <MiniStat label="Returned to BD" value={lg.last30.returned} icon={<RotateCcw />} tone="text-red-500" />
+            <MiniStat label="Documents requested" value={lg.last30.docsRequested} icon={<FileWarning />} tone="text-blue-500" />
+            <MiniStat label="Deviations decided" value={lg.last30.deviationsDecided} icon={<Scale />} tone="text-orange-500" />
+          </StatGrid>
+          <Link to="/agreements?nonStandard=1" className="flex items-center gap-1.5 border-t border-line/70 px-5 py-2.5 text-xs text-muted hover:text-primary-700">
+            <Hourglass className="size-3.5 text-orange-500" aria-hidden />
+            {lg.nonStandardLive} live agreement{lg.nonStandardLive === 1 ? '' : 's'} on non-standard terms
+            <ChevronRight className="ml-auto size-3.5" aria-hidden />
+          </Link>
+        </Card>
+
+        <div className="flex flex-col gap-6 max-xl:order-2">
           <Card id="deviations">
             <CardHeader title="Deviations to decide" description="Non-standard terms a BD has requested on a draft, before it is signed" icon={<Scale />} action={<ButtonLink to="/tasks" variant="link" size="sm">View all</ButtonLink>} />
             {lg.deviations.length ? (
@@ -156,48 +173,31 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
           </Card>
         </div>
 
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} action={<ButtonLink to="/reports" variant="link" size="sm">Reports</ButtonLink>} />
-            <StatGrid>
-              <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />
-              <MiniStat label="Returned to BD" value={lg.last30.returned} icon={<RotateCcw />} tone="text-red-500" />
-              <MiniStat label="Documents requested" value={lg.last30.docsRequested} icon={<FileWarning />} tone="text-blue-500" />
-              <MiniStat label="Deviations decided" value={lg.last30.deviationsDecided} icon={<Scale />} tone="text-orange-500" />
-            </StatGrid>
-            <Link to="/agreements?nonStandard=1" className="flex items-center gap-1.5 border-t border-line/70 px-5 py-2.5 text-xs text-muted hover:text-primary-700">
-              <Hourglass className="size-3.5 text-orange-500" aria-hidden />
-              {lg.nonStandardLive} live agreement{lg.nonStandardLive === 1 ? '' : 's'} on non-standard terms
-              <ChevronRight className="ml-auto size-3.5" aria-hidden />
-            </Link>
-          </Card>
-
-          <Card className="flex flex-1 flex-col">
-            <CardHeader title="Documents sent back" description="You asked for corrected CP documents; follow up if they sit too long" icon={<Undo2 />} action={<ButtonLink to="/agreements?status=docs_requested" variant="link" size="sm">View all</ButtonLink>} />
-            {lg.docs.length ? (
-              <ul className="divide-y divide-line">
-                {lg.docs.map((x) => (
-                  <DashRow
-                    key={x.agreement.id}
-                    to={`/agreements/${x.agreement.id}`}
-                    icon={<FileWarning />}
-                    tile={TILE.blue}
-                    title={x.agreement.cpName}
-                    sub={`${x.items} document${x.items === 1 ? '' : 's'} · ${DOC_STAGE[x.stage].what}`}
-                    badges={<Badge tone={DOC_STAGE[x.stage].tone}>{DOC_STAGE[x.stage].label}</Badge>}
-                    pill={<Pill tone={x.days >= 5 ? 'amber' : 'grey'}>{ageLabel(x.days)}</Pill>}
-                    when={`since ${formatShortDate(x.since)}`}
-                    action="Open"
-                  />
-                ))}
-              </ul>
-            ) : (
-              <div className="flex flex-1 flex-col justify-center">
-                <EmptyState compact icon={<FileCheck2 />} title="Nothing sent back" description="Agreements you return for corrected CP documents are tracked here until they come back." />
-              </div>
-            )}
-          </Card>
-        </div>
+        <Card className="flex flex-col max-xl:order-4">
+          <CardHeader title="Documents sent back" description="You asked for corrected CP documents; follow up if they sit too long" icon={<Undo2 />} action={<ButtonLink to="/agreements?status=docs_requested" variant="link" size="sm">View all</ButtonLink>} />
+          {lg.docs.length ? (
+            <ul className="divide-y divide-line">
+              {lg.docs.map((x) => (
+                <DashRow
+                  key={x.agreement.id}
+                  to={`/agreements/${x.agreement.id}`}
+                  icon={<FileWarning />}
+                  tile={TILE.blue}
+                  title={x.agreement.cpName}
+                  sub={`${x.items} document${x.items === 1 ? '' : 's'} · ${DOC_STAGE[x.stage].what}`}
+                  badges={<Badge tone={DOC_STAGE[x.stage].tone}>{DOC_STAGE[x.stage].label}</Badge>}
+                  pill={<Pill tone={x.days >= 5 ? 'amber' : 'grey'}>{ageLabel(x.days)}</Pill>}
+                  when={`since ${formatShortDate(x.since)}`}
+                  action="Open"
+                />
+              ))}
+            </ul>
+          ) : (
+            <div className="flex flex-1 flex-col justify-center">
+              <EmptyState compact icon={<FileCheck2 />} title="Nothing sent back" description="Agreements you return for corrected CP documents are tracked here until they come back." />
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
