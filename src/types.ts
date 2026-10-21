@@ -118,7 +118,6 @@ export interface CpMaster {
 export type AgreementStatus =
   | 'draft'
   | 'pending_approval'
-  | 'pending_admin_approval'
   | 'approved_for_signing'
   | 'signed_copy_uploaded'
   | 'active'
@@ -196,9 +195,9 @@ export interface StampPaper {
   vendor: string;
 }
 
-/** 1: Legal review · 2: Gate 2 (legacy scans) · 3: Admin final approval. */
+/** 1: Legal review · 2: Gate 2 (legacy scans). */
 export interface Rejection {
-  gate: 1 | 2 | 3;
+  gate: 1 | 2;
   byId: string;
   at: ISODateTime;
   comment: string;
@@ -468,7 +467,6 @@ export type TaskType =
   | 'warning_override'
   | 'legacy_scan_upload'
   | 'rate_review'
-  | 'admin_approval'
   | 'cp_doc_request'
   | 'cp_doc_review';
 

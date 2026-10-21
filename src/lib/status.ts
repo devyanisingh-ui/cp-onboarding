@@ -7,7 +7,6 @@ export const STATUS_META: Record<DisplayStatus, { label: string; tone: StatusTon
   rejected: { label: 'Rejected', tone: 'red' },
   pending_approval: { label: 'Pending Legal approval', tone: 'amber' },
   docs_requested: { label: 'Documents requested', tone: 'orange' },
-  pending_admin_approval: { label: 'Pending Admin approval', tone: 'amber' },
   approved_for_signing: { label: 'Ready for signing', tone: 'blue' },
   out_for_signature: { label: 'Out for e-signature', tone: 'purple' },
   signed_copy_uploaded: { label: 'Signed copy uploaded', tone: 'purple' },
@@ -38,7 +37,6 @@ export const FINAL_STATUSES: AgreementStatus[] = ['terminated', 'expired', 'not_
 export const IN_PROGRESS_STATUSES: AgreementStatus[] = [
   'draft',
   'pending_approval',
-  'pending_admin_approval',
   'approved_for_signing',
   'signed_copy_uploaded',
 ];
@@ -62,8 +60,8 @@ export const STEPPER: { status: AgreementStatus; label: string }[] = [
 ];
 
 /** Title for a "returned" banner, by the step that returned it. */
-export function rejectionTitle(gate: 1 | 2 | 3): string {
-  return gate === 1 ? 'Returned by Legal' : gate === 3 ? 'Returned by Admin' : 'Returned at Gate 2';
+export function rejectionTitle(gate: 1 | 2): string {
+  return gate === 1 ? 'Returned by Legal' : 'Returned at Gate 2';
 }
 
 export const VERSION_STATUS_META: Record<VersionStatus, { label: string; tone: StatusTone }> = {

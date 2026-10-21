@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, ThumbsDown, ThumbsUp, Upload } from 'lucide-react';
+import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, ThumbsUp, Upload } from 'lucide-react';
 import type { DocRequest, DocumentRecord, ESigner, ESignRequest } from '@/types';
 import { api, type AgreementDetail as AgreementDetailData } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
@@ -16,12 +16,9 @@ export function AgreementDetail() {
   const { id = '' } = useParams();
   const { data, error, loading, reload } = useApi(() => api.agreements.get(id), [id]);
   const [override, setOverride] = useState<'approve' | 'reject' | null>(null);
-  const [returning, setReturning] = useState(false);
   useDocumentTitle(id);
   const decideOverride = useAction((d: 'approve' | 'reject', r: string) => api.agreements.decideOverride(id, d, r), { success: 'Override decision recorded' });
   const clearFlag = useAction(() => api.agreements.clearReviewFlag(id), { success: 'Marked as reviewed' });
-  const finalApprove = useAction(() => api.agreements.decideFinalApproval(id, 'approve'), { success: 'Final approval given — agreement Active' });
-  const finalReturn = useAction((c: string) => api.agreements.decideFinalApproval(id, 'reject', c), { success: 'Returned to the BD Executive' });
 
   if (loading && !data) return <PageSkeleton />;
   if (error && !data) return <ErrorState error={error} onRetry={reload} />;
@@ -86,16 +83,6 @@ export function AgreementDetail() {
                 Legal review
               </ButtonLink>
             )}
-            {act.finalApprove && (
-              <>
-                <Button variant="danger" icon={<ThumbsDown className="size-4" />} onClick={() => setReturning(true)}>
-                  Return
-                </Button>
-                <Button variant="success" icon={<ThumbsUp className="size-4" />} loading={finalApprove.loading} onClick={() => void finalApprove.run()}>
-                  Give final approval
-                </Button>
-              </>
-            )}
             {(act.renewalDecision || act.confirmNonRenewal) && (
               <ButtonLink to={`/agreements/${a.id}/renewal`} icon={<RefreshCw className="size-4" />}>
                 {act.confirmNonRenewal ? 'Confirm non-renewal' : 'Renew'}
@@ -115,11 +102,6 @@ export function AgreementDetail() {
         {a.lastRejection && !(a.docRequest && a.docRequest.status !== 'closed') && (
           <Alert tone="error" title={`${rejectionTitle(a.lastRejection.gate)} (${d.names[a.lastRejection.byId]}) · ${formatDateTime(a.lastRejection.at)}`}>
             {a.lastRejection.comment}
-          </Alert>
-        )}
-        {act.finalApprove && (
-          <Alert tone="info" title="Waiting for your final approval">
-            This agreement is signed and Legal has approved it and its documents. Give final approval to make it Active, or return it to the BD Executive with a comment.
           </Alert>
         )}
         {a.docRequest && a.docRequest.status !== 'closed' && (
@@ -278,7 +260,7 @@ export function AgreementDetail() {
             <CardHeader title="Timeline" icon={<History />} />
             <Timeline events={d.events} limit={10} />
           </Card>
-          <p className="px-1 text-xs text-muted">Status colours: {Object.entries(STATUS_META).filter(([k]) => k !== 'pending_admin_approval').slice(0, 6).map(([, m]) => m.label).join(' · ')}</p>
+          <p className="px-1 text-xs text-muted">Status colours: {Object.values(STATUS_META).slice(0, 6).map((m) => m.label).join(' · ')}</p>
         </aside>
       </div>
 
@@ -291,14 +273,6 @@ export function AgreementDetail() {
         tone={override === 'approve' ? 'primary' : 'danger'}
         placeholder="Reason"
         onConfirm={async (c) => (await decideOverride.run(override!, c)).ok}
-      />
-      <CommentDialog
-        open={returning}
-        onClose={() => setReturning(false)}
-        title="Return to BD Executive"
-        description="The agreement goes back to the BD Executive as a draft with your comment, and must be signed again. A comment is mandatory."
-        confirmLabel="Return"
-        onConfirm={async (c) => (await finalReturn.run(c)).ok}
       />
     </div>
   );

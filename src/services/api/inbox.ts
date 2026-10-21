@@ -51,7 +51,6 @@ export interface Dashboard {
   expiring: AgreementSummary[];
   pendingApproval: AgreementSummary[];
   pendingGate2: AgreementSummary[];
-  pendingAdminApproval: AgreementSummary[];
   counts: { active: number; inProgress: number; nonStandard: number; cps: number };
   wizardDrafts: number;
   /** BD Executive view: their own agreements laid out along the workflow. */
@@ -104,7 +103,7 @@ export interface LegalDashboard {
 }
 
 /** Who an agreement is waiting on when the next move is not the BD Executive's. */
-export type WaitingOn = 'legal' | 'admin' | 'cp' | 'signers' | 'deviation';
+export type WaitingOn = 'legal' | 'cp' | 'signers' | 'deviation';
 
 export interface WaitingItem {
   agreement: AgreementSummary;
@@ -143,7 +142,6 @@ export async function dashboard(institutionId?: string): Promise<Dashboard> {
     expiring: sum(ags.filter((a) => a.status === 'active' && a.endDate && daysUntil(a.endDate) <= 60)).sort((a, b) => (a.endDate ?? '').localeCompare(b.endDate ?? '')),
     pendingApproval: sum(ags.filter((a) => a.status === 'pending_approval')),
     pendingGate2: sum(ags.filter((a) => a.status === 'signed_copy_uploaded')),
-    pendingAdminApproval: sum(ags.filter((a) => a.status === 'pending_admin_approval')),
     counts: {
       active: ags.filter((a) => a.status === 'active' || a.status === 'notice_period').length,
       inProgress: ags.filter((a) => IN_PROGRESS_STATUSES.includes(a.status)).length,
@@ -235,7 +233,6 @@ function bdDashboard(own: ReturnType<typeof getDb>['agreements']): BdDashboard {
     waiting.push({ agreement: toSummary(a), on, what, since: at(since), days: Math.max(0, daysBetween(at(since), t)) });
   for (const a of own) {
     if (a.status === 'pending_approval') wait(a, 'legal', 'Legal is reviewing the signed agreement', a.updatedAt);
-    else if (a.status === 'pending_admin_approval') wait(a, 'admin', 'Admin final approval', a.updatedAt);
     else if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') wait(a, 'signers', 'Out for e-signature', a.esign.sentAt ?? a.updatedAt);
     else if (a.docRequest?.status === 'sent_to_cp') wait(a, 'cp', 'CP to upload corrected documents', a.docRequest.sentAt);
     else if (a.status === 'draft' && d.deviations.some((x) => x.agreementId === a.id && x.status === 'pending')) {

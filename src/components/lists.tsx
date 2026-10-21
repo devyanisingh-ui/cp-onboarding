@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { AlarmClock, AlertTriangle, BadgeCheck, Ban, ChevronRight, FilePen, FileSearch, FileSignature, FileUp, FileWarning, Flag, Gavel, RefreshCcw, Scale, ScrollText, ShieldAlert, ShieldCheck, TableProperties } from 'lucide-react';
+import { AlarmClock, AlertTriangle, Ban, ChevronRight, FilePen, FileSearch, FileSignature, FileUp, FileWarning, Flag, Gavel, RefreshCcw, Scale, ScrollText, ShieldAlert, ShieldCheck, TableProperties } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { TaskType } from '@/types';
 import type { AgreementSummary, TaskItem } from '@/services/mockApi';
@@ -124,7 +124,6 @@ export const TASK_TYPE_META: Record<TaskType, { icon: ReactNode; tone: string }>
   warning_override: { icon: <ShieldAlert />, tone: 'bg-orange-50 text-orange-700 ring-orange-200' },
   legacy_scan_upload: { icon: <FileUp />, tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
   rate_review: { icon: <TableProperties />, tone: 'bg-slate-100 text-slate-700 ring-slate-300' },
-  admin_approval: { icon: <BadgeCheck />, tone: 'bg-purple-50 text-purple-700 ring-purple-200' },
   cp_doc_request: { icon: <FileWarning />, tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
   cp_doc_review: { icon: <FileSearch />, tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
 };

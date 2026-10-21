@@ -129,7 +129,6 @@ function baseActions(user: User, a: Agreement): AgreementActions {
       can(user, 'gate1.approve') &&
       (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId)),
     requestDocChanges: false, // set below: same rule as approveGate1
-    finalApprove: a.status === 'pending_admin_approval' && can(user, 'final.approve') && a.ownerId !== user.id,
     // Legal's document request parks the signed agreement with the BD (status signed_copy_uploaded).
     sendDocLink: a.status === 'signed_copy_uploaded' && a.source === 'app' && !!a.docRequest && a.docRequest.status !== 'closed' && isOwnerSide && can(user, 'kyc.upload'),
     reviewCpDocs: a.status === 'signed_copy_uploaded' && a.source === 'app' && a.docRequest?.status === 'cp_submitted' && isOwnerSide,
@@ -472,7 +471,7 @@ export function sendToLegal(a: Agreement, by: User | 'system') {
  * Legal or Admin sends a signed agreement back to the BD Executive. It goes back to Draft, so it
  * has to be finalised and signed again; the old signed copy is kept but marked superseded.
  */
-function returnToDraft(a: Agreement, gate: 1 | 3, user: User, comment: string) {
+function returnToDraft(a: Agreement, gate: 1, user: User, comment: string) {
   const d = getDb();
   a.status = 'draft';
   a.lastRejection = { gate, byId: user.id, at: now(), comment };
@@ -507,28 +506,6 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
     returnToDraft(a, 1, user, c);
     notify([a.ownerId], { title: 'Returned by Legal', body: `${cpName(a)} · ${a.id} was returned by Legal with comments. Fix it and get it signed again.`, link: `/agreements/${id}` });
     audit(user, 'reject', 'agreement', id, `Rejected by Legal: ${c}`, before, { status: a.status });
-  }
-  commit();
-}
-
-/** Legacy: final approval for agreements still parked in the retired Admin step (Legal approval now makes them Active). */
-export async function decideFinalApproval(id: string, decision: 'approve' | 'reject', comment?: string): Promise<void> {
-  await delay('write');
-  const user = ctx();
-  assertCan(user, 'final.approve', 'Only Admin gives the final approval.');
-  const a = load(id, user);
-  if (a.status !== 'pending_admin_approval') throw conflict('This agreement is not waiting for final approval.');
-  if (a.ownerId === user.id) throw forbidden('You cannot give final approval on an agreement you created.');
-  const before = { status: a.status };
-  closeTasks({ agreementId: id, types: ['admin_approval'] }, user);
-  if (decision === 'approve') {
-    activateAgreement(a, user);
-    audit(user, 'approve', 'agreement', id, `Admin final approval${comment ? `: ${comment}` : ''}; agreement Active`, before, { status: a.status });
-  } else {
-    const c = requireComment(comment);
-    returnToDraft(a, 3, user, c);
-    notify([a.ownerId], { title: 'Returned by Admin', body: `${cpName(a)} · ${a.id} was returned by Admin with comments.`, link: `/agreements/${id}` });
-    audit(user, 'reject', 'agreement', id, `Returned by Admin: ${c}`, before, { status: a.status });
   }
   commit();
 }

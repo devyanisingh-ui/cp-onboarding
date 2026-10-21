@@ -164,7 +164,7 @@ function WizardInner({
       .then((v) => {
         if (v.limited) return;
         const live = v.agreements.filter((a) => a.status === 'active' || a.status === 'notice_period').map((a) => a.institutionId);
-        const prog = v.agreements.filter((a) => ['draft', 'pending_approval', 'pending_admin_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status)).map((a) => a.institutionId);
+        const prog = v.agreements.filter((a) => ['draft', 'pending_approval', 'approved_for_signing', 'signed_copy_uploaded'].includes(a.status)).map((a) => a.institutionId);
         setState((s) => (s.panResult ? { ...s, panResult: { ...s.panResult, liveInstitutionIds: live, inProgressInstitutionIds: prog } } : s));
       })
       .catch(() => undefined);

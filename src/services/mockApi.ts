@@ -45,7 +45,6 @@ export const api = {
     saveFields: agreements.saveAgreementFields,
     submit: agreements.submitForApproval,
     decideGate1: agreements.decideGate1,
-    decideFinalApproval: agreements.decideFinalApproval,
     requestDocChanges: docRequests.requestDocChanges,
     sendDocRequestLink: docRequests.sendDocRequestLink,
     acceptCpDocs: docRequests.acceptCpDocs,

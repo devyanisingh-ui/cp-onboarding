@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "id": "inline:the-pending-admin-approval-status-and-the-admin-47bb0d49",
+      "statement": "The Pending Admin approval status and the Admin final approval task no…",
+      "status": "proposed",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:when-legal-approves-a-signed-agreement-it-become-8f949b92",
       "statement": "When Legal approves a signed agreement it becomes Active straight away:…",
       "status": "proved",

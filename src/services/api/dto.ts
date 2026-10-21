@@ -82,8 +82,6 @@ export interface AgreementActions {
   approveGate1: boolean;
   /** Legal: send flagged documents back for the CP to correct. */
   requestDocChanges: boolean;
-  /** Admin: final approval before signing. */
-  finalApprove: boolean;
   /** BD: send / resend the CP their document upload link. */
   sendDocLink: boolean;
   /** BD: check the CP's corrected documents and resubmit to Legal. */

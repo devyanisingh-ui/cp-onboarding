@@ -112,7 +112,6 @@ describe('new CP onboarding (PRD 6.1)', () => {
     // Legal's approval is the last step: no Admin approval, the agreement is Active.
     // Legal's review verifies the CP's KYC documents.
     expect(getDb().documents.filter((x) => x.ownerType === 'cp' && x.ownerId === cpId).every((x) => x.verificationStatus === 'verified')).toBe(true);
-    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'admin_approval')).toBe(false);
     expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.status === 'open')).toBe(false);
     const a = getDb().agreements.find((x) => x.id === agreementId)!;
     expect(a.status).toBe('active');

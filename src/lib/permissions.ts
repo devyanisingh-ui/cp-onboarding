@@ -32,8 +32,7 @@ export type Capability =
   | 'termination.confirm'
   | 'override.decide'
   | 'legacy.import'
-  | 'scope.all'
-  | 'final.approve';
+  | 'scope.all';
 
 const ALL_CAPABILITIES: Capability[] = [
   'cp.create',
@@ -63,7 +62,6 @@ const ALL_CAPABILITIES: Capability[] = [
   'override.decide',
   'legacy.import',
   'scope.all',
-  'final.approve',
 ];
 
 /**

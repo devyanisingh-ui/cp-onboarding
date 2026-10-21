@@ -57,8 +57,7 @@ export function AgreementsList() {
                 <option value="">All statuses</option>
                 <option value="in_progress">In progress (before Active)</option>
                 <option value="closed">Closed</option>
-                {/* The Admin approval step is retired: Legal's approval makes an agreement Active. */}
-                {Object.entries(STATUS_META).filter(([k]) => k !== 'pending_admin_approval').map(([k, m]) => (
+                {Object.entries(STATUS_META).map(([k, m]) => (
                   <option key={k} value={k}>
                     {m.label}
                   </option>

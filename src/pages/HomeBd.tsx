@@ -255,7 +255,6 @@ function groupTasks(tasks: TaskItem[]) {
 const WAITING_META: Record<WaitingOn, { label: string; tone: 'amber' | 'purple' | 'blue' | 'orange' }> = {
   legal: { label: 'Legal', tone: 'amber' },
   deviation: { label: 'Legal', tone: 'orange' },
-  admin: { label: 'Admin', tone: 'purple' },
   cp: { label: 'CP', tone: 'blue' },
   signers: { label: 'Signers', tone: 'blue' },
 };

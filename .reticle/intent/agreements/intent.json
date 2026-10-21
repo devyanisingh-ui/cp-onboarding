@@ -1,5 +1,46 @@
 {
   "intents": {
+    "inline:the-pending-admin-approval-status-and-the-admin-47bb0d49": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/agreements/AGR-ASU-2026-0005"
+          },
+          {
+            "contains": "Active (current)",
+            "kind": "text"
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "final approval",
+              "kind": "text"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Pending Admin",
+              "kind": "text"
+            }
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792569808388,
+      "id": "inline:the-pending-admin-approval-status-and-the-admin-47bb0d49",
+      "state": "bound",
+      "statement": "The Pending Admin approval status and the Admin final approval task no longer exist anywhere in the app; agreement pages render without them.",
+      "status": "proposed",
+      "subject": "agreements",
+      "updatedAt": 1792569808422
+    },
     "inline:when-legal-approves-a-signed-agreement-it-become-8f949b92": {
       "binding": {
         "kind": "allOf",
