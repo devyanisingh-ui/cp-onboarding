@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-each-document-on-an-agreement-shows-as-a-card-ty": {
+      "declaredAt": 1792578470410,
+      "id": "flow:drive-each-document-on-an-agreement-shows-as-a-card-ty",
+      "state": "declared",
+      "statement": "Each document on an agreement shows as a card: type, check status badge, file type, file name, size, uploader and time, retention, and its View / Download / Delete actions still work.",
+      "status": "proposed",
+      "subject": "drive-each-document-on-an-agreement-show",
+      "surface": {
+        "flow": "drive-each-document-on-an-agreement-shows-as-a-card-ty"
+      },
+      "updatedAt": 1792578470420
+    }
+  },
+  "subject": "drive-each-document-on-an-agreement-show",
+  "version": 1
+}

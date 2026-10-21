@@ -109,6 +109,12 @@
       "subject": "drive-bd-home-pipeline"
     },
     {
+      "id": "flow:drive-each-document-on-an-agreement-shows-as-a-card-ty",
+      "statement": "Each document on an agreement shows as a card: type, check status badge…",
+      "status": "proposed",
+      "subject": "drive-each-document-on-an-agreement-show"
+    },
+    {
       "id": "flow:drive-legal-home-deviations",
       "statement": "legal-home-deviations",
       "status": "proposed",
