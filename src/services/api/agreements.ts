@@ -696,13 +696,15 @@ export async function uploadSignedCopy(
   id: string,
   input: {
     stampPaper: Agreement['stampPaper'];
-    signedOn: string;
+    /** Signing happens by hand outside the app; when not given, the upload day is recorded. */
+    signedOn?: string;
     signedById?: string;
     signedFile: Blob;
     signedFileName: string;
     stampFile: Blob;
     stampFileName: string;
-    checklist: boolean[];
+    /** No longer asked on the upload screen; if a caller still sends one, every item must be ticked. */
+    checklist?: boolean[];
   },
 ): Promise<void> {
   await delay('write');
@@ -711,10 +713,11 @@ export async function uploadSignedCopy(
   const a = load(id, user);
   const legacyScan = a.source === 'legacy' && a.status === 'signed_copy_uploaded';
   if (a.status !== 'approved_for_signing' && !legacyScan) throw conflict('This agreement is not waiting for a signed copy.');
-  if (!input.checklist.every(Boolean)) throw invalid('Confirm every item on the checklist.');
+  if (input.checklist && !input.checklist.every(Boolean)) throw invalid('Confirm every item on the checklist.');
   if (!input.stampPaper) throw invalid('Stamp paper details are mandatory before Gate 2.');
-  if (input.signedOn > today()) throw invalid('Signing date cannot be in the future.', { signedOn: 'Cannot be in the future' });
-  if (a.executionDate && input.signedOn < a.executionDate && a.source === 'app')
+  const signedOn = input.signedOn || today();
+  if (signedOn > today()) throw invalid('Signing date cannot be in the future.', { signedOn: 'Cannot be in the future' });
+  if (input.signedOn && a.executionDate && signedOn < a.executionDate && a.source === 'app')
     throw invalid('Signing date cannot be before the execution date.', { signedOn: 'Before execution date' });
   const d = getDb();
   // Previous rejected scans are kept (retention) but superseded.
@@ -722,7 +725,7 @@ export async function uploadSignedCopy(
   await storeDocument(user, 'agreement', id, 'stamp_paper_scan', input.stampFile, input.stampFileName);
   const before = { status: a.status, stampPaper: a.stampPaper };
   a.stampPaper = input.stampPaper;
-  a.signedOn = input.signedOn;
+  a.signedOn = signedOn;
   a.signedById = input.signedById;
   a.status = 'signed_copy_uploaded';
   a.lastRejection = undefined;

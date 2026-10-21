@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarClock, CheckCircle2, FilePen, FileSignature, FileWarning, Hourglass, PenLine, Plus, RefreshCcw, Scale, ShieldCheck, Sparkles, UserCheck, Users, Wrench } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { ArrowRight, CalendarClock, CheckCircle2, ChevronDown, FilePen, FileSignature, FileWarning, Hourglass, PenLine, Plus, RefreshCcw, Scale, ShieldCheck, Sparkles, UserCheck, Users, Wrench } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
 import type { TaskType } from '@/types';
 import type { Dashboard, TaskItem, WaitingOn } from '@/services/api/inbox';
 import { cn } from '@/lib/cn';
@@ -8,6 +8,8 @@ import { formatShortDate } from '@/lib/dates';
 import { Badge, ButtonLink, Card, CardHeader, EmptyState } from '@/components/ui';
 import { AgreementTable, TaskRow } from '@/components/lists';
 import { MiniStat, StatGrid, UrgencyChip, WorkflowStrip } from '@/components/dashboard';
+
+const COLLAPSED_KEY = 'cp-onboarding:bd-home-collapsed';
 
 /**
  * Home for a BD Executive: their agreements laid out along the workflow, what needs them (grouped by
@@ -18,6 +20,30 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
   const tasks = data.pendingTasks;
   const dueSoon = tasks.filter((t) => !t.overdue && t.daysLeft <= 7).length;
   const later = tasks.length - data.overdueCount - dueSoon;
+  const groups = groupTasks(tasks);
+  // Which "Needs your action" groups are collapsed; remembered in this browser (best effort).
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '[]') as string[]);
+    } catch {
+      return new Set();
+    }
+  });
+  const save = (next: Set<string>) => {
+    setCollapsed(next);
+    try {
+      localStorage.setItem(COLLAPSED_KEY, JSON.stringify([...next]));
+    } catch {
+      /* storage blocked: still works for this visit */
+    }
+  };
+  const toggle = (key: string) => {
+    const next = new Set(collapsed);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    save(next);
+  };
+  const setAll = (close: boolean) => save(close ? new Set(groups.map((g) => g.key)) : new Set());
 
   return (
     <div className="space-y-6">
@@ -74,23 +100,43 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
                 <UrgencyChip tone="red" count={data.overdueCount} label="Overdue" to="/tasks?overdue=1" />
                 <UrgencyChip tone="amber" count={dueSoon} label="Due this week" />
                 <UrgencyChip tone="grey" count={later} label="Later" />
+                {groups.length > 1 && (
+                  <button type="button" onClick={() => setAll(collapsed.size < groups.length)} className="hit-area ml-auto text-xs font-semibold text-primary-700 hover:underline">
+                    {collapsed.size < groups.length ? 'Collapse all' : 'Expand all'}
+                  </button>
+                )}
               </div>
               <div className="divide-y divide-line">
-                {groupTasks(tasks).map((g) => (
-                  <section key={g.key} aria-label={g.label}>
-                    <div className="flex items-center gap-2 bg-canvas/50 px-5 py-2">
-                      <span className="text-subtle [&_svg]:size-4">{g.icon}</span>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{g.label}</h3>
-                      <span className="rounded-full bg-white px-1.5 text-xs font-semibold tabular-nums text-ink-soft ring-1 ring-line">{g.items.length}</span>
-                      <span className="ml-auto hidden text-xs text-muted sm:inline">{g.hint}</span>
-                    </div>
-                    <div className="divide-y divide-line/70">
-                      {g.items.map((t) => (
-                        <TaskRow key={t.id} t={t} compact />
-                      ))}
-                    </div>
-                  </section>
-                ))}
+                {groups.map((g) => {
+                  const open = !collapsed.has(g.key);
+                  return (
+                    <section key={g.key} aria-label={g.label}>
+                      <h3>
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-controls={`bd-group-${g.key}`}
+                          onClick={() => toggle(g.key)}
+                          className="group flex w-full items-center gap-2 bg-canvas/50 px-5 py-2 text-left transition-colors hover:bg-canvas"
+                        >
+                          <ChevronDown className={cn('size-4 shrink-0 text-subtle transition-transform duration-200', !open && '-rotate-90')} aria-hidden />
+                          <span className="text-subtle [&_svg]:size-4">{g.icon}</span>
+                          <span className="text-xs font-semibold uppercase tracking-wider text-ink-soft">{g.label}</span>
+                          <span className="rounded-full bg-white px-1.5 text-xs font-semibold tabular-nums text-ink-soft ring-1 ring-line">{g.items.length}</span>
+                          {!open && g.items.some((t) => t.overdue) && <span className="rounded-full bg-danger-50 px-1.5 text-[11px] font-semibold text-danger-700 ring-1 ring-inset ring-danger-200">overdue</span>}
+                          <span className="ml-auto hidden text-xs font-normal normal-case text-muted sm:inline">{g.hint}</span>
+                        </button>
+                      </h3>
+                      {open && (
+                        <div id={`bd-group-${g.key}`} className="divide-y divide-line/70">
+                          {g.items.map((t) => (
+                            <TaskRow key={t.id} t={t} compact />
+                          ))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -188,7 +234,7 @@ function summaryLine(tasks: number, overdue: number, waiting: number): string {
 
 const GROUPS: { key: string; label: string; hint: string; icon: ReactNode; types: TaskType[] }[] = [
   { key: 'fix', label: 'Fix and resubmit', hint: 'Returned by Legal or Admin', icon: <Wrench />, types: ['fix_rejected'] },
-  { key: 'sign', label: 'Get signed and upload', hint: 'E-sign, or print, sign and upload', icon: <FileSignature />, types: ['signing_upload', 'legacy_scan_upload'] },
+  { key: 'sign', label: 'Get signed and upload', hint: 'Print, sign on stamp paper, then upload', icon: <FileSignature />, types: ['signing_upload', 'legacy_scan_upload'] },
   { key: 'docs', label: 'CP documents', hint: 'Send the link, then check uploads', icon: <FileWarning />, types: ['cp_doc_request', 'cp_doc_review'] },
   { key: 'renew', label: 'Renewal decisions', hint: 'Renew or not, 30 days before expiry', icon: <RefreshCcw />, types: ['renewal_decision'] },
 ];

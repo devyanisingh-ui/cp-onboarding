@@ -1,0 +1,19 @@
+{
+  "intents": {
+    "upload-no-signing-or-checklist": {
+      "declaredAt": 1792563298815,
+      "id": "upload-no-signing-or-checklist",
+      "state": "declared",
+      "statement": "Uploading a signed copy asks only for the stamp paper details and the scans: there is no signing-date step and no checklist, and the upload day is recorded as the signing date.",
+      "status": "proposed",
+      "subject": "signed-upload",
+      "surface": {
+        "flow": "signed-upload",
+        "route": "/agreements/:id/upload"
+      },
+      "updatedAt": 1792563298826
+    }
+  },
+  "subject": "signed-upload",
+  "version": 1
+}

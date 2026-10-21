@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-bd-home-groups-collapsible-83270f": {
+      "declaredAt": 1792563432192,
+      "id": "flow:drive-bd-home-groups-collapsible-83270f",
+      "state": "declared",
+      "statement": "bd-home-groups-collapsible",
+      "status": "proposed",
+      "subject": "drive-bd-home-groups-collapsible-83270f",
+      "surface": {
+        "flow": "drive-bd-home-groups-collapsible-83270f"
+      },
+      "updatedAt": 1792563432215
+    }
+  },
+  "subject": "drive-bd-home-groups-collapsible-83270f",
+  "version": 1
+}

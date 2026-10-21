@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import type { z } from 'zod';
 import { UploadCloud } from 'lucide-react';
 import { api } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
@@ -12,17 +12,11 @@ import { stampPaperSchema } from '@/lib/schemas';
 import { getDb } from '@/services/db';
 import { combineToPdf } from '@/lib/pdf';
 import { today } from '@/lib/dates';
-import { Alert, Button, Card, CardBody, CardHeader, Checkbox, ErrorState, Field, Input, PageSkeleton, Select, useToast } from '@/components/ui';
+import { Alert, Button, Card, CardBody, CardHeader, ErrorState, Field, Input, PageSkeleton, Select, useToast } from '@/components/ui';
 import { ActionBar, FileDrop, PageHeader } from '@/components/common';
 
-const schema = stampPaperSchema.extend({ signedOn: z.string().min(1, 'Enter the date both parties signed'), signedById: z.string().optional() });
+const schema = stampPaperSchema;
 type Values = z.infer<typeof schema>;
-
-const CHECKLIST = [
-  'Every page is signed by both the CP and the Authorised Signatory',
-  'Both copies are printed on the stamp paper entered above',
-  'The CP has kept one original copy',
-];
 
 export function SignedUpload() {
   const { id = '' } = useParams();
@@ -32,8 +26,7 @@ export function SignedUpload() {
   const lists = getDb().masterLists;
   const [signed, setSigned] = useState<File[]>([]);
   const [stamp, setStamp] = useState<File[]>([]);
-  const [checks, setChecks] = useState([false, false, false]);
-  const [fileErr, setFileErr] = useState<{ signed?: string; stamp?: string; checks?: string }>({});
+  const [fileErr, setFileErr] = useState<{ signed?: string; stamp?: string }>({});
   const [busy, setBusy] = useState(false);
   useDocumentTitle(`Upload signed copy ${id}`);
   const a = data?.agreement;
@@ -46,8 +39,6 @@ export function SignedUpload() {
           purchaseDate: a.stampPaper?.purchaseDate ?? '',
           state: a.stampPaper?.state ?? data!.institution.state,
           vendor: a.stampPaper?.vendor ?? '',
-          signedOn: a.signedOn ?? '',
-          signedById: a.signedById ?? '',
         }
       : undefined,
   });
@@ -64,7 +55,6 @@ export function SignedUpload() {
     const fe: typeof fileErr = {};
     if (!signed.length) fe.signed = 'Upload the scanned signed agreement';
     if (!stamp.length) fe.stamp = 'Upload the stamp paper scan';
-    if (!checks.every(Boolean)) fe.checks = 'Confirm every item before uploading';
     setFileErr(fe);
     if (Object.keys(fe).length) return;
     setBusy(true);
@@ -73,13 +63,10 @@ export function SignedUpload() {
       const st = await combineToPdf(stamp, `Stamp_${d.agreement.id}`);
       await api.agreements.uploadSigned(d.agreement.id, {
         stampPaper: { number: v.number, valueInr: v.valueInr, purchaseDate: v.purchaseDate, state: v.state, vendor: v.vendor },
-        signedOn: v.signedOn,
-        signedById: v.signedById || undefined,
         signedFile: s.blob,
         signedFileName: s.fileName,
         stampFile: st.blob,
         stampFileName: st.fileName,
-        checklist: checks,
       });
       toast.success('Signed copy uploaded', d.agreement.source === 'legacy' ? 'Sent to Admin for Gate 2 verification.' : 'Sent to Legal for review.');
       navigate(`/agreements/${d.agreement.id}`);
@@ -128,21 +115,6 @@ export function SignedUpload() {
           </CardBody>
         </Card>
         <Card>
-          <CardHeader title="Signing" description="The app records who signed for the institution and when." />
-          <CardBody className="grid gap-4 sm:grid-cols-2">
-            <Field label="Date signed" required error={e.signedOn?.message}>
-              <Input type="date" max={today()} {...form.register('signedOn')} />
-            </Field>
-            <div>
-              <p className="text-sm font-medium text-ink">Signed for the institution by</p>
-              <p className="mt-2 text-sm text-ink-soft">
-                {d.agreement.signatoryName}
-                {d.agreement.signatoryDesignation ? `, ${d.agreement.signatoryDesignation}` : ''}
-              </p>
-            </div>
-          </CardBody>
-        </Card>
-        <Card>
           <CardHeader title="Scans" description="Upload one PDF, or photograph each page — photos are combined into a single PDF." />
           <CardBody className="grid gap-5 md:grid-cols-2">
             <FileDrop
@@ -164,19 +136,6 @@ export function SignedUpload() {
               onFiles={(f) => setStamp((s) => [...s, ...f])}
               onRemove={(i) => setStamp((s) => s.filter((_, j) => j !== i))}
             />
-          </CardBody>
-        </Card>
-        <Card>
-          <CardHeader title="Checklist" />
-          <CardBody className="space-y-3">
-            {CHECKLIST.map((c, i) => (
-              <Checkbox key={c} label={c} checked={checks[i]} onChange={(ev) => setChecks((x) => x.map((v, j) => (j === i ? ev.target.checked : v)))} />
-            ))}
-            {fileErr.checks && (
-              <p role="alert" className="text-xs font-medium text-danger-700">
-                {fileErr.checks}
-              </p>
-            )}
           </CardBody>
         </Card>
         <ActionBar>

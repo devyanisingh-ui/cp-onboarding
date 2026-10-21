@@ -1,0 +1,108 @@
+{
+  "version": 2,
+  "name": "drive-bd-home-groups-collapsible-83270f",
+  "projectId": "cp-onboarding-app-54b2b66a",
+  "createdAt": 1792563432132,
+  "steps": [
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "Collapse all"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "role": "button",
+              "name": "Expand all"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "text",
+            "contains": "Rework rejected draft: Sharma & Gill Associates",
+            "absent": true
+          },
+          {
+            "kind": "text",
+            "contains": "Upload legacy scan: Pathway Admissions Hub",
+            "absent": true
+          },
+          {
+            "kind": "text",
+            "contains": "Renewal decision due: Pathway Admissions Hub",
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 5000,
+      "page": "/"
+    },
+    {
+      "tool": "reticle_act",
+      "anchor": {
+        "kind": "role",
+        "role": "button",
+        "name": "Expand all"
+      },
+      "args": {},
+      "action": "click",
+      "expect": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "role": "button",
+              "name": "Collapse all"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "text",
+            "contains": "Rework rejected draft: Sharma & Gill Associates"
+          },
+          {
+            "kind": "text",
+            "contains": "Upload legacy scan: Pathway Admissions Hub"
+          },
+          {
+            "kind": "text",
+            "contains": "Renewal decision due: Pathway Admissions Hub"
+          },
+          {
+            "kind": "console",
+            "level": "error",
+            "absent": true
+          }
+        ]
+      },
+      "timeoutMs": 5000,
+      "page": "/"
+    }
+  ],
+  "startPath": "/",
+  "intent": "bd-home-groups-collapsible",
+  "requires": [
+    {
+      "kind": "route",
+      "pathname": "/"
+    }
+  ],
+  "ensures": [
+    {
+      "kind": "route",
+      "pathname": "/"
+    }
+  ],
+  "author": {
+    "agent": "claude-code"
+  },
+  "intentId": "flow:drive-bd-home-groups-collapsible-83270f"
+}

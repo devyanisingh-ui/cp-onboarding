@@ -634,3 +634,21 @@ describe('clear all records', () => {
     await expect(api.system.clearRecords()).rejects.toThrow();
   });
 });
+
+describe('manual signing upload', () => {
+  it('uploads the signed copy without a signing date or checklist; the upload day is recorded and it goes to Legal', async () => {
+    const { agreementId } = await createReadyDraft();
+    await api.agreements.submit(agreementId);
+    getDb().agreements.find((a) => a.id === agreementId)!.executionDate = today();
+    await api.agreements.uploadSigned(agreementId, {
+      stampPaper: { number: 'IN-HR99887766', valueInr: 100, purchaseDate: today(), state: 'Haryana', vendor: 'Tehsil vendor' },
+      signedFile: new Blob(['x'], { type: 'application/pdf' }),
+      signedFileName: 'signed.pdf',
+      stampFile: new Blob(['x'], { type: 'application/pdf' }),
+      stampFileName: 'stamp.pdf',
+    });
+    const a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.status).toBe('pending_approval');
+    expect(a.signedOn).toBe(today());
+  });
+});

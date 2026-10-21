@@ -13,6 +13,19 @@
       },
       "updatedAt": 1792387809774
     },
+    "bd-home-groups-collapsible": {
+      "declaredAt": 1792563298815,
+      "id": "bd-home-groups-collapsible",
+      "state": "declared",
+      "statement": "Each group under Needs your action on a BD Executive's Home (fix and resubmit, get signed and upload, CP documents, renewal decisions) can be collapsed and expanded from its header, and Collapse all / Expand all switches every group.",
+      "status": "proposed",
+      "subject": "bd-dashboard",
+      "surface": {
+        "flow": "bd-dashboard",
+        "route": "/"
+      },
+      "updatedAt": 1792563298878
+    },
     "bd-home-pipeline": {
       "declaredAt": 1792387809750,
       "id": "bd-home-pipeline",

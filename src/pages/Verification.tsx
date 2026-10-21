@@ -53,9 +53,13 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
     const a = d.agreement;
     const sp = a.stampPaper;
     const rows: { key: string; label: string; value: ReactNode; doc?: DocumentType }[] = [
-      a.esign?.status === 'completed'
-        ? { key: 'pages_signed', label: 'E-signatures complete (see the signature certificate page)', value: a.esign.signers.map((s) => `${s.name}: ${s.signature?.kind === 'dsc' ? 'DSC' : s.signature?.kind}`).join(' · ') }
-        : { key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' },
+      // Paper copies are signed by hand, outside the app: Legal's review no longer has a page-by-page signature
+      // check (Admin's Gate 2 check of legacy scans keeps it). E-signed copies still confirm their signatures.
+      ...(a.esign?.status === 'completed'
+        ? [{ key: 'pages_signed', label: 'E-signatures complete (see the signature certificate page)', value: a.esign.signers.map((s) => `${s.name}: ${s.signature?.kind === 'dsc' ? 'DSC' : s.signature?.kind}`).join(' · ') }]
+        : legal
+          ? []
+          : [{ key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' }]),
       { key: 'cp_name', label: 'CP name in signature block', value: d.cp.legalName },
       { key: 'signatory', label: 'Institution signatory', value: `${a.signatoryName}, ${a.signatoryDesignation}` },
       { key: 'stamp_number', label: a.esign?.status === 'completed' ? 'E-stamp certificate number' : 'Stamp paper number', value: sp?.number ?? '—' },

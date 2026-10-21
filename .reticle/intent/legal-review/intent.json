@@ -1,0 +1,19 @@
+{
+  "intents": {
+    "legal-review-no-page-signature-check": {
+      "declaredAt": 1792563298815,
+      "id": "legal-review-no-page-signature-check",
+      "state": "declared",
+      "statement": "Legal's review of a paper-signed agreement has no 'Every page signed by both parties' check.",
+      "status": "proposed",
+      "subject": "legal-review",
+      "surface": {
+        "flow": "legal-review",
+        "route": "/agreements/:id/legal-review"
+      },
+      "updatedAt": 1792563298860
+    }
+  },
+  "subject": "legal-review",
+  "version": 1
+}

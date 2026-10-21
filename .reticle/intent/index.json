@@ -7,6 +7,12 @@
       "subject": "bd-dashboard"
     },
     {
+      "id": "bd-home-groups-collapsible",
+      "statement": "Each group under Needs your action on a BD Executive's Home (fix and re…",
+      "status": "proposed",
+      "subject": "bd-dashboard"
+    },
+    {
       "id": "bd-home-pipeline",
       "statement": "A BD Executive’s Home shows their own agreements counted at each workfl…",
       "status": "proposed",
@@ -47,6 +53,18 @@
       "statement": "bd-home-actions-grouped",
       "status": "proposed",
       "subject": "drive-bd-home-actions-grouped"
+    },
+    {
+      "id": "flow:drive-bd-home-groups-collapsible",
+      "statement": "bd-home-groups-collapsible",
+      "status": "proposed",
+      "subject": "drive-bd-home-groups-collapsible"
+    },
+    {
+      "id": "flow:drive-bd-home-groups-collapsible-83270f",
+      "statement": "bd-home-groups-collapsible",
+      "status": "proposed",
+      "subject": "drive-bd-home-groups-collapsible-83270f"
     },
     {
       "id": "flow:drive-bd-home-pipeline",
@@ -107,6 +125,12 @@
       "statement": "Legal’s Home shows Legal’s part of the workflow with counts: deviations…",
       "status": "proposed",
       "subject": "legal-dashboard"
+    },
+    {
+      "id": "legal-review-no-page-signature-check",
+      "statement": "Legal's review of a paper-signed agreement has no 'Every page signed by…",
+      "status": "proposed",
+      "subject": "legal-review"
     },
     {
       "id": "tasks-completed-rows",
@@ -173,6 +197,12 @@
       "statement": "Someone who enters a wrong password is refused: a visible \"Incorrect us…",
       "status": "proposed",
       "subject": "sign-in-wrong-password"
+    },
+    {
+      "id": "upload-no-signing-or-checklist",
+      "statement": "Uploading a signed copy asks only for the stamp paper details and the s…",
+      "status": "proposed",
+      "subject": "signed-upload"
     },
     {
       "id": "inline:on-the-agreements-by-status-report-the-status-ca-abea570a",
