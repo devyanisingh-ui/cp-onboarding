@@ -322,7 +322,7 @@ function WizardInner({
     setBusy('submit');
     try {
       await api.agreements.submit(agreementId!);
-      toast.success('Ready for signing', 'Send it for e-signature, or sign on paper and upload it. Legal reviews it after signing.');
+      toast.success('Ready for signing', 'Sign it on paper and upload it. Legal reviews it after signing.');
       navigate(`/agreements/${agreementId}`);
     } catch (e) {
       toast.error('Cannot submit yet', errorMessage(e));

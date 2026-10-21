@@ -1,5 +1,82 @@
 {
   "intents": {
+    "inline:an-agreement-that-is-ready-for-signing-offers-on-518785cf": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Send for e-signature",
+              "kind": "text"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Send it for e-signature",
+              "kind": "text"
+            }
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "Send for e-signature",
+              "role": "link"
+            }
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "Send for e-signature again",
+              "role": "link"
+            }
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "Send for e-signature",
+              "role": "button"
+            }
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Upload signed copy",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "Upload paper copy",
+              "role": "link"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1792579235254,
+      "id": "inline:an-agreement-that-is-ready-for-signing-offers-on-518785cf",
+      "provenBy": {
+        "at": 1792579245848,
+        "grade": "presence",
+        "runId": "drive-safa3ed35-ed94-4587-b25f-74574df4504d",
+        "verdictId": "reticle_assert:1792579245848"
+      },
+      "state": "proved",
+      "statement": "An agreement that is ready for signing offers only the paper route: no 'Send for e-signature' button anywhere on the page, and 'Upload signed copy' is the main action in the header.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0008"
+      },
+      "updatedAt": 1792579245903
+    },
     "inline:each-document-on-an-agreement-shows-as-a-card-ty-76723e80": {
       "binding": {
         "kind": "allOf",

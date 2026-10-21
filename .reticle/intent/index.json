@@ -7,6 +7,12 @@
       "subject": "admin"
     },
     {
+      "id": "inline:an-agreement-that-is-ready-for-signing-offers-on-518785cf",
+      "statement": "An agreement that is ready for signing offers only the paper route: no…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:each-document-on-an-agreement-shows-as-a-card-ty-76723e80",
       "statement": "Each document on an agreement shows as a card: type, check status badge…",
       "status": "proved",

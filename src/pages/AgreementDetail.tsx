@@ -63,14 +63,9 @@ export function AgreementDetail() {
                 Request deviation
               </ButtonLink>
             )}
-            {act.sendForSignature && (
-              <ButtonLink to={`/agreements/${a.id}/esign`} icon={<PenLine className="size-4" />}>
-                {a.esign ? 'Send for e-signature again' : 'Send for e-signature'}
-              </ButtonLink>
-            )}
             {act.uploadSigned && (
-              <ButtonLink to={`/agreements/${a.id}/upload`} variant={act.sendForSignature ? 'secondary' : 'primary'} icon={<Upload className="size-4" />}>
-                {a.source === 'legacy' ? 'Upload scan' : act.sendForSignature ? 'Upload paper copy' : 'Upload signed copy'}
+              <ButtonLink to={`/agreements/${a.id}/upload`} icon={<Upload className="size-4" />}>
+                {a.source === 'legacy' ? 'Upload scan' : 'Upload signed copy'}
               </ButtonLink>
             )}
             {act.verifyGate2 && (
@@ -338,7 +333,7 @@ function ESignCard({ d, onChange }: { d: AgreementDetailData; onChange: () => vo
       {declined && (
         <div className="border-t border-line px-5 py-3">
           <Alert tone="error" title={`${declined.name} declined to sign`}>
-            “{declined.declineReason}” — fix what’s needed, then send for e-signature again (or use the paper copy).
+            “{declined.declineReason}” — fix what’s needed, then sign it on paper and upload it.
           </Alert>
         </div>
       )}
