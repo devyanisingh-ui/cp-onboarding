@@ -448,7 +448,7 @@ export function Timeline({ events, limit }: { events: AuditEvent[]; limit?: numb
 // ---------- Status stepper ----------
 
 export function StatusStepper({ status: raw, legacy }: { status: AgreementStatus; nonStandard?: boolean; legacy?: boolean }) {
-  // Every agreement goes BD → signing → Legal → Admin. A signed agreement waiting on corrected CP
+  // Every agreement goes BD → signing → Legal → Active. A signed agreement waiting on corrected CP
   // documents is still in Legal's step; legacy scans show their Gate 2 step instead.
   const steps = legacy
     ? [STEPPER[0]!, { status: 'signed_copy_uploaded' as const, label: 'Gate 2' }, STEPPER[STEPPER.length - 1]!]

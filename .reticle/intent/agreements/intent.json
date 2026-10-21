@@ -1,0 +1,62 @@
+{
+  "intents": {
+    "inline:when-legal-approves-a-signed-agreement-it-become-8f949b92": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/agreements/AGR-ASU-2026-0004"
+          },
+          {
+            "contains": "Active (current)",
+            "kind": "text"
+          },
+          {
+            "contains": "Legal approved; agreement Active",
+            "kind": "text"
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Admin approval",
+              "kind": "text"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Legal approval (current)",
+              "kind": "text"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Pending Admin",
+              "kind": "text"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1792568417796,
+      "id": "inline:when-legal-approves-a-signed-agreement-it-become-8f949b92",
+      "provenBy": {
+        "at": 1792568462439,
+        "grade": "presence",
+        "runId": "drive-s2656f7ac-eed2-4d02-8bd1-5e330067fe77",
+        "verdictId": "reticle_assert:1792568462439"
+      },
+      "state": "proved",
+      "statement": "When Legal approves a signed agreement it becomes Active straight away: there is no Admin approval step in the workflow, and Admin keeps every capability.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0004"
+      },
+      "updatedAt": 1792568462500
+    }
+  },
+  "subject": "agreements",
+  "version": 1
+}

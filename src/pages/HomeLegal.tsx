@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { BadgeCheck, CheckCircle2, ChevronRight, FileCheck2, FileSignature, FileWarning, Hourglass, Paperclip, RotateCcw, Scale, ScrollText, ShieldCheck, Undo2 } from 'lucide-react';
+import { BadgeCheck, CheckCircle2, ChevronRight, FileCheck2, FileSignature, FileWarning, Hourglass, Paperclip, RotateCcw, Scale, ScrollText, Undo2 } from 'lucide-react';
 import type { Dashboard, LegalDocsItem } from '@/services/api/inbox';
 import { cn } from '@/lib/cn';
 import { daysUntil, formatShortDate, shiftDays, today } from '@/lib/dates';
@@ -39,7 +39,6 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
           { key: 'deviations', label: 'Deviations to decide', who: 'Your move · before signing', yours: true, count: lg.stages.deviations, to: '#deviations', icon: <Scale /> },
           { key: 'review', label: 'Signed, to review', who: 'Your move', yours: true, count: lg.stages.review, to: '/agreements?status=pending_approval', icon: <FileSignature /> },
           { key: 'docs', label: 'Documents sent back', who: 'With BD / CP', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning /> },
-          { key: 'admin', label: 'Admin approval', who: 'With Admin', yours: false, count: lg.stages.admin, to: '/agreements?status=pending_admin_approval', icon: <ShieldCheck /> },
           { key: 'active', label: 'Active', who: 'Live', yours: false, count: lg.stages.active, to: '/agreements?status=active', icon: <CheckCircle2 />, done: true },
         ]}
       />
@@ -96,7 +95,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
                 </ul>
               </>
             ) : (
-              <EmptyState compact icon={<CheckCircle2 />} title="Review queue is empty" description="Signed agreements come here for Legal review before Admin’s final approval." />
+              <EmptyState compact icon={<CheckCircle2 />} title="Review queue is empty" description="Signed agreements come here for Legal review. Your approval makes them Active." />
             )}
           </Card>
 
@@ -193,7 +192,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
           <Card>
             <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} />
             <StatGrid>
-              <MiniStat label="Approved to Admin" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />
+              <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />
               <MiniStat label="Returned to BD" value={lg.last30.returned} icon={<RotateCcw />} tone="text-red-500" />
               <MiniStat label="Documents requested" value={lg.last30.docsRequested} icon={<FileWarning />} tone="text-blue-500" />
               <MiniStat label="Deviations decided" value={lg.last30.deviationsDecided} icon={<Scale />} tone="text-orange-500" />

@@ -94,7 +94,7 @@ export interface LegalDocsItem {
 }
 
 export interface LegalDashboard {
-  stages: { deviations: number; review: number; docs: number; admin: number; active: number };
+  stages: { deviations: number; review: number; docs: number; active: number };
   queue: LegalReviewItem[];
   deviations: LegalDeviationItem[];
   docs: LegalDocsItem[];
@@ -117,7 +117,7 @@ export interface WaitingItem {
 
 export interface BdDashboard {
   /** The BD's agreements at each step of the workflow (counts). */
-  stages: { draft: number; signing: number; legal: number; admin: number; active: number };
+  stages: { draft: number; signing: number; legal: number; active: number };
   waiting: WaitingItem[];
   /** Live agreements owned by the BD, expiring within 60 days (soonest first). */
   expiring: AgreementSummary[];
@@ -211,7 +211,6 @@ function legalDashboard(ags: ReturnType<typeof getDb>['agreements'], userId: str
       deviations: deviations.length,
       review: queue.length,
       docs: docs.length,
-      admin: ags.filter((a) => a.status === 'pending_admin_approval').length,
       active: ags.filter((a) => a.status === 'active' || a.status === 'notice_period').length,
     },
     queue,
@@ -255,7 +254,6 @@ function bdDashboard(own: ReturnType<typeof getDb>['agreements']): BdDashboard {
       draft: own.filter((a) => a.status === 'draft').length,
       signing: own.filter((a) => a.status === 'approved_for_signing').length,
       legal: own.filter((a) => a.status === 'pending_approval' || (a.status === 'signed_copy_uploaded' && a.source === 'app')).length,
-      admin: own.filter((a) => a.status === 'pending_admin_approval').length,
       active: live.length,
     },
     waiting: waiting.sort((a, b) => b.days - a.days),

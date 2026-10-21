@@ -39,7 +39,6 @@ export function Home() {
     tiles.push(<StatTile key="s" label="Awaiting signed copy" value={data.awaitingSigned.length} icon={<FileSignature />} tone="blue" to="/agreements?status=approved_for_signing" />);
   }
   if (isLegal || isAdmin) tiles.push(<StatTile key="p" label="Pending Legal approval" value={data.pendingApproval.length} icon={<CheckCircle2 />} tone="amber" to="/agreements?status=pending_approval" />);
-  if (isAdmin) tiles.push(<StatTile key="f" label="Awaiting final approval" value={data.pendingAdminApproval.length} icon={<ShieldCheck />} tone="purple" to="/agreements?status=pending_admin_approval" />);
   if (isAdmin && data.pendingGate2.length) tiles.push(<StatTile key="g" label="Legacy scans at Gate 2" value={data.pendingGate2.length} icon={<ShieldCheck />} tone="purple" to="/agreements?status=signed_copy_uploaded" />);
   if (isLegal) tiles.push(<StatTile key="n" label="Non-standard (live)" value={data.counts.nonStandard} icon={<Scale />} tone="orange" to="/agreements?nonStandard=1" />);
   tiles.push(<StatTile key="e" label="Expiring in 60 days" value={data.expiring.length} icon={<CalendarClock />} tone="orange" to="/agreements?status=expiring" />);
@@ -165,11 +164,11 @@ export function Home() {
       {(isLegal || isAdmin) && (
         <Card>
           <CardHeader
-            title={isAdmin ? 'Awaiting your final approval' : 'Pending Legal approval(s)'}
+            title="Pending Legal approval(s)"
             icon={<FileSearch />}
           />
-          {(isAdmin ? data.pendingAdminApproval : data.pendingApproval).length ? (
-            <AgreementTable items={(isAdmin ? data.pendingAdminApproval : data.pendingApproval).slice(0, 6)} caption="Queue" />
+          {data.pendingApproval.length ? (
+            <AgreementTable items={data.pendingApproval.slice(0, 6)} caption="Queue" />
           ) : (
             <EmptyState compact icon={<CheckCircle2 />} title="Queue is empty" description="Nothing is waiting for your review." />
           )}

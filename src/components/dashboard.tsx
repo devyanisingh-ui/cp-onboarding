@@ -40,8 +40,8 @@ export function WorkflowStrip({ title, description, steps }: { title: string; de
   return (
     <Card>
       <CardHeader title={title} description={description} />
-      {/* Phones 2 columns, tablets 3, one row from lg up. The gap keeps every step in its own box; the arrows sit in it. */}
-      <ol className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3 sm:gap-3 sm:p-4 lg:grid-cols-[repeat(var(--steps),minmax(0,1fr))] lg:gap-5" style={{ ['--steps' as string]: steps.length }}>
+      {/* Phones 2 columns, tablets 3 (2 for four steps), one row from lg up. The gap keeps every step in its own box; the arrows sit in it. */}
+      <ol className={cn('grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 lg:grid-cols-[repeat(var(--steps),minmax(0,1fr))] lg:gap-5', steps.length === 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')} style={{ ['--steps' as string]: steps.length }}>
         {steps.map((s, i) => {
           const hot = s.yours && s.count > 0;
           return (

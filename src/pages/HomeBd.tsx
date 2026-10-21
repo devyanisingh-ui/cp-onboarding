@@ -67,7 +67,6 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
           { key: 'draft', label: 'Draft', who: 'Your move', yours: true, count: bd.stages.draft, to: '/agreements?status=draft&mine=1', icon: <FilePen /> },
           { key: 'signing', label: 'Ready for signing', who: 'Your move', yours: true, count: bd.stages.signing, to: '/agreements?status=approved_for_signing&mine=1', icon: <FileSignature /> },
           { key: 'legal', label: 'Legal review', who: 'With Legal', yours: false, count: bd.stages.legal, to: '/agreements?status=pending_approval&mine=1', icon: <Scale /> },
-          { key: 'admin', label: 'Admin approval', who: 'With Admin', yours: false, count: bd.stages.admin, to: '/agreements?status=pending_admin_approval&mine=1', icon: <ShieldCheck /> },
           { key: 'active', label: 'Active', who: 'Live', yours: false, count: bd.stages.active, to: '/agreements?status=active&mine=1', icon: <CheckCircle2 />, done: true },
         ]}
       />
@@ -180,7 +179,7 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
                 ))}
               </ul>
             ) : (
-              <EmptyState compact icon={<UserCheck />} title="Nothing waiting on others" description="Agreements with Legal, Admin, the CP or signers appear here with how long they have waited." />
+              <EmptyState compact icon={<UserCheck />} title="Nothing waiting on others" description="Agreements with Legal, the CP or signers appear here with how long they have waited." />
             )}
           </Card>
 

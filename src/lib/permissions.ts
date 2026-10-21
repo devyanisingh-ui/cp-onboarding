@@ -67,9 +67,9 @@ const ALL_CAPABILITIES: Capability[] = [
 ];
 
 /**
- * Three roles, in approval order: BD Executives create CPs and agreements; Legal reviews every
- * agreement and its documents (and approves deviations, templates and rate cards); Admin gives
- * the final approval before signing and can do everything else.
+ * Three roles: BD Executives create CPs and agreements; Legal reviews every signed agreement and
+ * its documents (its approval makes the agreement Active) and approves deviations, templates and
+ * rate cards; Admin can do everything, including Legal's approvals.
  */
 const MATRIX: Record<Role, Capability[]> = {
   bd_exec: [

@@ -494,18 +494,14 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
   const before = { status: a.status };
   closeTasks({ agreementId: id, types: ['gate1_approval'] }, user);
   if (decision === 'approve') {
-    a.status = 'pending_admin_approval';
     a.lastRejection = undefined;
-    touch(a);
     // Legal's review is the KYC check: the CP documents it has seen are now verified.
     d.documents
       .filter((x) => x.ownerType === 'cp' && x.ownerId === a.cpId && x.verificationStatus === 'pending')
       .forEach((x) => Object.assign(x, { verificationStatus: 'verified', verifiedById: user.id, verifiedOn: now(), verificationMethod: 'manual' }));
-    const admin = firstUserWithRole('admin');
-    if (admin)
-      createTask({ type: 'admin_approval', title: `Final approval: ${cpName(a)}`, assigneeId: admin.id, slaDays: d.settings.sla.gate1Days, agreementId: id, cpId: a.cpId, institutionId: a.institutionId });
-    notify([a.ownerId], { title: 'Legal approved', body: `${cpName(a)} · ${a.id} was approved by Legal and is with Admin for final approval.`, link: `/agreements/${id}` });
-    audit(user, 'approve', 'agreement', id, `Legal approved${comment ? `: ${comment}` : ''}; sent to Admin for final approval`, before, { status: a.status });
+    // Legal's approval is the last step: the agreement goes Active straight away.
+    activateAgreement(a, user);
+    audit(user, 'approve', 'agreement', id, `Legal approved${comment ? `: ${comment}` : ''}; agreement Active`, before, { status: a.status });
   } else {
     const c = requireComment(comment);
     returnToDraft(a, 1, user, c);
@@ -515,7 +511,7 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
   commit();
 }
 
-/** Admin's final approval of the signed, Legal-approved agreement: makes it Active, or returns it. */
+/** Legacy: final approval for agreements still parked in the retired Admin step (Legal approval now makes them Active). */
 export async function decideFinalApproval(id: string, decision: 'approve' | 'reject', comment?: string): Promise<void> {
   await delay('write');
   const user = ctx();
@@ -537,7 +533,7 @@ export async function decideFinalApproval(id: string, decision: 'approve' | 'rej
   commit();
 }
 
-/** Makes an agreement Active, with everything that goes with it: Admin's final approval, or a legacy scan passing Gate 2. */
+/** Makes an agreement Active, with everything that goes with it: Legal's approval, or a legacy scan passing Gate 2. */
 export function activateAgreement(a: Agreement, by: User | 'system') {
   const d = getDb();
   a.status = 'active';
@@ -554,7 +550,7 @@ export function activateAgreement(a: Agreement, by: User | 'system') {
     const p = d.agreements.find((x) => x.id === a.predecessorId);
     if (p) p.successorId = a.id;
   }
-  notify([a.ownerId], { title: 'Agreement active', body: `${cpName(a)} · ${a.id} has final approval and is now Active.`, link: `/agreements/${a.id}` });
+  notify([a.ownerId], { title: 'Agreement active', body: `${cpName(a)} · ${a.id} was approved by Legal and is now Active.`, link: `/agreements/${a.id}` });
 }
 
 // ---------------- Deviations ----------------
@@ -734,7 +730,7 @@ export async function uploadSignedCopy(
   closeTasks({ agreementId: id, types: ['signing_upload', 'legacy_scan_upload'] }, user);
   const what = `Uploaded signed copy and stamp paper ${input.stampPaper.number}${input.signedById ? `; signed by ${userName(input.signedById)}` : ''}`;
   if (a.source === 'app') {
-    // Signed: Legal reviews it next, then Admin gives final approval.
+    // Signed: Legal reviews it next; Legal's approval makes it Active.
     sendToLegal(a, user);
     audit(user, 'upload', 'agreement', id, `${what}; sent to Legal for review`, before, { status: a.status, stampPaper: a.stampPaper });
   } else {

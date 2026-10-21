@@ -1,5 +1,47 @@
 {
   "intents": {
+    "inline:legal-s-home-workflow-strip-has-no-admin-approva-1fc601e5": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Signed, to review",
+            "kind": "text"
+          },
+          {
+            "contains": "Approved (now Active)",
+            "kind": "text"
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Admin approval",
+              "kind": "text"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Approved to Admin",
+              "kind": "text"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1792568403997,
+      "id": "inline:legal-s-home-workflow-strip-has-no-admin-approva-1fc601e5",
+      "provenBy": {
+        "at": 1792568404400,
+        "grade": "presence",
+        "runId": "drive-s2656f7ac-eed2-4d02-8bd1-5e330067fe77",
+        "verdictId": "reticle_assert:1792568404400"
+      },
+      "state": "proved",
+      "statement": "Legal's home workflow strip has no Admin approval step: Legal review goes straight to Active.",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1792568404425
+    },
     "inline:on-the-agreements-by-status-report-the-status-ca-abea570a": {
       "binding": {
         "kind": "element",

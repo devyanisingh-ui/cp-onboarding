@@ -17,7 +17,7 @@ import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, Pa
  * Checklist review of a signed agreement against its documents.
  *  - gate2: Admin verifies a legacy scan (approve makes it Active).
  *  - legal: Legal reviews a signed agreement. A Mismatch on a CP document (PAN, Aadhaar, cheque,
- *    GST) can be sent back for the CP to correct; approve sends it to Admin for final approval.
+ *    GST) can be sent back for the CP to correct; approve makes it Active.
  */
 export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const legal = mode === 'legal';
@@ -38,7 +38,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
     return notes.length ? `${c}\n\nChecklist remarks — ${notes.join('; ')}` : c;
   };
   const approve = useAction(() => (legal ? api.agreements.decideGate1(id, 'approve') : api.agreements.decideGate2(id, 'approve', checks)), {
-    success: legal ? 'Approved — sent to Admin for final approval' : 'Verified — agreement is now Active',
+    success: legal ? 'Approved — agreement is now Active' : 'Verified — agreement is now Active',
     onSuccess: () => navigate(`/agreements/${id}`),
   });
   const askDocs = useAction((items: { documentId: string; remark: string }[], n: string) => api.agreements.requestDocChanges(id, items, n), {
@@ -161,7 +161,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
           <Alert tone="info">
             {legal
-              ? 'Mark each item against the documents. Approve needs every item Verified and sends the agreement to Admin. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the CP re-uploads it; if the signed agreement itself is wrong, reject it.'
+              ? 'Mark each item against the documents. Approve needs every item Verified and makes the agreement Active. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the CP re-uploads it; if the signed agreement itself is wrong, reject it.'
               : 'Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments.'}{' '}
             {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.
           </Alert>
@@ -223,7 +223,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               </Button>
             )}
             <Button variant="success" icon={legal ? <ThumbsUp className="size-4" /> : <ShieldCheck className="size-4" />} disabled={done !== fields.length} loading={approve.loading} onClick={() => void approve.run()}>
-              {legal ? 'Approve & send to Admin' : 'Approve — make Active'}
+              Approve — make Active
             </Button>
           </ActionBar>
           {legal && mismatches > 0 && docMismatches.length === 0 && (

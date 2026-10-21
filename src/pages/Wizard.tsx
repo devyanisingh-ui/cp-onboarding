@@ -322,7 +322,7 @@ function WizardInner({
     setBusy('submit');
     try {
       await api.agreements.submit(agreementId!);
-      toast.success('Ready for signing', 'Send it for e-signature, or sign on paper and upload it. Legal and Admin review it after signing.');
+      toast.success('Ready for signing', 'Send it for e-signature, or sign on paper and upload it. Legal reviews it after signing.');
       navigate(`/agreements/${agreementId}`);
     } catch (e) {
       toast.error('Cannot submit yet', errorMessage(e));
@@ -843,7 +843,7 @@ function StepReview({ agreementId, onEdit }: { agreementId: string; onEdit: (ste
         </Alert>
       ) : (
         <Alert tone="success" title="Ready to submit">
-          All merge fields are filled and KYC is uploaded. Submitting releases it for signing. Once signed, it goes to Legal for review{a.nonStandard ? ' (with its approved deviations)' : ''}, then to Admin for final approval.
+          All merge fields are filled and KYC is uploaded. Submitting releases it for signing. Once signed, it goes to Legal for review{a.nonStandard ? ' (with its approved deviations)' : ''}. Legal’s approval makes it Active.
         </Alert>
       )}
       <div className="grid gap-4 md:grid-cols-3">

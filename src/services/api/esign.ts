@@ -5,7 +5,7 @@
  * after they sign, the institution's signatory (e.g. the Registrar) gets theirs → when both have
  * signed, the app builds the signed PDF (signatures in the signature block, optionally on every
  * page, plus a signature certificate page), files it as the signed copy and sends the agreement to
- * Legal for review (then Admin's final approval).
+ * Legal for review (Legal's approval makes it Active).
  *
  * Signers have no app account: the signing link's token is their only credential. Methods:
  *  - `electronic`: drawn or typed signature, with consent, from the email link
@@ -334,7 +334,7 @@ async function completeSigning(a: Agreement, req: ESignRequest) {
   req.completedAt = now();
   req.documentHash = hash;
   req.signedDocumentId = document.id;
-  // Signed by both the CP and the institution's signatory: Legal reviews it next, then Admin.
+  // Signed by both the CP and the institution's signatory: Legal reviews it next; its approval makes it Active.
   a.signedOn = today();
   a.verification = undefined;
   sendToLegal(a, 'system');

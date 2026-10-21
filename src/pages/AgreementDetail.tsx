@@ -278,7 +278,7 @@ export function AgreementDetail() {
             <CardHeader title="Timeline" icon={<History />} />
             <Timeline events={d.events} limit={10} />
           </Card>
-          <p className="px-1 text-xs text-muted">Status colours: {Object.values(STATUS_META).slice(0, 6).map((m) => m.label).join(' · ')}</p>
+          <p className="px-1 text-xs text-muted">Status colours: {Object.entries(STATUS_META).filter(([k]) => k !== 'pending_admin_approval').slice(0, 6).map(([, m]) => m.label).join(' · ')}</p>
         </aside>
       </div>
 
@@ -410,7 +410,7 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
   );
   return (
     <Card>
-      <CardHeader title="How will this be signed?" description="Choose either route. Once signed, it goes to Legal for review, then to Admin for final approval." />
+      <CardHeader title="How will this be signed?" description="Choose either route. Once signed, it goes to Legal for review; Legal’s approval makes it Active." />
       <CardBody className="grid gap-6 md:grid-cols-2">
         <div className="space-y-4">
           <h3 className="flex items-center gap-2 font-semibold">

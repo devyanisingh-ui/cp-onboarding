@@ -58,7 +58,6 @@ export const STEPPER: { status: AgreementStatus; label: string }[] = [
   { status: 'draft', label: 'Draft' },
   { status: 'approved_for_signing', label: 'Signing' },
   { status: 'pending_approval', label: 'Legal approval' },
-  { status: 'pending_admin_approval', label: 'Admin approval' },
   { status: 'active', label: 'Active' },
 ];
 

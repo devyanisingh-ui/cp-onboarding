@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "id": "inline:when-legal-approves-a-signed-agreement-it-become-8f949b92",
+      "statement": "When Legal approves a signed agreement it becomes Active straight away:…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "bd-home-actions-grouped",
       "statement": "A BD Executive’s pending tasks on Home are grouped by the kind of work…",
       "status": "proposed",
@@ -203,6 +209,12 @@
       "statement": "Uploading a signed copy asks only for the stamp paper details and the s…",
       "status": "proposed",
       "subject": "signed-upload"
+    },
+    {
+      "id": "inline:legal-s-home-workflow-strip-has-no-admin-approva-1fc601e5",
+      "statement": "Legal's home workflow strip has no Admin approval step: Legal review go…",
+      "status": "proved",
+      "subject": "unsorted"
     },
     {
       "id": "inline:on-the-agreements-by-status-report-the-status-ca-abea570a",

@@ -77,7 +77,7 @@ export function SendForSignature() {
       <div className="space-y-5">
         <Alert tone="info" title="How it works">
           The Channel Partner signs first. When they’re done, the institution’s signatory gets their link. Once both have signed, the signed PDF — with a
-          signature certificate page — is filed as the signed copy and the agreement goes to Legal for review, then to Admin for final approval.
+          signature certificate page — is filed as the signed copy and the agreement goes to Legal for review; Legal’s approval makes it Active.
         </Alert>
         {signerCard(cp, setCp, 1, 'Channel Partner', `Signs for ${d.cp.legalName}.`)}
         {signerCard(inst, setInst, 2, 'Institution', `Signs for ${d.institution.legalName}, after the Channel Partner.`)}
