@@ -43,8 +43,9 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
         ]}
       />
 
+      {/* Both columns are flex columns whose last card stretches, so the two end on the same line. */}
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           <Card>
             <CardHeader
               title="Review queue"
@@ -135,9 +136,31 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
               <EmptyState compact icon={<Scale />} title="No deviation requests" description="When a BD asks for different rates or clause wording, it waits here for your decision." />
             )}
           </Card>
+
+          <Card className="flex-1">
+            <CardHeader
+              title="Templates & rate cards"
+              description="Set-up changes waiting for Legal approval"
+              icon={<ScrollText />}
+              action={
+                <ButtonLink to="/admin" variant="link" size="sm">
+                  Open
+                </ButtonLink>
+              }
+            />
+            {configTasks.length ? (
+              <div className="divide-y divide-line">
+                {configTasks.map((t) => (
+                  <TaskRow key={t.id} t={t} compact />
+                ))}
+              </div>
+            ) : (
+              <EmptyState compact icon={<ScrollText />} title="Nothing to approve" description="New template and rate card versions wait here for your approval." />
+            )}
+          </Card>
         </div>
 
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           <Card>
             <CardHeader title="Documents sent back" description="You asked for corrected CP documents; follow up if they sit too long" icon={<Undo2 />} />
             {lg.docs.length ? (
@@ -167,29 +190,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
             )}
           </Card>
 
-          <Card>
-            <CardHeader
-              title="Templates & rate cards"
-              description="Set-up changes waiting for Legal approval"
-              icon={<ScrollText />}
-              action={
-                <ButtonLink to="/admin" variant="link" size="sm">
-                  Open
-                </ButtonLink>
-              }
-            />
-            {configTasks.length ? (
-              <div className="divide-y divide-line">
-                {configTasks.map((t) => (
-                  <TaskRow key={t.id} t={t} compact />
-                ))}
-              </div>
-            ) : (
-              <EmptyState compact icon={<ScrollText />} title="Nothing to approve" description="New template and rate card versions wait here for your approval." />
-            )}
-          </Card>
-
-          <Card>
+          <Card className="flex-1">
             <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} />
             <StatGrid>
               <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />

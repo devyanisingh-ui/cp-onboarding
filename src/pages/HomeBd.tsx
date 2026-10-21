@@ -153,7 +153,8 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
           )}
         </Card>
 
-        <div className="space-y-6">
+        {/* The last card stretches so this column ends level with "Needs your action". */}
+        <div className="flex flex-col gap-6">
           <Card>
             <CardHeader title="Waiting on others" description="Follow up if anything sits too long" icon={<Hourglass />} />
             {bd.waiting.length ? (
@@ -183,7 +184,7 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
             )}
           </Card>
 
-          <Card>
+          <Card className="flex-1">
             <CardHeader title="My portfolio" description="Your agreements across institutions" icon={<Users />} />
             <StatGrid>
               <MiniStat label="Active agreements" value={bd.stats.active} to="/agreements?status=active&mine=1" icon={<ShieldCheck />} tone="text-green-600" />

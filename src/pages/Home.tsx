@@ -143,7 +143,7 @@ export function Home() {
       {isBd && (
         <div className="grid gap-6 xl:grid-cols-2">
           <Card>
-            <CardHeader title="Drafts" icon={<FilePen />} action={<ButtonLink to="/agreements?status=draft" variant="link" size="sm">View all</ButtonLink>} />
+            <CardHeader title="Drafts" description="Agreements you are still preparing" icon={<FilePen />} action={<ButtonLink to="/agreements?status=draft" variant="link" size="sm">View all</ButtonLink>} />
             {data.drafts.length ? (
               <AgreementTable items={data.drafts.slice(0, 5)} caption="Drafts" showOwner={false} compact />
             ) : (
@@ -165,7 +165,9 @@ export function Home() {
         <Card>
           <CardHeader
             title="Pending Legal approval(s)"
+            description="Signed agreements waiting for Legal review"
             icon={<FileSearch />}
+            action={<ButtonLink to="/agreements?status=pending_approval" variant="link" size="sm">View all</ButtonLink>}
           />
           {data.pendingApproval.length ? (
             <AgreementTable items={data.pendingApproval.slice(0, 6)} caption="Queue" />
