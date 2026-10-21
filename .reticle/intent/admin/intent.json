@@ -1,0 +1,44 @@
+{
+  "intents": {
+    "inline:sending-the-cp-the-upload-link-emails-the-cp-the-ab94fbc2": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "To irfan.m@gmail.com",
+            "kind": "text"
+          },
+          {
+            "contains": "Please re-upload documents for your Channel Partner Agreement AGR-ASU-2026-0009",
+            "kind": "text"
+          },
+          {
+            "contains": "PAN card of the individual: PAN scan is blurred, upload a clear copy",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1792570442738,
+      "id": "inline:sending-the-cp-the-upload-link-emails-the-cp-the-ab94fbc2",
+      "provenBy": {
+        "at": 1792570452308,
+        "grade": "presence",
+        "runId": "drive-sa8b2d953-4130-47e3-9b5e-dc9b8b843a61",
+        "verdictId": "reticle_assert:1792570452308"
+      },
+      "state": "proved",
+      "statement": "Sending the CP the upload link emails the CP: the outbox has one task email to the CP's address naming the agreement and each document to correct with Legal's remark, with a link to the CP's upload page.",
+      "status": "proved",
+      "subject": "admin",
+      "surface": {
+        "files": [
+          "src/pages/admin/System.tsx"
+        ],
+        "route": "/admin/system"
+      },
+      "updatedAt": 1792570452338
+    }
+  },
+  "subject": "admin",
+  "version": 1
+}

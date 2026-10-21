@@ -8,6 +8,7 @@ import type { CpFormValues } from '@/lib/schemas';
 import { DEMO_PASSWORD } from '@/data/seed';
 import { requiredKyc } from '@/lib/kyc';
 import { correctedDocsToRecheck } from '@/lib/status';
+import { handleSendEmail } from '../../../server/sendEmail';
 
 const as = (email: string) => api.auth.signIn(email, DEMO_PASSWORD);
 const KAVYA = 'kavya.iyer@apeejay.edu';
@@ -221,6 +222,64 @@ describe('new CP onboarding (PRD 6.1)', () => {
     const newPan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.fileName === 'pan-clear.pdf')!;
     expect(newPan.verificationStatus).toBe('verified');
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
+  });
+
+  it('emails the CP their upload link for the corrected documents, through the real-delivery relay', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const docOf = (type: string) => getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === type)!;
+    await as(PRIYA);
+    await api.agreements.requestDocChanges(agreementId, [{ documentId: docOf('pan').id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
+
+    // Real delivery on (as with VITE_EMAIL_DELIVERY=resend in .env); capture what the app posts to the relay.
+    vi.stubEnv('VITE_EMAIL_DELIVERY', 'resend');
+    const relayed: unknown[] = [];
+    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => (relayed.push(JSON.parse(init.body as string)), new Response(JSON.stringify({ id: 'em_1' })))));
+    try {
+      await as(KAVYA);
+      const before = getDb().emails.length;
+      const { link } = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
+
+      // Exactly one email, to the CP, carrying their personal link and what to fix.
+      const sent = getDb().emails.slice(before);
+      expect(sent).toHaveLength(1);
+      const [m] = sent;
+      expect(m).toMatchObject({ to: 'ravi@sunrise.in', link, kind: 'task' });
+      expect(m!.subject).toContain(agreementId);
+      expect(m!.body).toContain('PAN copy is blurred');
+      expect(m!.body).toMatch(/Do not forward it/);
+
+      // Handed to the relay, which accepts it and would send it through Resend with an absolute link.
+      expect(relayed).toEqual([{ to: 'ravi@sunrise.in', subject: m!.subject, body: m!.body, link, kind: 'task' }]);
+      const resend = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({ id: 'em_2' })));
+      const res = await handleSendEmail(
+        new Request('http://x/api/send-email', { method: 'POST', body: JSON.stringify(relayed[0]) }),
+        { RESEND_API_KEY: 're_test', EMAIL_FROM: 'CP <n@example.com>', APP_URL: 'https://cp.apeejay.example' },
+        resend as unknown as typeof fetch,
+      );
+      expect(res.status).toBe(200);
+      const toResend = JSON.parse(resend.mock.calls[0]![1]!.body as string);
+      expect(toResend.to).toEqual(['ravi@sunrise.in']);
+      expect(toResend.text).toContain(`https://cp.apeejay.example${link}`);
+      await vi.waitFor(() => expect(m!.delivery).toEqual({ status: 'sent', providerId: 'em_1' }));
+
+      // The link opens the CP's upload page for just the flagged document.
+      const session = await api.cpDocs.session(link.split('/').pop()!);
+      expect(session.items.map((it) => it.documentType)).toEqual(['pan']);
+
+      // Resending emails a fresh link; the old one stops working.
+      const again = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
+      expect(again.link).not.toBe(link);
+      expect(getDb().emails.slice(before).map((x) => x.link)).toEqual([link, again.link]);
+      await expect(api.cpDocs.session(link.split('/').pop()!)).rejects.toThrow();
+
+      // A bad address sends nothing.
+      await expect(api.agreements.sendDocRequestLink(agreementId, 'not-an-email')).rejects.toThrow(/valid email/);
+      expect(getDb().emails.length).toBe(before + 2);
+    } finally {
+      vi.unstubAllEnvs();
+      vi.unstubAllGlobals();
+    }
   });
 
   it('sends a signed non-standard agreement to Legal, whose approval makes it Active', async () => {

@@ -1,6 +1,12 @@
 {
   "entries": [
     {
+      "id": "inline:sending-the-cp-the-upload-link-emails-the-cp-the-ab94fbc2",
+      "statement": "Sending the CP the upload link emails the CP: the outbox has one task e…",
+      "status": "proved",
+      "subject": "admin"
+    },
+    {
       "id": "inline:the-pending-admin-approval-status-and-the-admin-47bb0d49",
       "statement": "The Pending Admin approval status and the Admin final approval task no…",
       "status": "proposed",
