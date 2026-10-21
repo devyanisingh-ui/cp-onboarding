@@ -1,5 +1,71 @@
 {
   "intents": {
+    "inline:each-document-on-an-agreement-shows-as-a-card-ty-76723e80": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "role": "dialog"
+            }
+          },
+          {
+            "contains": "Pending check",
+            "kind": "text"
+          },
+          {
+            "contains": "323 KB",
+            "kind": "text"
+          },
+          {
+            "contains": "Retained until 23 November 2035",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Download PAN card",
+              "role": "button"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Delete PAN card (retention locked)",
+              "role": "button"
+            },
+            "state": "visible"
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792576685130,
+      "id": "inline:each-document-on-an-agreement-shows-as-a-card-ty-76723e80",
+      "provenBy": {
+        "at": 1792576690535,
+        "grade": "presence",
+        "runId": "drive-s7b54c196-c81a-4a50-a3db-ac041501ff6d",
+        "verdictId": "reticle_act_and_wait:1792576690535"
+      },
+      "state": "proved",
+      "statement": "Each document on an agreement shows as a card: type, check status badge, file type, file name, size, uploader and time, retention, and its View / Download / Delete actions still work.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "files": [
+          "src/components/ui/Button.tsx"
+        ],
+        "route": "/agreements/AGR-ASU-2026-0004"
+      },
+      "updatedAt": 1792576690574
+    },
     "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21": {
       "binding": {
         "kind": "allOf",

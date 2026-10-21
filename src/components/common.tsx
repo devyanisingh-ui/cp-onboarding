@@ -275,6 +275,21 @@ export function VerificationBadge({ status }: { status: DocumentRecord['verifica
   );
 }
 
+/** Colours for a document card, by its check status. */
+const DOC_TONE: Record<DocumentRecord['verificationStatus'], { bar: string; tile: string; note: string }> = {
+  pending: { bar: 'bg-warning-600/70', tile: 'bg-warning-50 text-warning-700 ring-warning-600/20', note: 'bg-warning-50 text-warning-700' },
+  verified: { bar: 'bg-success-600', tile: 'bg-success-50 text-success-700 ring-success-600/20', note: 'bg-success-50 text-success-700' },
+  mismatch: { bar: 'bg-danger-600', tile: 'bg-danger-50 text-danger-700 ring-danger-600/20', note: 'bg-danger-50 text-danger-700' },
+};
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]!.toUpperCase())
+    .join('') || '?';
+
 export function DocumentList({ docs, names, onVerify, empty = 'No documents uploaded yet.' }: { docs: DocumentRecord[]; names: Record<string, string>; onVerify?: (d: DocumentRecord) => void; empty?: string }) {
   const [viewing, setViewing] = useState<DocumentRecord | null>(null);
   const toast = useToast();
@@ -298,48 +313,71 @@ export function DocumentList({ docs, names, onVerify, empty = 'No documents uplo
   if (!docs.length) return <p className="px-5 py-6 text-sm text-muted">{empty}</p>;
   return (
     <>
-      <ul className="divide-y divide-line">
-        {docs.map((d) => (
-          <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-muted">
-              {d.mimeType.startsWith('image/') ? <ImageIcon className="size-4" aria-hidden /> : <FileText className="size-4" aria-hidden />}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-ink">{docLabel(d.type)}</p>
-              <p className="truncate text-xs text-muted">
-                {d.fileName} · {formatBytes(d.size)} · {names[d.uploadedById] ?? '—'}, {timeAgo(d.uploadedAt)}
-              </p>
-              {d.verifiedById && (
-                <p className="text-xs text-muted">
-                  {d.verificationStatus === 'verified' ? 'Verified' : 'Checked'} by {names[d.verifiedById] ?? 'Admin'} on {formatDate(d.verifiedOn?.slice(0, 10))} · {d.verificationMethod ?? 'manual'}
-                  {d.remarks ? ` · “${d.remarks}”` : ''}
+      <ul className="grid gap-2.5 p-3 sm:p-4">
+        {docs.map((d) => {
+          const tone = DOC_TONE[d.verificationStatus];
+          const ext = d.fileName.split('.').pop()?.slice(0, 4).toUpperCase() ?? '';
+          const uploader = names[d.uploadedById] ?? '—';
+          return (
+            <li key={d.id} className="relative overflow-hidden rounded-xl border border-line bg-white shadow-card transition hover:border-primary-200 hover:shadow-md">
+              <span className={cn('absolute inset-y-0 left-0 w-1', tone.bar)} aria-hidden />
+              <div className="flex flex-wrap items-start gap-x-3.5 gap-y-3 py-3.5 pl-5 pr-3.5">
+                <div className={cn('flex size-12 shrink-0 flex-col items-center justify-center gap-0.5 rounded-lg ring-1 ring-inset', tone.tile)}>
+                  {d.mimeType.startsWith('image/') ? <ImageIcon className="size-5" aria-hidden /> : <FileText className="size-5" aria-hidden />}
+                  {ext && <span className="text-[9px] font-bold leading-none tracking-wider">{ext}</span>}
+                </div>
+                <div className="min-w-0 flex-1 basis-56">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold text-ink">{docLabel(d.type)}</p>
+                    <VerificationBadge status={d.verificationStatus} />
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-muted">
+                    <span className="inline-flex max-w-full items-center gap-1 truncate rounded-md bg-sunken px-2 py-0.5 font-medium text-ink-soft">
+                      <span className="truncate">{d.fileName}</span>
+                    </span>
+                    <span className="rounded-md bg-sunken px-2 py-0.5">{formatBytes(d.size)}</span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="flex size-5 items-center justify-center rounded-full bg-primary-50 text-[9px] font-bold text-primary-700" aria-hidden>
+                        {initials(uploader)}
+                      </span>
+                      {uploader}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Clock className="size-3" aria-hidden /> {timeAgo(d.uploadedAt)}
+                    </span>
+                  </div>
+                  {d.verifiedById && (
+                    <p className={cn('mt-2 rounded-md px-2.5 py-1.5 text-xs', tone.note)}>
+                      {d.verificationStatus === 'verified' ? 'Verified' : 'Checked'} by {names[d.verifiedById] ?? 'Admin'} on {formatDate(d.verifiedOn?.slice(0, 10))} · {d.verificationMethod ?? 'manual'}
+                      {d.remarks ? ` · “${d.remarks}”` : ''}
+                    </p>
+                  )}
+                </div>
+                <div className="ml-auto flex items-center rounded-lg border border-line bg-white p-0.5">
+                  <IconButton label={`View ${docLabel(d.type)}`} size="sm" onClick={() => setViewing(d)}>
+                    <Eye className="size-4" />
+                  </IconButton>
+                  <IconButton label={`Download ${docLabel(d.type)}`} size="sm" onClick={() => void download(d)}>
+                    <Download className="size-4" />
+                  </IconButton>
+                  {onVerify && (
+                    <IconButton label={`Verify ${docLabel(d.type)}`} size="sm" onClick={() => onVerify(d)}>
+                      <CheckCircle2 className="size-4" />
+                    </IconButton>
+                  )}
+                  <IconButton label={`Delete ${docLabel(d.type)} (retention locked)`} size="sm" onClick={() => void remove(d)}>
+                    <Trash2 className="size-4" />
+                  </IconButton>
+                </div>
+              </div>
+              {d.retentionUntil && (
+                <p className="flex items-center gap-1.5 border-t border-line/70 bg-sunken/60 py-1.5 pl-5 pr-3.5 text-2xs text-subtle">
+                  <Lock className="size-3" aria-hidden /> Retained until {formatDate(d.retentionUntil)}
                 </p>
               )}
-            </div>
-            <VerificationBadge status={d.verificationStatus} />
-            <div className="flex items-center">
-              <IconButton label={`View ${docLabel(d.type)}`} size="sm" onClick={() => setViewing(d)}>
-                <Eye className="size-4" />
-              </IconButton>
-              <IconButton label={`Download ${docLabel(d.type)}`} size="sm" onClick={() => void download(d)}>
-                <Download className="size-4" />
-              </IconButton>
-              {onVerify && (
-                <IconButton label={`Verify ${docLabel(d.type)}`} size="sm" onClick={() => onVerify(d)}>
-                  <CheckCircle2 className="size-4" />
-                </IconButton>
-              )}
-              <IconButton label={`Delete ${docLabel(d.type)} (retention locked)`} size="sm" onClick={() => void remove(d)}>
-                <Trash2 className="size-4" />
-              </IconButton>
-            </div>
-            {d.retentionUntil && (
-              <p className="flex w-full items-center gap-1 pl-12 text-2xs text-subtle">
-                <Lock className="size-3" aria-hidden /> Retained until {formatDate(d.retentionUntil)}
-              </p>
-            )}
-          </li>
-        ))}
+            </li>
+          );
+        })}
       </ul>
       <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
     </>

@@ -7,6 +7,12 @@
       "subject": "admin"
     },
     {
+      "id": "inline:each-document-on-an-agreement-shows-as-a-card-ty-76723e80",
+      "statement": "Each document on an agreement shows as a card: type, check status badge…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21",
       "statement": "The 'How will this be signed?' card on a ready-for-signing agreement of…",
       "status": "proved",
