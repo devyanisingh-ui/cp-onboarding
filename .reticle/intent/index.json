@@ -19,6 +19,12 @@
       "subject": "agreements"
     },
     {
+      "id": "inline:each-workflow-step-card-on-the-dashboard-shows-i-c064677a",
+      "statement": "Each workflow step card on the dashboard shows its count, label and own…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21",
       "statement": "The 'How will this be signed?' card on a ready-for-signing agreement of…",
       "status": "proved",

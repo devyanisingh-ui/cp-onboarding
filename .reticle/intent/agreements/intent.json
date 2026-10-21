@@ -143,6 +143,41 @@
       },
       "updatedAt": 1792576690574
     },
+    "inline:each-workflow-step-card-on-the-dashboard-shows-i-c064677a": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/agreements"
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792582646549,
+      "id": "inline:each-workflow-step-card-on-the-dashboard-shows-i-c064677a",
+      "provenBy": {
+        "at": 1792582647697,
+        "grade": "presence",
+        "runId": "drive-s6a9f79af-4c1d-43cd-83eb-dbfcc3509292",
+        "verdictId": "reticle_act_and_wait:1792582647697"
+      },
+      "state": "proved",
+      "statement": "Each workflow step card on the dashboard shows its count, label and owner beside the icon (not under it), and still opens the matching agreement list.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "files": [
+          "src/components/dashboard.tsx"
+        ],
+        "route": "/agreements"
+      },
+      "updatedAt": 1792582647735
+    },
     "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21": {
       "binding": {
         "kind": "allOf",

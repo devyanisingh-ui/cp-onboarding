@@ -40,8 +40,8 @@ export function WorkflowStrip({ title, description, steps, icon = <Workflow /> }
   return (
     <Card>
       <CardHeader title={title} description={description} icon={icon} />
-      {/* Phones 2 columns, tablets 3 (2 for four steps), one row from lg up. The gap keeps every step in its own box; the arrows sit in it. */}
-      <ol className={cn('grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 lg:grid-cols-[repeat(var(--steps),minmax(0,1fr))] lg:gap-5', steps.length === 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')} style={{ ['--steps' as string]: steps.length }}>
+      {/* Phones 2 columns, tablets 3 (2 for four steps), one row from xl up (text beside the icon needs the width). The gap keeps every step in its own box; the arrows sit in it. */}
+      <ol className={cn('grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 xl:grid-cols-[repeat(var(--steps),minmax(0,1fr))] xl:gap-5', steps.length === 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')} style={{ ['--steps' as string]: steps.length }}>
         {steps.map((s, i) => {
           const hot = s.yours && s.count > 0;
           return (
@@ -49,15 +49,15 @@ export function WorkflowStrip({ title, description, steps, icon = <Workflow /> }
               <StepLink
                 to={s.to}
                 className={cn(
-                  'group flex w-full min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 transition-colors sm:flex-col sm:items-start sm:gap-2 sm:px-3.5',
+                  'group flex w-full min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-left ring-1 transition-colors sm:gap-3.5 sm:px-4 sm:py-3.5',
                   hot ? 'bg-primary-50 ring-primary-200 hover:bg-primary-100/70' : 'bg-white/40 ring-line/60 hover:bg-[var(--surface-hover)]',
                 )}
               >
-                <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', hot ? 'bg-white text-primary-700 ring-primary-200' : s.done ? 'bg-green-50 text-green-700 ring-green-200' : 'bg-slate-50 text-slate-500 ring-slate-200')}>
+                <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset sm:size-11 [&_svg]:size-[18px] sm:[&_svg]:size-5', hot ? 'bg-white text-primary-700 ring-primary-200' : s.done ? 'bg-green-50 text-green-700 ring-green-200' : 'bg-slate-50 text-slate-500 ring-slate-200')}>
                   {s.icon}
                 </span>
                 <span className="min-w-0 max-w-full">
-                  {/* The label sits under the count and wraps inside the box, so it never runs into the next step. */}
+                  {/* Beside the icon: the count, then the label, which wraps inside the box so it never runs into the next step. */}
                   <span className="flex flex-col gap-1">
                     <span className="text-2xl font-semibold leading-none tabular-nums text-ink">{s.count}</span>
                     <span className="break-words text-sm font-medium leading-tight text-ink-soft">{s.label}</span>
@@ -66,7 +66,7 @@ export function WorkflowStrip({ title, description, steps, icon = <Workflow /> }
                 </span>
               </StepLink>
               {/* Centred in the 20px gap to the next step; only when all steps share one row. */}
-              {i < steps.length - 1 && <ChevronRight className="pointer-events-none absolute -right-[18px] top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle lg:block" aria-hidden />}
+              {i < steps.length - 1 && <ChevronRight className="pointer-events-none absolute -right-[18px] top-1/2 z-10 hidden size-4 -translate-y-1/2 text-subtle xl:block" aria-hidden />}
             </li>
           );
         })}
