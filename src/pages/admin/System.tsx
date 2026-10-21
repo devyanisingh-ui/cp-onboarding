@@ -4,6 +4,7 @@ import { Eraser, Mail, Play, RotateCcw, Send } from 'lucide-react';
 import { api } from '@/services/mockApi';
 import { getDb } from '@/services/db';
 import { channels } from '@/services/notificationChannels';
+import { relayEnabled } from '@/services/emailRelay';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useSession } from '@/context/SessionContext';
 import { useDocumentTitle } from '@/hooks/misc';
@@ -65,7 +66,7 @@ export function System() {
       </Card>
 
       <Card>
-        <CardHeader title="Email outbox" description="Emails the app has sent (simulated)." icon={<Mail />} />
+        <CardHeader title="Email outbox" description={relayEnabled() ? 'Emails the app has sent. Tasks, reminders, escalations and signing links are delivered through Resend.' : 'Emails the app has sent (simulated).'} icon={<Mail />} />
         {emails.data?.length ? (
           <ul className="max-h-[480px] divide-y divide-line overflow-y-auto">
             {emails.data.map((m) => (
@@ -74,7 +75,9 @@ export function System() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Badge tone={m.kind === 'escalation' ? 'orange' : m.kind === 'digest' ? 'purple' : m.kind === 'reminder' ? 'amber' : m.kind === 'signature' ? 'blue' : 'accent'}>{m.kind}</Badge>
                     <span className="text-sm font-medium">{m.subject}</span>
+                    {m.delivery && <Badge tone={m.delivery.status === 'sent' ? 'green' : m.delivery.status === 'failed' ? 'red' : 'grey'}>{m.delivery.status === 'sent' ? 'Delivered to Resend' : m.delivery.status === 'failed' ? 'Not sent' : 'Sending…'}</Badge>}
                   </div>
+                  {m.delivery?.status === 'failed' && <p className="mt-0.5 text-xs text-danger-700">{m.delivery.error}</p>}
                   <p className="mt-0.5 text-xs text-muted">
                     To {m.to} · {formatDateTime(m.sentAt)}
                   </p>

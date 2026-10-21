@@ -509,6 +509,8 @@ export interface EmailMessage {
   link?: string;
   kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event' | 'signature';
   sentAt: ISODateTime;
+  /** Real delivery through the Resend relay. Absent when the email only went to the simulated outbox. */
+  delivery?: { status: 'sending' | 'sent' | 'failed'; providerId?: string; error?: string };
 }
 
 export interface AuditEvent {

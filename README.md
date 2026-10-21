@@ -29,6 +29,28 @@ header lets you view the app as each persona.
 
 To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the printed Network address.
 
+## Email notifications (Resend)
+
+By default emails only go to the simulated outbox (Admin → System). To send them for real:
+
+1. Create an API key at [resend.com](https://resend.com) and, for real recipients, verify your sending domain.
+2. Copy `.env.example` to `.env` and fill it in. Keep `EMAIL_REDIRECT_TO` set while testing: the demo users' addresses are not real.
+3. Restart `npm run dev`.
+
+New tasks, reminders, escalations and signing / document-upload links to CPs are then sent through
+Resend; event notices and the Legal/Admin digest stay in-app. Each outbox entry shows whether
+Resend accepted it.
+
+The API key lives only on the server: the app POSTs to `/api/send-email`
+([`server/sendEmail.ts`](server/sendEmail.ts)), which the dev server serves locally and
+[`api/send-email.ts`](api/send-email.ts) serves as a Vercel function in production (set the same
+variables in the Vercel project, with `APP_URL` as the deployed address). The relay accepts only
+the email kinds above, a fixed sender and links inside the app, but it has no sign-in check yet,
+so add one before it faces the internet. The single-file mobile builds keep the simulated outbox.
+
+Because all data lives in each browser, reminders and escalations fire from whichever browser runs
+the scheduler, and a fresh browser sends the reminders for the seeded overdue tasks once.
+
 ## Demo personas
 
 | Role | Account | What they do |

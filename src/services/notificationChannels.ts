@@ -1,5 +1,6 @@
-import type { User } from '@/types';
+import type { EmailMessage, User } from '@/types';
 import { getDb, nextId } from './db';
+import { relay } from './emailRelay';
 
 /**
  * Pluggable notification channels (PRD §2, §9). In-app notifications are written by `notify`;
@@ -24,17 +25,16 @@ const emailChannel: NotificationChannel = {
   label: 'Email',
   enabled: true,
   send(user, msg) {
-    getDb().emails.push({
-      id: nextId('email', 'M-'),
-      to: user.email,
-      subject: msg.title,
-      body: msg.body,
-      link: msg.link,
-      kind: msg.kind,
-      sentAt: new Date().toISOString(),
-    });
+    sendEmail(user.email, msg);
   },
 };
+
+/** Writes to the outbox and, when enabled, sends for real through the Resend relay. */
+function sendEmail(to: string, msg: OutboundMessage) {
+  const m: EmailMessage = { id: nextId('email', 'M-'), to, subject: msg.title, body: msg.body, link: msg.link, kind: msg.kind, sentAt: new Date().toISOString() };
+  getDb().emails.push(m);
+  relay(m);
+}
 
 const whatsappChannel: NotificationChannel = {
   id: 'whatsapp',
@@ -56,5 +56,5 @@ export function deliver(user: User, msg: OutboundMessage) {
  * outbox; WhatsApp and other channels never carry signing links.
  */
 export function sendExternalEmail(to: string, msg: OutboundMessage) {
-  getDb().emails.push({ id: nextId('email', 'M-'), to, subject: msg.title, body: msg.body, link: msg.link, kind: msg.kind, sentAt: new Date().toISOString() });
+  sendEmail(to, msg);
 }
