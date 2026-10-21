@@ -7,6 +7,12 @@
       "subject": "admin"
     },
     {
+      "id": "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21",
+      "statement": "The 'How will this be signed?' card on a ready-for-signing agreement of…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:the-pending-admin-approval-status-and-the-admin-47bb0d49",
       "statement": "The Pending Admin approval status and the Admin final approval task no…",
       "status": "proposed",
@@ -107,6 +113,12 @@
       "statement": "legal-home-workflow",
       "status": "proposed",
       "subject": "drive-legal-home-workflow"
+    },
+    {
+      "id": "flow:drive-sending-the-cp-the-upload-link-emails-the-cp-the",
+      "statement": "Sending the CP the upload link emails the CP: the outbox has one task e…",
+      "status": "proposed",
+      "subject": "drive-sending-the-cp-the-upload-link-ema"
     },
     {
       "id": "flow:drive-signin-lands-on-dashboard",

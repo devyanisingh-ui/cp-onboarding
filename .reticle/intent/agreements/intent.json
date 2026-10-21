@@ -1,5 +1,63 @@
 {
   "intents": {
+    "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "How will this be signed?",
+              "role": "heading"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Sign on paper",
+              "role": "heading"
+            },
+            "state": "visible"
+          },
+          {
+            "contains": "Sign it on paper and upload it.",
+            "kind": "text"
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "E-signature",
+              "role": "heading"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "gets an email link and signs first",
+              "kind": "text"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1792571380602,
+      "id": "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21",
+      "provenBy": {
+        "at": 1792571380884,
+        "grade": "presence",
+        "runId": "drive-se150a7db-34f6-4573-ac4c-94fc8966fcc1",
+        "verdictId": "reticle_assert:1792571380884"
+      },
+      "state": "proved",
+      "statement": "The 'How will this be signed?' card on a ready-for-signing agreement offers only the paper route (download, sign on stamp paper, upload); it has no E-signature section.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0008"
+      },
+      "updatedAt": 1792571380930
+    },
     "inline:the-pending-admin-approval-status-and-the-admin-47bb0d49": {
       "binding": {
         "kind": "allOf",

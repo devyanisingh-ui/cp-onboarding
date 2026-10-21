@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-sending-the-cp-the-upload-link-emails-the-cp-the": {
+      "declaredAt": 1792571353295,
+      "id": "flow:drive-sending-the-cp-the-upload-link-emails-the-cp-the",
+      "state": "declared",
+      "statement": "Sending the CP the upload link emails the CP: the outbox has one task email to the CP's address naming the agreement and each document to correct with Legal's remark, with a link to the CP's upload page.",
+      "status": "proposed",
+      "subject": "drive-sending-the-cp-the-upload-link-ema",
+      "surface": {
+        "flow": "drive-sending-the-cp-the-upload-link-emails-the-cp-the"
+      },
+      "updatedAt": 1792571353312
+    }
+  },
+  "subject": "drive-sending-the-cp-the-upload-link-ema",
+  "version": 1
+}

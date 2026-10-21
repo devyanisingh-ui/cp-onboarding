@@ -108,7 +108,7 @@ export function AgreementDetail() {
           <DocRequestPanel agreementId={a.id} req={a.docRequest} docs={d.cpDocuments} names={d.names} cpEmail={d.cp.email} canSend={act.sendDocLink} canAccept={act.reviewCpDocs} />
         )}
         {act.uploadSigned && a.source === 'app' && a.status === 'approved_for_signing' && a.esign?.status !== 'in_progress' && (
-          <SigningChoice agreementId={a.id} signatory={`${a.signatoryName}, ${a.signatoryDesignation}`} cpName={d.cp.legalName} canEsign={act.sendForSignature} />
+          <SigningChoice agreementId={a.id} signatory={`${a.signatoryName}, ${a.signatoryDesignation}`} cpName={d.cp.legalName} />
         )}
         {a.override && (
           <Alert
@@ -374,8 +374,8 @@ function ESignCard({ d, onChange }: { d: AgreementDetailData; onChange: () => vo
   );
 }
 
-/** Ready for signing: the two ways to get it signed, so the paper route isn't missed. */
-function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreementId: string; signatory: string; cpName: string; canEsign: boolean }) {
+/** Ready for signing: how to get it signed on paper and uploaded. */
+function SigningChoice({ agreementId, signatory, cpName }: { agreementId: string; signatory: string; cpName: string }) {
   const step = (n: number, text: string) => (
     <li className="flex gap-3">
       <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-700">{n}</span>
@@ -384,8 +384,8 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
   );
   return (
     <Card>
-      <CardHeader title="How will this be signed?" description="Choose either route. Once signed, it goes to Legal for review; Legal’s approval makes it Active." />
-      <CardBody className="grid gap-6 md:grid-cols-2">
+      <CardHeader title="How will this be signed?" description="Sign it on paper and upload it. It then goes to Legal for review; Legal’s approval makes it Active." />
+      <CardBody>
         <div className="space-y-4">
           <h3 className="flex items-center gap-2 font-semibold">
             <FileSignature className="size-4 text-muted" aria-hidden /> Sign on paper
@@ -402,21 +402,6 @@ function SigningChoice({ agreementId, signatory, cpName, canEsign }: { agreement
             </ButtonLink>
           </div>
         </div>
-        {canEsign && (
-          <div className="space-y-4 md:border-l md:border-line md:pl-6">
-            <h3 className="flex items-center gap-2 font-semibold">
-              <PenLine className="size-4 text-muted" aria-hidden /> E-signature
-            </h3>
-            <ol className="space-y-2.5 text-sm text-ink-soft">
-              {step(1, `${cpName} gets an email link and signs first.`)}
-              {step(2, `${signatory} gets their link next.`)}
-              {step(3, 'Once both have signed, the signed PDF is filed and the agreement goes to Legal for review.')}
-            </ol>
-            <ButtonLink to={`/agreements/${agreementId}/esign`} icon={<PenLine className="size-4" />}>
-              Send for e-signature
-            </ButtonLink>
-          </div>
-        )}
       </CardBody>
     </Card>
   );
