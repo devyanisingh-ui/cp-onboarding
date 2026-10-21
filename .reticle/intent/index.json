@@ -13,6 +13,12 @@
       "subject": "agreements"
     },
     {
+      "id": "inline:when-the-bd-sends-corrected-cp-documents-back-le-65306760",
+      "statement": "When the BD sends corrected CP documents back, Legal's re-review shows…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "bd-home-actions-grouped",
       "statement": "A BD Executive’s pending tasks on Home are grouped by the kind of work…",
       "status": "proposed",

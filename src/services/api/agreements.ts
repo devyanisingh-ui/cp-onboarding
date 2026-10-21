@@ -492,6 +492,8 @@ export async function decideGate1(id: string, decision: 'approve' | 'reject', co
   const d = getDb();
   const before = { status: a.status };
   closeTasks({ agreementId: id, types: ['gate1_approval'] }, user);
+  // Legal has now re-checked the corrected documents; a later review covers everything again.
+  if (a.docRequest?.status === 'closed') a.docRequest.legalReviewedAt = now();
   if (decision === 'approve') {
     a.lastRejection = undefined;
     // Legal's review is the KYC check: the CP documents it has seen are now verified.

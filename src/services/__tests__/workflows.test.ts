@@ -7,6 +7,7 @@ import { shiftDays, today } from '@/lib/dates';
 import type { CpFormValues } from '@/lib/schemas';
 import { DEMO_PASSWORD } from '@/data/seed';
 import { requiredKyc } from '@/lib/kyc';
+import { correctedDocsToRecheck } from '@/lib/status';
 
 const as = (email: string) => api.auth.signIn(email, DEMO_PASSWORD);
 const KAVYA = 'kavya.iyer@apeejay.edu';
@@ -211,9 +212,12 @@ describe('new CP onboarding (PRD 6.1)', () => {
     a = getDb().agreements.find((x) => x.id === agreementId)!;
     expect(a.docRequest?.status).toBe('closed');
     expect(a.status).toBe('pending_approval');
+    // Legal re-checks only the corrected PAN, not every document again.
+    expect(correctedDocsToRecheck(a)?.map((it) => it.documentType)).toEqual(['pan']);
 
     await as(PRIYA);
     await api.agreements.decideGate1(agreementId, 'approve');
+    expect(correctedDocsToRecheck(getDb().agreements.find((x) => x.id === agreementId)!)).toBeNull();
     const newPan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.fileName === 'pan-clear.pdf')!;
     expect(newPan.verificationStatus).toBe('verified');
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');

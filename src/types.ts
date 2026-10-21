@@ -230,6 +230,8 @@ export interface DocRequest {
   cpSubmittedAt?: ISODateTime;
   closedAt?: ISODateTime;
   closedById?: string;
+  /** Set when Legal decides on the resubmitted agreement; until then Legal re-checks only these documents. */
+  legalReviewedAt?: ISODateTime;
 }
 
 export type FieldCheck = { status: 'verified' | 'mismatch'; remark?: string };

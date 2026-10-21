@@ -1,4 +1,4 @@
-import type { Agreement, AgreementStatus, DisplayStatus, VersionStatus } from '@/types';
+import type { Agreement, AgreementStatus, DisplayStatus, DocRequestItem, VersionStatus } from '@/types';
 import { daysUntil } from './dates';
 
 /** PRD §8 status colours — used everywhere a status is shown. */
@@ -58,6 +58,15 @@ export const STEPPER: { status: AgreementStatus; label: string }[] = [
   { status: 'pending_approval', label: 'Legal approval' },
   { status: 'active', label: 'Active' },
 ];
+
+/**
+ * The corrected CP documents Legal still has to re-check: set once the BD resubmits them, until
+ * Legal decides. Legal's earlier review covered everything else, so only these are checked again.
+ */
+export function correctedDocsToRecheck(a: Pick<Agreement, 'status' | 'docRequest'>): DocRequestItem[] | null {
+  const r = a.docRequest;
+  return a.status === 'pending_approval' && r?.status === 'closed' && !r.legalReviewedAt ? r.items : null;
+}
 
 /** Title for a "returned" banner, by the step that returned it. */
 export function rejectionTitle(gate: 1 | 2): string {

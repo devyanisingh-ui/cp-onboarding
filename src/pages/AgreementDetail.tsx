@@ -470,7 +470,10 @@ function DocRequestPanel({ agreementId, req, docs, names, cpEmail, canSend, canA
         </ul>
         {req.status === 'cp_submitted' && req.cpNote && <p className="text-sm text-ink-soft">CP’s note: “{req.cpNote}”</p>}
         {req.status === 'cp_submitted' && (
-          <p className="text-sm text-muted">Open the new files under CP documents to check them before sending the agreement back to Legal.</p>
+          <div>
+            <p className="mb-2 text-sm text-muted">Check only these new files, then send the agreement back to Legal. Legal re-checks just these documents.</p>
+            <DocumentList docs={req.items.map((it) => byId(it.replacementId)).filter((x): x is DocumentRecord => !!x)} names={names} />
+          </div>
         )}
         {(canSend || canAccept) && (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end">

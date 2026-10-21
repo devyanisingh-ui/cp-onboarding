@@ -2,7 +2,7 @@ import type { AppNotification, AuditEvent, EmailMessage, Task, TaskType } from '
 import { daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
 import { can } from '@/lib/permissions';
 import { taskLink } from '@/lib/links';
-import { IN_PROGRESS_STATUSES } from '@/lib/status';
+import { correctedDocsToRecheck, IN_PROGRESS_STATUSES } from '@/lib/status';
 import { assertCan, commit, ctx, delay, getDb, inScope, userName } from './core';
 import { toSummary, type AgreementSummary } from './dto';
 
@@ -173,7 +173,7 @@ function legalDashboard(ags: ReturnType<typeof getDb>['agreements'], userId: str
         dueDate: task?.dueDate,
         overdue: !!task && task.dueDate < t,
         deviations: d.deviations.filter((x) => x.agreementId === a.id && x.status === 'approved').length,
-        resubmitted: a.docRequest?.status === 'closed',
+        resubmitted: !!correctedDocsToRecheck(a),
         signedBy: a.esign?.status === 'completed' ? 'e-sign' : 'paper',
       };
     })

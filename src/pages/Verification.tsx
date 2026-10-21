@@ -6,10 +6,11 @@ import { kycDocsFor, kycLabel, PAN_OF, PERSON_ROLE } from '@/lib/kyc';
 import { api } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
-import { formatDate } from '@/lib/dates';
+import { formatDate, formatDateTime } from '@/lib/dates';
 import { formatInr } from '@/lib/format';
 import { maskAadhaar } from '@/lib/mask';
 import { cn } from '@/lib/cn';
+import { correctedDocsToRecheck } from '@/lib/status';
 import { Alert, Button, Card, ErrorState, Field, Input, Modal, PageSkeleton, Tabs, Textarea } from '@/components/ui';
 import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, PageHeader } from '@/components/common';
 
@@ -17,7 +18,8 @@ import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, Pa
  * Checklist review of a signed agreement against its documents.
  *  - gate2: Admin verifies a legacy scan (approve makes it Active).
  *  - legal: Legal reviews a signed agreement. A Mismatch on a CP document (PAN, Aadhaar, cheque,
- *    GST) can be sent back for the CP to correct; approve makes it Active.
+ *    GST) can be sent back for the CP to correct; approve makes it Active. When the BD resubmits
+ *    the corrected documents, Legal re-checks only those, not the whole agreement again.
  */
 export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const legal = mode === 'legal';
@@ -48,8 +50,15 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const reject = useAction((c: string) => (legal ? api.agreements.decideGate1(id, 'reject', remarksOf(c)) : api.agreements.decideGate2(id, 'reject', checks, c)), { success: 'Returned to the BD Executive', onSuccess: () => navigate('/tasks') });
 
   const d = detail.data;
+  const recheck = legal && d ? correctedDocsToRecheck(d.agreement) : null;
   const fields = useMemo(() => {
     if (!d) return [];
+    // Re-review after corrected documents: just the documents the CP re-uploaded.
+    if (recheck) return allFields(d).filter((f) => f.doc && recheck.some((it) => it.documentType === f.doc));
+    return allFields(d);
+  }, [d, recheck]);
+
+  function allFields(d: NonNullable<typeof detail.data>) {
     const a = d.agreement;
     const sp = a.stampPaper;
     const rows: { key: string; label: string; value: ReactNode; doc?: DocumentType }[] = [
@@ -90,7 +99,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
       if (r) rows.push({ key: k.type, label: r.label, value: r.value, doc: k.type });
     }
     return rows;
-  }, [d]);
+  }
 
   if ((detail.loading && !d) || (doc.loading && !doc.data)) return <PageSkeleton />;
   if (detail.error || doc.error) return <ErrorState error={detail.error ?? doc.error} onRetry={() => (detail.reload(), doc.reload())} />;
@@ -102,7 +111,9 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
     );
   // Newest upload of each type (lists come newest first), so replaced files don't show twice.
   const newest = <T extends { type: string; verificationStatus: string }>(list: T[]) => list.filter((x, i) => x.verificationStatus !== 'mismatch' && list.findIndex((y) => y.type === x.type && y.verificationStatus !== 'mismatch') === i);
-  const docs = [...newest(d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan')), ...(legal ? newest(d!.cpDocuments) : d!.cpDocuments)];
+  const docs = recheck
+    ? newest(d!.cpDocuments).filter((x) => recheck.some((it) => it.documentType === x.type))
+    : [...newest(d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan')), ...(legal ? newest(d!.cpDocuments) : d!.cpDocuments)];
   const current = docs.find((x) => x.id === docTab) ?? docs[0];
   const set = (key: string, v: Partial<FieldCheck>) => setChecks((c) => ({ ...c, [key]: { ...(c[key] ?? { status: 'verified' }), ...v } as FieldCheck }));
   const done = fields.filter((f) => checks[f.key]?.status === 'verified').length;
@@ -159,8 +170,15 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
 
         <div className="min-w-0 space-y-4">
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
+          {recheck && (
+            <Alert tone="success" title={`Corrected document${recheck.length === 1 ? '' : 's'} only`}>
+              The CP re-uploaded {recheck.length === 1 ? 'this document' : `these ${recheck.length} documents`} and the BD Executive sent them back on {formatDateTime(d!.agreement.docRequest!.closedAt)}. The signed agreement and the other documents were covered in your earlier review, so only check what changed.
+            </Alert>
+          )}
           <Alert tone="info">
-            {legal
+            {recheck
+              ? 'Mark each corrected document. Approve needs each one Verified and makes the agreement Active; if one is still wrong, request document changes again.'
+              : legal
               ? 'Mark each item against the documents. Approve needs every item Verified and makes the agreement Active. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the CP re-uploads it; if the signed agreement itself is wrong, reject it.'
               : 'Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments.'}{' '}
             {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.

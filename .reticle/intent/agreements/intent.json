@@ -96,6 +96,75 @@
         "route": "/agreements/AGR-ASU-2026-0004"
       },
       "updatedAt": 1792568462500
+    },
+    "inline:when-the-bd-sends-corrected-cp-documents-back-le-65306760": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Corrected document only",
+            "kind": "text"
+          },
+          {
+            "contains": "0/1 verified",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "PAN card of the individual",
+              "role": "tab"
+            },
+            "state": "visible"
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "Signed agreement",
+              "role": "tab"
+            }
+          },
+          {
+            "absent": true,
+            "kind": "element",
+            "query": {
+              "name": "Aadhaar card of the individual",
+              "role": "tab"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Stamp paper number",
+              "kind": "text"
+            }
+          },
+          {
+            "kind": "not",
+            "predicate": {
+              "contains": "Bank details match",
+              "kind": "text"
+            }
+          }
+        ]
+      },
+      "declaredAt": 1792570124182,
+      "id": "inline:when-the-bd-sends-corrected-cp-documents-back-le-65306760",
+      "provenBy": {
+        "at": 1792570124572,
+        "grade": "presence",
+        "runId": "drive-sa8b2d953-4130-47e3-9b5e-dc9b8b843a61",
+        "verdictId": "reticle_assert:1792570124572"
+      },
+      "state": "proved",
+      "statement": "When the BD sends corrected CP documents back, Legal's re-review shows and asks to verify only the corrected documents, not the signed agreement and every other document again.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0009/legal-review"
+      },
+      "updatedAt": 1792570124609
     }
   },
   "subject": "agreements",
