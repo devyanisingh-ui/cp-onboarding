@@ -7,7 +7,8 @@ import { useDocumentTitle } from '@/hooks/misc';
 import { can } from '@/lib/permissions';
 import { ROLE_LABELS } from '@/lib/format';
 import { ButtonLink, Card, CardHeader, EmptyState, ErrorState, PageSkeleton, StatTile } from '@/components/ui';
-import { AgreementTable, TaskRow } from '@/components/lists';
+import { AgreementDashRow, Pill, TaskDashRow, TILE } from '@/components/dashboard';
+import { formatShortDate } from '@/lib/dates';
 import type { ReactNode } from 'react';
 import { HomeBd } from './HomeBd';
 import { HomeLegal } from './HomeLegal';
@@ -120,11 +121,11 @@ export function Home() {
         <Card>
           <CardHeader title="My pending tasks" description="Sorted by due date" icon={<Inbox />} action={<ButtonLink to="/tasks" variant="link" size="sm">View all</ButtonLink>} />
           {data.pendingTasks.length ? (
-            <div className="divide-y divide-line">
+            <ul className="divide-y divide-line">
               {data.pendingTasks.slice(0, 6).map((t) => (
-                <TaskRow key={t.id} t={t} />
+                <TaskDashRow key={t.id} t={t} />
               ))}
-            </div>
+            </ul>
           ) : (
             <EmptyState compact icon={<CheckCircle2 />} title="All caught up" description={isBd ? 'No tasks right now — start a new CP agreement when you have a partner ready.' : 'Approvals and reviews routed to you will show up here.'} action={isBd ? <ButtonLink to="/agreements/new" icon={<Plus className="size-4" />}>New CP agreement</ButtonLink> : undefined} />
           )}
@@ -133,7 +134,11 @@ export function Home() {
         <Card>
           <CardHeader title="Expiring in 60 days" description="Renewal decisions are due 30 days before expiry" icon={<CalendarClock />} action={<ButtonLink to="/agreements?status=expiring" variant="link" size="sm">View all</ButtonLink>} />
           {data.expiring.length ? (
-            <AgreementTable items={data.expiring.slice(0, 5)} caption="Expiring agreements" showOwner={!isBd} compact />
+            <ul className="divide-y divide-line" aria-label="Expiring agreements">
+              {data.expiring.slice(0, 5).map((a) => (
+                <AgreementDashRow key={a.id} a={a} icon={<CalendarClock />} tile={TILE.teal} owner={!isBd} />
+              ))}
+            </ul>
           ) : (
             <EmptyState compact icon={<CalendarClock />} title="No agreements expiring soon" description="Agreements appear here 60 days before their expiry date." />
           )}
@@ -145,7 +150,11 @@ export function Home() {
           <Card>
             <CardHeader title="Drafts" description="Agreements you are still preparing" icon={<FilePen />} action={<ButtonLink to="/agreements?status=draft" variant="link" size="sm">View all</ButtonLink>} />
             {data.drafts.length ? (
-              <AgreementTable items={data.drafts.slice(0, 5)} caption="Drafts" showOwner={false} compact />
+              <ul className="divide-y divide-line" aria-label="Drafts">
+                {data.drafts.slice(0, 5).map((a) => (
+                  <AgreementDashRow key={a.id} a={a} icon={<FilePen />} tile={TILE.slate} pill={<Pill tone="grey">Draft</Pill>} when={`updated ${formatShortDate(a.updatedAt.slice(0, 10))}`} action="Continue" />
+                ))}
+              </ul>
             ) : (
               <EmptyState compact icon={<FilePen />} title="No drafts yet" description="Start a new CP agreement to create your first draft." action={<ButtonLink to="/agreements/new" icon={<Plus className="size-4" />}>New CP agreement</ButtonLink>} />
             )}
@@ -153,7 +162,11 @@ export function Home() {
           <Card>
             <CardHeader title="Awaiting signed copy" description="Print, sign on stamp paper, then upload" icon={<FileSignature />} />
             {data.awaitingSigned.length ? (
-              <AgreementTable items={data.awaitingSigned.slice(0, 5)} caption="Awaiting signed copy" showOwner={false} compact />
+              <ul className="divide-y divide-line" aria-label="Awaiting signed copy">
+                {data.awaitingSigned.slice(0, 5).map((a) => (
+                  <AgreementDashRow key={a.id} a={a} icon={<FileSignature />} tile={TILE.blue} pill={<Pill tone="grey">To sign</Pill>} when={`updated ${formatShortDate(a.updatedAt.slice(0, 10))}`} action="Upload" />
+                ))}
+              </ul>
             ) : (
               <EmptyState compact icon={<FileSignature />} title="Nothing to get signed" description="Approved agreements wait here until you upload the signed copy." />
             )}
@@ -170,7 +183,20 @@ export function Home() {
             action={<ButtonLink to="/agreements?status=pending_approval" variant="link" size="sm">View all</ButtonLink>}
           />
           {data.pendingApproval.length ? (
-            <AgreementTable items={data.pendingApproval.slice(0, 6)} caption="Queue" />
+            <ul className="divide-y divide-line" aria-label="Queue">
+              {data.pendingApproval.slice(0, 6).map((a) => (
+                <AgreementDashRow
+                  key={a.id}
+                  a={a}
+                  icon={<FileSignature />}
+                  tile={TILE.primary}
+                  owner
+                  pill={<Pill tone="amber">With Legal</Pill>}
+                  when={`since ${formatShortDate(a.updatedAt.slice(0, 10))}`}
+                  action="Review"
+                />
+              ))}
+            </ul>
           ) : (
             <EmptyState compact icon={<CheckCircle2 />} title="Queue is empty" description="Nothing is waiting for your review." />
           )}

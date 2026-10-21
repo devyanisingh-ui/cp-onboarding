@@ -1,13 +1,11 @@
-import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { BadgeCheck, CheckCircle2, ChevronRight, FileCheck2, FileSignature, FileWarning, Hourglass, Paperclip, RotateCcw, Scale, ScrollText, Undo2 } from 'lucide-react';
 import type { Dashboard, LegalDocsItem } from '@/services/api/inbox';
-import { cn } from '@/lib/cn';
 import { daysUntil, formatShortDate, shiftDays, today } from '@/lib/dates';
 import { Badge, ButtonLink, Card, CardHeader, EmptyState } from '@/components/ui';
 import { DuePill, TASK_TYPE_META } from '@/components/lists';
 import { TASK_TYPE_LABELS } from '@/lib/links';
-import { MiniStat, StatGrid, UrgencyChip, WorkflowStrip } from '@/components/dashboard';
+import { ageLabel, DashRow, MiniStat, Pill, StatGrid, TILE, UrgencyChip, WorkflowStrip } from '@/components/dashboard';
 
 /**
  * Home for Legal: the workflow from Legal's side (deviations before signing, signed agreements to
@@ -68,7 +66,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
                 </div>
                 <ul className="divide-y divide-line">
                   {lg.queue.map((q) => (
-                    <LegalRow
+                    <DashRow
                       key={q.agreement.id}
                       to={`/agreements/${q.agreement.id}/legal-review`}
                       icon={<FileSignature />}
@@ -99,7 +97,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
             {lg.deviations.length ? (
               <ul className="divide-y divide-line">
                 {lg.deviations.map((v) => (
-                  <LegalRow
+                  <DashRow
                     key={v.agreement.id}
                     to={`/agreements/${v.agreement.id}/deviation`}
                     icon={<Scale />}
@@ -138,7 +136,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
             {configTasks.length ? (
               <ul className="divide-y divide-line">
                 {configTasks.map((t) => (
-                  <LegalRow
+                  <DashRow
                     key={t.id}
                     to={t.link}
                     icon={TASK_TYPE_META[t.type].icon}
@@ -179,7 +177,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
             {lg.docs.length ? (
               <ul className="divide-y divide-line">
                 {lg.docs.map((x) => (
-                  <LegalRow
+                  <DashRow
                     key={x.agreement.id}
                     to={`/agreements/${x.agreement.id}`}
                     icon={<FileWarning />}
@@ -217,51 +215,4 @@ function dueLabel(due?: string): string {
   if (days < 0) return `${-days} day${days === -1 ? '' : 's'} overdue`;
   if (days === 0) return 'Due today';
   return `Due in ${days} day${days === 1 ? '' : 's'}`;
-}
-
-const TILE = {
-  primary: 'bg-primary-50 text-primary-700 ring-primary-200',
-  red: 'bg-danger-50 text-danger-700 ring-danger-200',
-  orange: 'bg-orange-50 text-orange-700 ring-orange-200',
-  indigo: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
-  blue: 'bg-sky-50 text-sky-700 ring-sky-200',
-};
-
-const PILL = {
-  red: 'bg-danger-50 text-danger-700 ring-danger-200',
-  amber: 'bg-amber-50 text-amber-800 ring-amber-200',
-  grey: 'bg-slate-50 text-slate-600 ring-slate-200',
-};
-
-function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
-  return <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset', PILL[tone])}>{children}</span>;
-}
-
-function ageLabel(days: number): string {
-  return days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`;
-}
-
-/** One row in any of Legal's dashboard lists: the same tile, text, pill, date and action everywhere. */
-function LegalRow({ to, icon, tile, urgent, title, sub, badges, pill, when, action }: { to: string; icon: ReactNode; tile: string; urgent?: boolean; title: ReactNode; sub: ReactNode; badges?: ReactNode; pill: ReactNode; when: ReactNode; action: string }) {
-  return (
-    <li>
-      <Link to={to} className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
-        <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', tile)} aria-hidden>
-          {icon}
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink group-hover:text-primary-800">{title}</p>
-          <p className="mt-0.5 text-xs text-muted">{sub}</p>
-          {badges && <div className="mt-1.5 flex flex-wrap gap-1.5">{badges}</div>}
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
-          {pill}
-          <p className="text-xs text-subtle">{when}</p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline">
-            {action} <ChevronRight className="size-3.5" aria-hidden />
-          </span>
-        </div>
-      </Link>
-    </li>
-  );
 }

@@ -1,8 +1,15 @@
 import { Link } from 'react-router-dom';
-import { ChevronRight, Workflow } from 'lucide-react';
+import { AlertTriangle, ChevronRight, Workflow } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
-import { Card, CardHeader } from '@/components/ui';
+import type { TaskType } from '@/types';
+import type { TaskItem } from '@/services/api/inbox';
+import type { AgreementSummary } from '@/services/api/dto';
+import { daysUntil, formatShortDate } from '@/lib/dates';
+import { CP_TYPE_LABELS } from '@/lib/format';
+import { TASK_TYPE_LABELS } from '@/lib/links';
+import { Badge, Card, CardHeader, StatusBadge } from '@/components/ui';
+import { AgreementFlags, DuePill, TASK_TYPE_META } from '@/components/lists';
 
 /** Pieces shared by the role dashboards on Home (BD Executive, Legal). */
 
@@ -116,4 +123,132 @@ export function MiniStat({ label, value, to, icon, tone }: { label: string; valu
 
 export function StatGrid({ children }: { children: ReactNode }) {
   return <div className="grid grid-cols-2 gap-px bg-line/60">{children}</div>;
+}
+
+export const TILE = {
+  primary: 'bg-primary-50 text-primary-700 ring-primary-200',
+  red: 'bg-danger-50 text-danger-700 ring-danger-200',
+  orange: 'bg-orange-50 text-orange-700 ring-orange-200',
+  indigo: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+  blue: 'bg-sky-50 text-sky-700 ring-sky-200',
+  teal: 'bg-teal-50 text-teal-700 ring-teal-200',
+  amber: 'bg-amber-50 text-amber-700 ring-amber-200',
+  purple: 'bg-purple-50 text-purple-700 ring-purple-200',
+  slate: 'bg-slate-50 text-slate-600 ring-slate-200',
+};
+
+const PILL = {
+  red: 'bg-danger-50 text-danger-700 ring-danger-200',
+  amber: 'bg-amber-50 text-amber-800 ring-amber-200',
+  grey: 'bg-slate-50 text-slate-600 ring-slate-200',
+};
+
+export function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
+  return <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset', PILL[tone])}>{children}</span>;
+}
+
+export function ageLabel(days: number): string {
+  return days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`;
+}
+
+/** One row in any dashboard list: the same tile, text, pill, date and action on every role's Home. */
+export function DashRow({ to, icon, tile, urgent, title, sub, badges, pill, when, action }: { to: string; icon: ReactNode; tile: string; urgent?: boolean; title: ReactNode; sub: ReactNode; badges?: ReactNode; pill: ReactNode; when: ReactNode; action: string }) {
+  return (
+    <li>
+      <Link to={to} className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
+        <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', tile)} aria-hidden>
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink group-hover:text-primary-800">{title}</p>
+          <p className="mt-0.5 text-xs text-muted">{sub}</p>
+          {badges && <div className="mt-1.5 flex flex-wrap gap-1.5">{badges}</div>}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+          {pill}
+          <p className="text-xs text-subtle">{when}</p>
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline">
+            {action} <ChevronRight className="size-3.5" aria-hidden />
+          </span>
+        </div>
+      </Link>
+    </li>
+  );
+}
+
+/** What you do with each kind of task, as the row's action. */
+const TASK_ACTION: Record<TaskType, string> = {
+  gate1_approval: 'Review',
+  deviation_review: 'Decide',
+  fix_rejected: 'Fix',
+  signing_upload: 'Upload',
+  gate2_verification: 'Verify',
+  renewal_decision: 'Decide',
+  non_renewal_confirm: 'Confirm',
+  termination_confirm: 'Confirm',
+  rate_card_approval: 'Approve',
+  template_approval: 'Approve',
+  warning_override: 'Decide',
+  legacy_scan_upload: 'Upload',
+  rate_review: 'Review',
+  cp_doc_request: 'Send link',
+  cp_doc_review: 'Check',
+};
+
+/** A task as a dashboard row: its type's icon, what it is, when it's due and what to do. */
+export function TaskDashRow({ t }: { t: TaskItem }) {
+  return (
+    <DashRow
+      to={t.link}
+      icon={TASK_TYPE_META[t.type].icon}
+      tile={TASK_TYPE_META[t.type].tone}
+      urgent={t.overdue}
+      title={t.title}
+      sub={
+        <>
+          {TASK_TYPE_LABELS[t.type]}
+          {t.agreementId && <> · <span className="font-mono">{t.agreementId}</span></>}
+          {t.institutionCode && ` · ${t.institutionCode}`}
+        </>
+      }
+      badges={
+        t.escalatedToId && (
+          <Badge tone="orange" icon={<AlertTriangle className="size-3" aria-hidden />}>
+            {t.escalatedToMe ? `Escalated to you · assigned to ${t.assigneeName}` : `Escalated to ${t.escalatedToName}`}
+          </Badge>
+        )
+      }
+      pill={<DuePill t={t} />}
+      when={formatShortDate(t.dueDate)}
+      action={TASK_ACTION[t.type]}
+    />
+  );
+}
+
+/** An agreement as a dashboard row. Expiring agreements show how long is left. */
+export function AgreementDashRow({ a, icon, tile, pill, when, action = 'Open', owner }: { a: AgreementSummary; icon: ReactNode; tile: string; pill?: ReactNode; when?: ReactNode; action?: string; owner?: boolean }) {
+  const left = a.endDate ? daysUntil(a.endDate) : undefined;
+  return (
+    <DashRow
+      to={`/agreements/${a.id}`}
+      icon={icon}
+      tile={tile}
+      title={a.cpName}
+      sub={
+        <>
+          <span className="font-mono">{a.id}</span> · {a.institutionCode} · {CP_TYPE_LABELS[a.cpType]}
+          {owner && ` · ${a.ownerName}`}
+        </>
+      }
+      badges={
+        <>
+          <StatusBadge status={a.displayStatus} />
+          <AgreementFlags a={a} />
+        </>
+      }
+      pill={pill ?? (left !== undefined ? <Pill tone={left <= 30 ? 'red' : left <= 60 ? 'amber' : 'grey'}>{left < 0 ? 'Expired' : `Expires in ${left} day${left === 1 ? '' : 's'}`}</Pill> : <Pill tone="grey">No end date</Pill>)}
+      when={when ?? (a.endDate ? formatShortDate(a.endDate) : '')}
+      action={action}
+    />
+  );
 }

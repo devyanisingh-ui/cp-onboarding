@@ -6,8 +6,7 @@ import type { Dashboard, TaskItem, WaitingOn } from '@/services/api/inbox';
 import { cn } from '@/lib/cn';
 import { formatShortDate } from '@/lib/dates';
 import { Badge, ButtonLink, Card, CardHeader, EmptyState } from '@/components/ui';
-import { AgreementTable, TaskRow } from '@/components/lists';
-import { MiniStat, StatGrid, UrgencyChip, WorkflowStrip } from '@/components/dashboard';
+import { ageLabel, AgreementDashRow, DashRow, MiniStat, Pill, StatGrid, TaskDashRow, TILE, UrgencyChip, WorkflowStrip } from '@/components/dashboard';
 
 const COLLAPSED_KEY = 'cp-onboarding:bd-home-collapsed';
 
@@ -127,11 +126,11 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
                         </button>
                       </h3>
                       {open && (
-                        <div id={`bd-group-${g.key}`} className="divide-y divide-line/70">
+                        <ul id={`bd-group-${g.key}`} className="divide-y divide-line/70">
                           {g.items.map((t) => (
-                            <TaskRow key={t.id} t={t} compact />
+                            <TaskDashRow key={t.id} t={t} />
                           ))}
-                        </div>
+                        </ul>
                       )}
                     </section>
                   );
@@ -160,23 +159,18 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
             {bd.waiting.length ? (
               <ul className="divide-y divide-line">
                 {bd.waiting.slice(0, 6).map((w) => (
-                  <li key={w.agreement.id}>
-                    <Link to={`/agreements/${w.agreement.id}`} className="group flex items-start gap-3 px-5 py-3 hover:bg-[var(--surface-hover)]">
-                      <Badge tone={WAITING_META[w.on].tone} className="mt-0.5 shrink-0">
-                        {WAITING_META[w.on].label}
-                      </Badge>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-ink group-hover:text-primary-800">{w.agreement.cpName}</p>
-                        <p className="truncate text-xs text-muted">
-                          {w.what} · <span className="font-mono">{w.agreement.id}</span>
-                        </p>
-                      </div>
-                      <p className={cn('shrink-0 text-right text-xs font-semibold', w.days >= 5 ? 'text-orange-700' : 'text-ink-soft')}>
-                        {w.days === 0 ? 'Today' : `${w.days} day${w.days === 1 ? '' : 's'}`}
-                        <span className="block font-normal text-subtle">since {formatShortDate(w.since)}</span>
-                      </p>
-                    </Link>
-                  </li>
+                  <DashRow
+                    key={w.agreement.id}
+                    to={`/agreements/${w.agreement.id}`}
+                    icon={WAITING_META[w.on].icon}
+                    tile={TILE[WAITING_META[w.on].tone]}
+                    title={w.agreement.cpName}
+                    sub={<>{w.what} · <span className="font-mono">{w.agreement.id}</span></>}
+                    badges={<Badge tone={WAITING_META[w.on].tone}>With {WAITING_META[w.on].label}</Badge>}
+                    pill={<Pill tone={w.days >= 5 ? 'amber' : 'grey'}>{ageLabel(w.days)}</Pill>}
+                    when={`since ${formatShortDate(w.since)}`}
+                    action="Open"
+                  />
                 ))}
               </ul>
             ) : (
@@ -214,7 +208,11 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
           }
         />
         {bd.expiring.length ? (
-          <AgreementTable items={bd.expiring.slice(0, 5)} caption="Expiring agreements" showOwner={false} compact />
+          <ul className="divide-y divide-line" aria-label="Expiring agreements">
+            {bd.expiring.slice(0, 5).map((a) => (
+              <AgreementDashRow key={a.id} a={a} icon={<RefreshCcw />} tile={TILE.teal} action="Open" />
+            ))}
+          </ul>
         ) : (
           <EmptyState compact icon={<CalendarClock />} title="No renewals coming up" description="Your agreements appear here 60 days before they expire." />
         )}
@@ -253,9 +251,9 @@ function groupTasks(tasks: TaskItem[]) {
 
 // ---------- Waiting on others / portfolio ----------
 
-const WAITING_META: Record<WaitingOn, { label: string; tone: 'amber' | 'purple' | 'blue' | 'orange' }> = {
-  legal: { label: 'Legal', tone: 'amber' },
-  deviation: { label: 'Legal', tone: 'orange' },
-  cp: { label: 'CP', tone: 'blue' },
-  signers: { label: 'Signers', tone: 'blue' },
-};
+const WAITING_META: Record<WaitingOn, { label: string; tone: 'amber' | 'purple' | 'blue' | 'orange'; icon: ReactNode }> = {
+  legal: { label: 'Legal', tone: 'amber', icon: <Scale /> },
+  deviation: { label: 'Legal', tone: 'orange', icon: <Scale /> },
+  cp: { label: 'CP', tone: 'blue', icon: <Users /> },
+  signers: { label: 'Signers', tone: 'purple', icon: <FileSignature /> },
+}

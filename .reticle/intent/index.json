@@ -127,6 +127,12 @@
       "subject": "drive-each-document-on-an-agreement-show"
     },
     {
+      "id": "flow:drive-each-workflow-step-card-on-the-dashboard-shows-i",
+      "statement": "Each workflow step card on the dashboard shows its count, label and own…",
+      "status": "proposed",
+      "subject": "drive-each-workflow-step-card-on-the-das"
+    },
+    {
       "id": "flow:drive-legal-home-deviations",
       "statement": "legal-home-deviations",
       "status": "proposed",
@@ -280,6 +286,12 @@
       "id": "inline:on-the-agreements-by-status-report-the-status-ca-abea570a",
       "statement": "On the Agreements by status report, the status cards sit in one horizon…",
       "status": "proposed",
+      "subject": "unsorted"
+    },
+    {
+      "id": "inline:the-bd-and-admin-dashboards-use-the-same-list-ro-d52ba5da",
+      "statement": "The BD and Admin dashboards use the same list row as Legal's: icon tile…",
+      "status": "proved",
       "subject": "unsorted"
     }
   ],

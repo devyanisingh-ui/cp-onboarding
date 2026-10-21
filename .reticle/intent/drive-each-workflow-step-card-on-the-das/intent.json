@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-each-workflow-step-card-on-the-dashboard-shows-i": {
+      "declaredAt": 1792582838459,
+      "id": "flow:drive-each-workflow-step-card-on-the-dashboard-shows-i",
+      "state": "declared",
+      "statement": "Each workflow step card on the dashboard shows its count, label and owner beside the icon (not under it), and still opens the matching agreement list.",
+      "status": "proposed",
+      "subject": "drive-each-workflow-step-card-on-the-das",
+      "surface": {
+        "flow": "drive-each-workflow-step-card-on-the-dashboard-shows-i"
+      },
+      "updatedAt": 1792582838527
+    }
+  },
+  "subject": "drive-each-workflow-step-card-on-the-das",
+  "version": 1
+}

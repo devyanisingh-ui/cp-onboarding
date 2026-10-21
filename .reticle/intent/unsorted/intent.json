@@ -119,6 +119,55 @@
       "status": "proposed",
       "subject": "unsorted",
       "updatedAt": 1792404419943
+    },
+    "inline:the-bd-and-admin-dashboards-use-the-same-list-ro-d52ba5da": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Rework rejected draft: Sharma & Gill Associates Rework draft · AGR-ASU-2026-0007 · ASU Due today 21 Oct 2026 Fix",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Mohammed Irfan Legal is reviewing the signed agreement · AGR-ASU-2026-0009 With Legal 30 days since 21 Sep 2026 Open",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Career Compass AGR-ASU-2025-0003 · ASU · Sole Proprietorship Firm Expiring Expires in 25 days 15 Nov 2026 Open",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792582842087,
+      "id": "inline:the-bd-and-admin-dashboards-use-the-same-list-ro-d52ba5da",
+      "provenBy": {
+        "at": 1792582842163,
+        "grade": "presence",
+        "runId": "drive-s6a9f79af-4c1d-43cd-83eb-dbfcc3509292",
+        "verdictId": "reticle_assert:1792582842163"
+      },
+      "state": "proved",
+      "statement": "The BD and Admin dashboards use the same list row as Legal's: icon tile, title, sub-line, badges, then a status pill, a date and an action on the right.",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1792582842186
     }
   },
   "subject": "unsorted",
