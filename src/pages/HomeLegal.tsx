@@ -1,10 +1,12 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { BadgeCheck, CheckCircle2, ChevronRight, FileCheck2, FileSignature, FileWarning, Hourglass, Paperclip, RotateCcw, Scale, ScrollText, Undo2 } from 'lucide-react';
 import type { Dashboard, LegalDocsItem } from '@/services/api/inbox';
 import { cn } from '@/lib/cn';
 import { daysUntil, formatShortDate, shiftDays, today } from '@/lib/dates';
 import { Badge, ButtonLink, Card, CardHeader, EmptyState } from '@/components/ui';
-import { TaskRow } from '@/components/lists';
+import { DuePill, TASK_TYPE_META } from '@/components/lists';
+import { TASK_TYPE_LABELS } from '@/lib/links';
 import { MiniStat, StatGrid, UrgencyChip, WorkflowStrip } from '@/components/dashboard';
 
 /**
@@ -66,32 +68,24 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
                 </div>
                 <ul className="divide-y divide-line">
                   {lg.queue.map((q) => (
-                    <li key={q.agreement.id}>
-                      <Link to={`/agreements/${q.agreement.id}/legal-review`} className={cn('group flex items-start gap-3 px-5 py-3.5 hover:bg-[var(--surface-hover)]', q.overdue && 'bg-danger-50/50 hover:bg-danger-50')}>
-                        <span className={cn('mt-1.5 size-2.5 shrink-0 rounded-full', q.overdue ? 'bg-danger-600' : 'bg-primary-500')} aria-hidden />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-ink group-hover:text-primary-800">{q.agreement.cpName}</p>
-                          <p className="mt-0.5 text-xs text-muted">
-                            <span className="font-mono">{q.agreement.id}</span> · {q.agreement.institutionCode} · {q.signedBy === 'e-sign' ? 'E-signed' : 'Signed on paper'}
-                          </p>
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {q.agreement.nonStandard ? (
-                              <Badge tone="orange">Non-standard · {q.deviations} deviation{q.deviations === 1 ? '' : 's'} to check</Badge>
-                            ) : (
-                              <Badge tone="grey">Standard terms</Badge>
-                            )}
-                            {q.resubmitted && <Badge tone="blue">Corrected documents re-submitted</Badge>}
-                          </div>
-                        </div>
-                        <div className="shrink-0 text-right">
-                          <p className={cn('text-xs font-semibold', q.overdue ? 'text-danger-700' : 'text-ink-soft')}>{dueLabel(q.dueDate)}</p>
-                          <p className="text-xs text-subtle">waiting {q.days} day{q.days === 1 ? '' : 's'}</p>
-                          <span className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline">
-                            Review <ChevronRight className="size-3.5" aria-hidden />
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
+                    <LegalRow
+                      key={q.agreement.id}
+                      to={`/agreements/${q.agreement.id}/legal-review`}
+                      icon={<FileSignature />}
+                      tile={q.overdue ? TILE.red : TILE.primary}
+                      urgent={q.overdue}
+                      title={q.agreement.cpName}
+                      sub={<><span className="font-mono">{q.agreement.id}</span> · {q.agreement.institutionCode} · {q.signedBy === 'e-sign' ? 'E-signed' : 'Signed on paper'}</>}
+                      badges={
+                        <>
+                          {q.agreement.nonStandard ? <Badge tone="orange">Non-standard · {q.deviations} deviation{q.deviations === 1 ? '' : 's'} to check</Badge> : <Badge tone="grey">Standard terms</Badge>}
+                          {q.resubmitted && <Badge tone="blue">Corrected documents re-submitted</Badge>}
+                        </>
+                      }
+                      pill={<Pill tone={q.overdue ? 'red' : q.dueDate && daysUntil(q.dueDate) <= 1 ? 'amber' : 'grey'}>{dueLabel(q.dueDate)}</Pill>}
+                      when={`waiting ${q.days} day${q.days === 1 ? '' : 's'}`}
+                      action="Review"
+                    />
                   ))}
                 </ul>
               </>
@@ -101,35 +95,28 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
           </Card>
 
           <Card id="deviations">
-            <CardHeader title="Deviations to decide" description="Non-standard terms a BD has requested on a draft, before it is signed" icon={<Scale />} />
+            <CardHeader title="Deviations to decide" description="Non-standard terms a BD has requested on a draft, before it is signed" icon={<Scale />} action={<ButtonLink to="/tasks" variant="link" size="sm">View all</ButtonLink>} />
             {lg.deviations.length ? (
               <ul className="divide-y divide-line">
                 {lg.deviations.map((v) => (
-                  <li key={v.agreement.id}>
-                    <Link to={`/agreements/${v.agreement.id}/deviation`} className="group flex items-start gap-3 px-5 py-3.5 hover:bg-[var(--surface-hover)]">
-                      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-200 [&_svg]:size-4">
-                        <Scale />
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-ink group-hover:text-primary-800">{v.agreement.cpName}</p>
-                        <p className="mt-0.5 text-xs text-muted">
-                          {[v.rates && `${v.rates} rate change${v.rates === 1 ? '' : 's'}`, v.clauses && `${v.clauses} clause change${v.clauses === 1 ? '' : 's'}`].filter(Boolean).join(' · ')} · requested by {v.requestedBy}
-                        </p>
-                        {v.documents > 0 && (
-                          <p className="mt-1 flex items-center gap-1 text-xs text-muted">
-                            <Paperclip className="size-3" aria-hidden /> {v.documents} supporting document{v.documents === 1 ? '' : 's'}
-                          </p>
-                        )}
-                      </div>
-                      <div className="shrink-0 text-right">
-                        <p className="text-xs font-semibold text-ink-soft">{v.days === 0 ? 'Today' : `${v.days} day${v.days === 1 ? '' : 's'}`}</p>
-                        <p className="text-xs text-subtle">since {formatShortDate(v.since)}</p>
-                        <span className="mt-1.5 inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline">
-                          Decide <ChevronRight className="size-3.5" aria-hidden />
-                        </span>
-                      </div>
-                    </Link>
-                  </li>
+                  <LegalRow
+                    key={v.agreement.id}
+                    to={`/agreements/${v.agreement.id}/deviation`}
+                    icon={<Scale />}
+                    tile={TILE.orange}
+                    title={v.agreement.cpName}
+                    sub={`${[v.rates && `${v.rates} rate change${v.rates === 1 ? '' : 's'}`, v.clauses && `${v.clauses} clause change${v.clauses === 1 ? '' : 's'}`].filter(Boolean).join(' · ')} · requested by ${v.requestedBy}`}
+                    badges={
+                      v.documents > 0 && (
+                        <Badge tone="grey" icon={<Paperclip className="size-3" aria-hidden />}>
+                          {v.documents} supporting document{v.documents === 1 ? '' : 's'}
+                        </Badge>
+                      )
+                    }
+                    pill={<Pill tone={v.days >= 3 ? 'amber' : 'grey'}>{ageLabel(v.days)}</Pill>}
+                    when={`since ${formatShortDate(v.since)}`}
+                    action="Decide"
+                  />
                 ))}
               </ul>
             ) : (
@@ -144,16 +131,27 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
               icon={<ScrollText />}
               action={
                 <ButtonLink to="/admin" variant="link" size="sm">
-                  Open
+                  View all
                 </ButtonLink>
               }
             />
             {configTasks.length ? (
-              <div className="divide-y divide-line">
+              <ul className="divide-y divide-line">
                 {configTasks.map((t) => (
-                  <TaskRow key={t.id} t={t} compact />
+                  <LegalRow
+                    key={t.id}
+                    to={t.link}
+                    icon={TASK_TYPE_META[t.type].icon}
+                    tile={TILE.indigo}
+                    urgent={t.overdue}
+                    title={t.title.replace(/^Approve (rate card|template): /, '')}
+                    sub={<>{TASK_TYPE_LABELS[t.type]}{t.institutionCode && ` · ${t.institutionCode}`}</>}
+                    pill={<DuePill t={t} />}
+                    when={formatShortDate(t.dueDate)}
+                    action="Approve"
+                  />
                 ))}
-              </div>
+              </ul>
             ) : (
               <EmptyState compact icon={<ScrollText />} title="Nothing to approve" description="New template and rate card versions wait here for your approval." />
             )}
@@ -162,36 +160,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
 
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader title="Documents sent back" description="You asked for corrected CP documents; follow up if they sit too long" icon={<Undo2 />} />
-            {lg.docs.length ? (
-              <ul className="divide-y divide-line">
-                {lg.docs.map((x) => (
-                  <li key={x.agreement.id}>
-                    <Link to={`/agreements/${x.agreement.id}`} className="group flex items-start gap-3 px-5 py-3 hover:bg-[var(--surface-hover)]">
-                      <Badge tone={DOC_STAGE[x.stage].tone} className="mt-0.5 shrink-0">
-                        {DOC_STAGE[x.stage].label}
-                      </Badge>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-ink group-hover:text-primary-800">{x.agreement.cpName}</p>
-                        <p className="truncate text-xs text-muted">
-                          {x.items} document{x.items === 1 ? '' : 's'} · {DOC_STAGE[x.stage].what}
-                        </p>
-                      </div>
-                      <p className={cn('shrink-0 text-right text-xs font-semibold', x.days >= 5 ? 'text-orange-700' : 'text-ink-soft')}>
-                        {x.days === 0 ? 'Today' : `${x.days} day${x.days === 1 ? '' : 's'}`}
-                        <span className="block font-normal text-subtle">since {formatShortDate(x.since)}</span>
-                      </p>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState compact icon={<FileCheck2 />} title="Nothing sent back" description="Agreements you return for corrected CP documents are tracked here until they come back." />
-            )}
-          </Card>
-
-          <Card className="flex-1">
-            <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} />
+            <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} action={<ButtonLink to="/reports" variant="link" size="sm">Reports</ButtonLink>} />
             <StatGrid>
               <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />
               <MiniStat label="Returned to BD" value={lg.last30.returned} icon={<RotateCcw />} tone="text-red-500" />
@@ -203,6 +172,32 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
               {lg.nonStandardLive} live agreement{lg.nonStandardLive === 1 ? '' : 's'} on non-standard terms
               <ChevronRight className="ml-auto size-3.5" aria-hidden />
             </Link>
+          </Card>
+
+          <Card className="flex flex-1 flex-col">
+            <CardHeader title="Documents sent back" description="You asked for corrected CP documents; follow up if they sit too long" icon={<Undo2 />} action={<ButtonLink to="/agreements?status=docs_requested" variant="link" size="sm">View all</ButtonLink>} />
+            {lg.docs.length ? (
+              <ul className="divide-y divide-line">
+                {lg.docs.map((x) => (
+                  <LegalRow
+                    key={x.agreement.id}
+                    to={`/agreements/${x.agreement.id}`}
+                    icon={<FileWarning />}
+                    tile={TILE.blue}
+                    title={x.agreement.cpName}
+                    sub={`${x.items} document${x.items === 1 ? '' : 's'} · ${DOC_STAGE[x.stage].what}`}
+                    badges={<Badge tone={DOC_STAGE[x.stage].tone}>{DOC_STAGE[x.stage].label}</Badge>}
+                    pill={<Pill tone={x.days >= 5 ? 'amber' : 'grey'}>{ageLabel(x.days)}</Pill>}
+                    when={`since ${formatShortDate(x.since)}`}
+                    action="Open"
+                  />
+                ))}
+              </ul>
+            ) : (
+              <div className="flex flex-1 flex-col justify-center">
+                <EmptyState compact icon={<FileCheck2 />} title="Nothing sent back" description="Agreements you return for corrected CP documents are tracked here until they come back." />
+              </div>
+            )}
           </Card>
         </div>
       </div>
@@ -222,4 +217,51 @@ function dueLabel(due?: string): string {
   if (days < 0) return `${-days} day${days === -1 ? '' : 's'} overdue`;
   if (days === 0) return 'Due today';
   return `Due in ${days} day${days === 1 ? '' : 's'}`;
+}
+
+const TILE = {
+  primary: 'bg-primary-50 text-primary-700 ring-primary-200',
+  red: 'bg-danger-50 text-danger-700 ring-danger-200',
+  orange: 'bg-orange-50 text-orange-700 ring-orange-200',
+  indigo: 'bg-indigo-50 text-indigo-700 ring-indigo-200',
+  blue: 'bg-sky-50 text-sky-700 ring-sky-200',
+};
+
+const PILL = {
+  red: 'bg-danger-50 text-danger-700 ring-danger-200',
+  amber: 'bg-amber-50 text-amber-800 ring-amber-200',
+  grey: 'bg-slate-50 text-slate-600 ring-slate-200',
+};
+
+function Pill({ tone, children }: { tone: keyof typeof PILL; children: ReactNode }) {
+  return <span className={cn('inline-flex items-center whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset', PILL[tone])}>{children}</span>;
+}
+
+function ageLabel(days: number): string {
+  return days === 0 ? 'Today' : `${days} day${days === 1 ? '' : 's'}`;
+}
+
+/** One row in any of Legal's dashboard lists: the same tile, text, pill, date and action everywhere. */
+function LegalRow({ to, icon, tile, urgent, title, sub, badges, pill, when, action }: { to: string; icon: ReactNode; tile: string; urgent?: boolean; title: ReactNode; sub: ReactNode; badges?: ReactNode; pill: ReactNode; when: ReactNode; action: string }) {
+  return (
+    <li>
+      <Link to={to} className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
+        <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', tile)} aria-hidden>
+          {icon}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-semibold text-ink group-hover:text-primary-800">{title}</p>
+          <p className="mt-0.5 text-xs text-muted">{sub}</p>
+          {badges && <div className="mt-1.5 flex flex-wrap gap-1.5">{badges}</div>}
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+          {pill}
+          <p className="text-xs text-subtle">{when}</p>
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline">
+            {action} <ChevronRight className="size-3.5" aria-hidden />
+          </span>
+        </div>
+      </Link>
+    </li>
+  );
 }

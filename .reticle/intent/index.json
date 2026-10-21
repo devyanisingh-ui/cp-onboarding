@@ -265,6 +265,12 @@
       "subject": "unsorted"
     },
     {
+      "id": "inline:on-legal-s-dashboard-every-widget-card-is-built-b85e0c05",
+      "statement": "On Legal's dashboard every widget card is built the same way: icon head…",
+      "status": "proved",
+      "subject": "unsorted"
+    },
+    {
       "id": "inline:on-the-agreements-by-status-report-the-status-ca-abea570a",
       "statement": "On the Agreements by status report, the status cards sit in one horizon…",
       "status": "proposed",

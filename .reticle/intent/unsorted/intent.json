@@ -42,6 +42,67 @@
       "subject": "unsorted",
       "updatedAt": 1792568404425
     },
+    "inline:on-legal-s-dashboard-every-widget-card-is-built-b85e0c05": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "EduBridge Services Pvt. Ltd AGR-ASU-2026-0004 · ASU · Signed on paper Non-standard · 2 deviations to check 6 days overdue waiting 8 days Review",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "NextStep Learning Pvt. Ltd 1 rate change · requested by Kavya Iyer 2 days since 19 Oct 2026 Decide",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "ASU v3 Rate card approval · ASU Due in 1 day 22 Oct 2026 Approve",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "Reports",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "contains": "Nothing sent back",
+            "kind": "text"
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792579738430,
+      "id": "inline:on-legal-s-dashboard-every-widget-card-is-built-b85e0c05",
+      "provenBy": {
+        "at": 1792579738512,
+        "grade": "presence",
+        "runId": "drive-safa3ed35-ed94-4587-b25f-74574df4504d",
+        "verdictId": "reticle_assert:1792579738512"
+      },
+      "state": "proved",
+      "statement": "On Legal's dashboard every widget card is built the same way: icon header with a title, description and a top-right link, and every list row has the same tile, title, sub-line, status pill, date and action (Review / Decide / Approve / Open).",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1792579738532
+    },
     "inline:on-the-agreements-by-status-report-the-status-ca-abea570a": {
       "binding": {
         "kind": "element",
