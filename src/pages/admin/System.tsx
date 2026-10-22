@@ -66,7 +66,7 @@ export function System() {
       </Card>
 
       <Card>
-        <CardHeader title="Email outbox" description={relayEnabled() ? 'Emails the app has sent. Tasks, reminders, escalations and signing links are delivered through Resend.' : 'Emails the app has sent (simulated).'} icon={<Mail />} />
+        <CardHeader title="Email outbox" description={relayEnabled() ? 'Emails the app has sent. Every one is delivered through Resend.' : 'Emails the app has sent (simulated).'} icon={<Mail />} />
         {emails.data?.length ? (
           <ul className="max-h-[480px] divide-y divide-line overflow-y-auto">
             {emails.data.map((m) => (

@@ -1,0 +1,30 @@
+{
+  "intents": {
+    "inline:every-notification-email-is-sent-through-resend-36da3fc3": {
+      "binding": {
+        "count": 2,
+        "kind": "net",
+        "method": "POST",
+        "urlContains": "/api/send-email"
+      },
+      "declaredAt": 1792656996670,
+      "id": "inline:every-notification-email-is-sent-through-resend-36da3fc3",
+      "provenBy": {
+        "at": 1792656996791,
+        "grade": "net",
+        "runId": "drive-s011bb100-b2fa-40d6-984f-3ab3ab52969f",
+        "verdictId": "reticle_assert:1792656996791"
+      },
+      "state": "proved",
+      "statement": "Every notification email is sent through Resend, including event notices: asking for corrected documents sends both the new task email and the 'Legal asked for corrected documents' notice to the relay.",
+      "status": "proved",
+      "subject": "api",
+      "surface": {
+        "route": "/tasks"
+      },
+      "updatedAt": 1792656996852
+    }
+  },
+  "subject": "api",
+  "version": 1
+}

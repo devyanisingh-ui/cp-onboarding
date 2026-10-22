@@ -49,6 +49,12 @@
       "subject": "agreements"
     },
     {
+      "id": "inline:every-notification-email-is-sent-through-resend-36da3fc3",
+      "statement": "Every notification email is sent through Resend, including event notice…",
+      "status": "proved",
+      "subject": "api"
+    },
+    {
       "id": "bd-home-actions-grouped",
       "statement": "A BD Executive’s pending tasks on Home are grouped by the kind of work…",
       "status": "proposed",

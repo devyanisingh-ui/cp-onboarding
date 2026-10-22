@@ -6,14 +6,12 @@ import { commit } from './db';
  * Off unless VITE_EMAIL_DELIVERY=resend, so tests and the single-file builds keep the simulated
  * outbox only. Every email is still written to the outbox first; this records how delivery went.
  */
-const RELAYED_KINDS: EmailMessage['kind'][] = ['task', 'reminder', 'escalation', 'signature'];
-
 export function relayEnabled(): boolean {
   return import.meta.env.VITE_EMAIL_DELIVERY === 'resend';
 }
 
 export function relay(m: EmailMessage): void {
-  if (!relayEnabled() || !RELAYED_KINDS.includes(m.kind)) return;
+  if (!relayEnabled()) return;
   m.delivery = { status: 'sending' };
   const url = import.meta.env.VITE_EMAIL_RELAY_URL || '/api/send-email';
   fetch(url, {

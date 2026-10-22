@@ -29,8 +29,8 @@ export interface RelayRequest {
   kind: RelayKind;
 }
 
-/** Which emails go out for real. Event notices and the Legal/Admin digest stay in-app only. */
-export const RELAY_KINDS = ['task', 'reminder', 'escalation', 'signature'] as const;
+/** Which emails go out for real: every kind the app writes to its outbox. */
+export const RELAY_KINDS = ['task', 'reminder', 'escalation', 'signature', 'event', 'digest'] as const;
 export type RelayKind = (typeof RELAY_KINDS)[number];
 
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
@@ -42,6 +42,8 @@ const KIND_ACTION: Record<RelayKind, string> = {
   reminder: 'Open your task',
   escalation: 'Review the task',
   signature: 'Open the agreement',
+  event: 'Open in CP Onboarding',
+  digest: 'Open your tasks',
 };
 
 function json(status: number, data: unknown): Response {

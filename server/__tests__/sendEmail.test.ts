@@ -34,10 +34,19 @@ describe('email relay', () => {
     expect(sent.subject).toBe('[to bd@example.com] New task: Legal approval');
   });
 
+  it('sends every kind the app writes to its outbox, notices and digests included', async () => {
+    for (const kind of ['task', 'reminder', 'escalation', 'signature', 'event', 'digest']) expect(parseRelayRequest({ ...ok, kind })).toMatchObject({ kind });
+    const fetchMock = resendMock();
+    await handleSendEmail(post({ ...ok, subject: 'Agreement active', kind: 'event' }), env, fetchMock as unknown as typeof fetch);
+    const sent = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(sent.tags).toEqual([{ name: 'kind', value: 'event' }]);
+    expect(sent.text).toContain('Open in CP Onboarding: https://app.example.com/agreements/AGR-1');
+  });
+
   it('refuses what the app would never send', () => {
     expect(parseRelayRequest({ ...ok, link: 'https://evil.example.com' })).toBe('Links must be paths inside the app.');
     expect(parseRelayRequest({ ...ok, link: '//evil.example.com' })).toBe('Links must be paths inside the app.');
-    expect(parseRelayRequest({ ...ok, kind: 'digest' })).toBe('This kind of email is not sent.');
+    expect(parseRelayRequest({ ...ok, kind: 'newsletter' })).toBe('This kind of email is not sent.');
     expect(parseRelayRequest({ ...ok, to: 'a@b.com, c@d.com' })).toBe('Invalid recipient.');
     expect(parseRelayRequest({ ...ok, link: '' })).toMatchObject({ link: undefined });
   });

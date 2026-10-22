@@ -118,7 +118,13 @@ export function runScheduledJobs(opts: { forceDigest?: boolean } = {}): JobRepor
       const overdue = mine.filter((x) => x.dueDate < t).length;
       deliver(u, {
         title: `Daily digest: ${mine.length} pending, ${overdue} overdue`,
-        body: mine.map((x) => `• ${x.title}${x.agreementId ? ` (${x.agreementId})` : ''}${x.dueDate < t ? ' — OVERDUE' : ''}`).join('\n'),
+        // Overdue first, and at most 40 lines so the email stays within the relay's size limit.
+        body: [...mine]
+          .sort((a, b) => Number(b.dueDate < t) - Number(a.dueDate < t) || a.dueDate.localeCompare(b.dueDate))
+          .slice(0, 40)
+          .map((x) => `• ${x.title}${x.agreementId ? ` (${x.agreementId})` : ''}${x.dueDate < t ? ' — OVERDUE' : ''}`)
+          .concat(mine.length > 40 ? [`…and ${mine.length - 40} more`] : [])
+          .join('\n'),
         link: '/tasks',
         kind: 'digest',
       });

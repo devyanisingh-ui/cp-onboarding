@@ -37,9 +37,9 @@ By default emails only go to the simulated outbox (Admin → System). To send th
 2. Copy `.env.example` to `.env` and fill it in. Keep `EMAIL_REDIRECT_TO` set while testing: the demo users' addresses are not real.
 3. Restart `npm run dev`.
 
-New tasks, reminders, escalations and signing / document-upload links to CPs are then sent through
-Resend; event notices and the Legal/Admin digest stay in-app. Each outbox entry shows whether
-Resend accepted it.
+Every email the app writes to its outbox is then sent through Resend: new tasks, reminders,
+escalations, notices (approvals, returns, activations…), the Legal/Admin daily digest, and signing /
+document-upload links to CPs. Each outbox entry shows whether Resend accepted it.
 
 The API key lives only on the server: the app POSTs to `/api/send-email`
 ([`server/sendEmail.ts`](server/sendEmail.ts)), which the dev server serves locally and
