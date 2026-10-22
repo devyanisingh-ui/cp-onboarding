@@ -45,6 +45,14 @@ function emailRelay(env: Record<string, string>): Plugin {
   return {
     name: 'email-relay',
     configureServer(server) {
+      // Say at startup whether real email is set up, and what is missing if not: a half-configured
+      // .env otherwise fails silently (the outbox still fills, nothing arrives).
+      const log = server.config.logger;
+      const on = env.VITE_EMAIL_DELIVERY === 'resend';
+      const missing = ['RESEND_API_KEY', 'EMAIL_FROM', 'APP_URL'].filter((k) => !env[k]?.trim());
+      if (on && missing.length) log.warn(`[email] VITE_EMAIL_DELIVERY=resend but ${missing.join(', ')} ${missing.length === 1 ? 'is' : 'are'} not set in .env: no email will be sent.`);
+      else if (on) log.info(`[email] Sending through Resend from ${env.EMAIL_FROM}${env.EMAIL_REDIRECT_TO?.trim() ? `, all redirected to ${env.EMAIL_REDIRECT_TO.trim()}` : ''}.`);
+      else if (!missing.length) log.warn('[email] RESEND_API_KEY etc. are set but VITE_EMAIL_DELIVERY is not "resend": the app only fills the outbox and sends nothing.');
       server.middlewares.use('/api/send-email', async (req, res) => {
         try {
           const { handleSendEmail } = await import('./server/sendEmail');
@@ -56,10 +64,16 @@ function emailRelay(env: Record<string, string>): Plugin {
             body: req.method === 'POST' ? Buffer.concat(chunks) : undefined,
           });
           const response = await handleSendEmail(request, env);
+          const body = await response.text();
+          // One line per email in the terminal: sent, or Resend's reason for refusing it.
+          const result = JSON.parse(body || '{}') as { id?: string; error?: string };
+          if (response.ok) log.info(`[email] Sent (Resend id ${result.id}).`, { timestamp: true });
+          else log.warn(`[email] Not sent (${response.status}): ${result.error ?? 'unknown error'}`, { timestamp: true });
           res.statusCode = response.status;
           res.setHeader('content-type', response.headers.get('content-type') ?? 'application/json');
-          res.end(await response.text());
+          res.end(body);
         } catch (e) {
+          log.warn(`[email] Not sent: ${e instanceof Error ? e.message : 'email relay failed'}`, { timestamp: true });
           // Never let one failed email crash the dev server.
           res.statusCode = 500;
           res.setHeader('content-type', 'application/json');
