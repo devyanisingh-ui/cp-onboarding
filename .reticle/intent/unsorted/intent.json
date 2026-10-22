@@ -168,6 +168,51 @@
       "status": "proved",
       "subject": "unsorted",
       "updatedAt": 1792582842186
+    },
+    "inline:the-workflow-strip-card-on-the-dashboard-has-no-938cabd1": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Legal’s part of the workflow",
+              "role": "heading"
+            },
+            "state": "visible"
+          },
+          {
+            "contains": "Highlighted steps are waiting for you.",
+            "kind": "text"
+          },
+          {
+            "kind": "element",
+            "query": {
+              "name": "2 Signed, to review Your move",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792645686586,
+      "id": "inline:the-workflow-strip-card-on-the-dashboard-has-no-938cabd1",
+      "provenBy": {
+        "at": 1792645686673,
+        "grade": "presence",
+        "runId": "drive-s1b237efb-89c2-42a4-885d-2ca1fa31165c",
+        "verdictId": "reticle_assert:1792645686673"
+      },
+      "state": "proved",
+      "statement": "The workflow strip card on the dashboard has no icon in its header; the title, description and the step cards are unchanged.",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1792645686690
     }
   },
   "subject": "unsorted",

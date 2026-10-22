@@ -293,6 +293,12 @@
       "statement": "The BD and Admin dashboards use the same list row as Legal's: icon tile…",
       "status": "proved",
       "subject": "unsorted"
+    },
+    {
+      "id": "inline:the-workflow-strip-card-on-the-dashboard-has-no-938cabd1",
+      "statement": "The workflow strip card on the dashboard has no icon in its header; the…",
+      "status": "proved",
+      "subject": "unsorted"
     }
   ],
   "version": 1

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { AlertTriangle, ChevronRight, Workflow } from 'lucide-react';
+import { AlertTriangle, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import type { TaskType } from '@/types';
@@ -43,10 +43,10 @@ export interface WorkflowStep {
 }
 
 /** The workflow as a strip of steps with counts; the viewer's own steps are highlighted. */
-export function WorkflowStrip({ title, description, steps, icon = <Workflow /> }: { title: string; description: string; steps: WorkflowStep[]; icon?: ReactNode }) {
+export function WorkflowStrip({ title, description, steps }: { title: string; description: string; steps: WorkflowStep[] }) {
   return (
     <Card>
-      <CardHeader title={title} description={description} icon={icon} />
+      <CardHeader title={title} description={description} />
       {/* Phones 2 columns, tablets 3 (2 for four steps), one row from xl up (text beside the icon needs the width). The gap keeps every step in its own box; the arrows sit in it. */}
       <ol className={cn('grid grid-cols-2 gap-2 p-3 sm:gap-3 sm:p-4 xl:grid-cols-[repeat(var(--steps),minmax(0,1fr))] xl:gap-5', steps.length === 4 ? 'sm:grid-cols-2' : 'sm:grid-cols-3')} style={{ ['--steps' as string]: steps.length }}>
         {steps.map((s, i) => {
