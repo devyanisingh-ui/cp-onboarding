@@ -48,4 +48,11 @@ describe('email relay', () => {
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({ error: 'Domain not verified' });
   });
+
+  it('answers with an error instead of throwing when Resend cannot be reached', async () => {
+    const offline = (() => Promise.reject(Object.assign(new TypeError('fetch failed'), { cause: { code: 'ENOTFOUND' } }))) as unknown as typeof fetch;
+    const res = await handleSendEmail(post(ok), env, offline);
+    expect(res.status).toBe(502);
+    expect((await res.json()).error).toContain('Could not reach Resend from the server (ENOTFOUND)');
+  });
 });

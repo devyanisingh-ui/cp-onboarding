@@ -95,18 +95,27 @@ export async function handleSendEmail(req: Request, env: RelayEnv, fetchImpl: ty
 
   const redirect = env.EMAIL_REDIRECT_TO?.trim();
   const { text, html } = renderEmail(msg, env.APP_URL);
-  const res = await fetchImpl('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
-    body: JSON.stringify({
-      from: env.EMAIL_FROM,
-      to: [redirect || msg.to],
-      subject: redirect ? `[to ${msg.to}] ${msg.subject}` : msg.subject,
-      text,
-      html,
-      tags: [{ name: 'kind', value: msg.kind }],
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetchImpl('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        from: env.EMAIL_FROM,
+        to: [redirect || msg.to],
+        subject: redirect ? `[to ${msg.to}] ${msg.subject}` : msg.subject,
+        text,
+        html,
+        tags: [{ name: 'kind', value: msg.kind }],
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch (e) {
+    // Network failure (no internet, DNS, a proxy or firewall blocking api.resend.com, timeout).
+    // Answer instead of throwing: an unhandled rejection here takes down the whole dev server.
+    const cause = (e as { cause?: { code?: string } })?.cause?.code ?? (e instanceof Error ? e.name : '');
+    return json(502, { error: `Could not reach Resend from the server${cause ? ` (${cause})` : ''}. Check that this machine can reach api.resend.com.` });
+  }
   const data = (await res.json().catch(() => ({}))) as { id?: string; message?: string };
   if (!res.ok) return json(502, { error: data.message ?? `Resend responded ${res.status}.` });
   return json(200, { id: data.id });

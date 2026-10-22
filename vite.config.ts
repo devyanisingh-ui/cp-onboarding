@@ -46,18 +46,25 @@ function emailRelay(env: Record<string, string>): Plugin {
     name: 'email-relay',
     configureServer(server) {
       server.middlewares.use('/api/send-email', async (req, res) => {
-        const { handleSendEmail } = await import('./server/sendEmail');
-        const chunks: Buffer[] = [];
-        for await (const chunk of req) chunks.push(chunk as Buffer);
-        const request = new Request('http://localhost/api/send-email', {
-          method: req.method,
-          headers: { 'content-type': req.headers['content-type'] ?? '' },
-          body: req.method === 'POST' ? Buffer.concat(chunks) : undefined,
-        });
-        const response = await handleSendEmail(request, env);
-        res.statusCode = response.status;
-        res.setHeader('content-type', response.headers.get('content-type') ?? 'application/json');
-        res.end(await response.text());
+        try {
+          const { handleSendEmail } = await import('./server/sendEmail');
+          const chunks: Buffer[] = [];
+          for await (const chunk of req) chunks.push(chunk as Buffer);
+          const request = new Request('http://localhost/api/send-email', {
+            method: req.method,
+            headers: { 'content-type': req.headers['content-type'] ?? '' },
+            body: req.method === 'POST' ? Buffer.concat(chunks) : undefined,
+          });
+          const response = await handleSendEmail(request, env);
+          res.statusCode = response.status;
+          res.setHeader('content-type', response.headers.get('content-type') ?? 'application/json');
+          res.end(await response.text());
+        } catch (e) {
+          // Never let one failed email crash the dev server.
+          res.statusCode = 500;
+          res.setHeader('content-type', 'application/json');
+          res.end(JSON.stringify({ error: e instanceof Error ? e.message : 'Email relay failed.' }));
+        }
       });
     },
   };
