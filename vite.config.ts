@@ -67,7 +67,9 @@ function emailRelay(env: Record<string, string>): Plugin {
           const body = await response.text();
           // One line per email in the terminal: sent, or Resend's reason for refusing it.
           const result = JSON.parse(body || '{}') as { id?: string; error?: string };
-          if (response.ok) log.info(`[email] Sent (Resend id ${result.id}).`, { timestamp: true });
+          if (req.method !== 'POST') {
+            /* a settings check, not an email */
+          } else if (response.ok) log.info(`[email] Sent (Resend id ${result.id}).`, { timestamp: true });
           else log.warn(`[email] Not sent (${response.status}): ${result.error ?? 'unknown error'}`, { timestamp: true });
           res.statusCode = response.status;
           res.setHeader('content-type', response.headers.get('content-type') ?? 'application/json');

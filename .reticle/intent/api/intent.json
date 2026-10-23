@@ -1,5 +1,37 @@
 {
   "intents": {
+    "inline:admin-system-has-an-email-delivery-check-it-list-bd765b35": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "contains": "Missing in .env: RESEND_API_KEY.",
+            "kind": "text"
+          },
+          {
+            "kind": "net",
+            "method": "POST",
+            "status": 503,
+            "urlContains": "/api/send-email"
+          },
+          {
+            "contains": "Resend did not send it",
+            "kind": "text"
+          },
+          {
+            "contains": "Fill in the missing values in .env, then stop and restart npm run dev.",
+            "kind": "text"
+          }
+        ]
+      },
+      "declaredAt": 1792734728417,
+      "id": "inline:admin-system-has-an-email-delivery-check-it-list-bd765b35",
+      "state": "bound",
+      "statement": "Admin → System has an Email delivery check: it lists which email settings the server can see (naming any missing .env value) and sends one test email through the relay, showing Resend's exact answer with plain advice.",
+      "status": "proposed",
+      "subject": "api",
+      "updatedAt": 1792734728468
+    },
     "inline:every-notification-email-is-sent-through-resend-36da3fc3": {
       "binding": {
         "count": 2,

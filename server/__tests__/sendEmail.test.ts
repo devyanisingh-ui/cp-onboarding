@@ -43,6 +43,14 @@ describe('email relay', () => {
     expect(sent.text).toContain('Open in CP Onboarding: https://app.example.com/agreements/AGR-1');
   });
 
+  it('reports on GET which settings are missing, never their values', async () => {
+    const get = (e: Record<string, string>) => handleSendEmail(new Request('http://x/api/send-email'), e).then((r) => r.json());
+    expect(await get({})).toEqual({ missing: ['RESEND_API_KEY', 'EMAIL_FROM', 'APP_URL'] });
+    const full = await get({ ...env, EMAIL_REDIRECT_TO: 'devyani@school.example' });
+    expect(full).toEqual({ missing: [], from: 'n@example.com', redirect: 'd…@school.example' });
+    expect(JSON.stringify(full)).not.toContain('re_test');
+  });
+
   it('refuses what the app would never send', () => {
     expect(parseRelayRequest({ ...ok, link: 'https://evil.example.com' })).toBe('Links must be paths inside the app.');
     expect(parseRelayRequest({ ...ok, link: '//evil.example.com' })).toBe('Links must be paths inside the app.');

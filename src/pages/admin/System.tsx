@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eraser, Mail, Play, RotateCcw, Send } from 'lucide-react';
+import { CheckCircle2, Eraser, Mail, MailCheck, Play, RotateCcw, Send, XCircle } from 'lucide-react';
 import { api } from '@/services/mockApi';
 import { getDb } from '@/services/db';
 import { channels } from '@/services/notificationChannels';
-import { relayEnabled } from '@/services/emailRelay';
+import { relayEnabled, relaySettings, sendTestEmail } from '@/services/emailRelay';
 import { useAction, useApi } from '@/hooks/useApi';
-import { useSession } from '@/context/SessionContext';
+import { useSession, useUser } from '@/context/SessionContext';
 import { useDocumentTitle } from '@/hooks/misc';
 import { ROUTER_MODE } from '@/lib/runtime';
 import { formatDateTime } from '@/lib/dates';
-import { Badge, Button, Card, CardBody, CardHeader, EmptyState, Modal, Toggle } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, Modal, Toggle } from '@/components/ui';
 
 export function System() {
   useDocumentTitle('System');
@@ -64,6 +64,8 @@ export function System() {
           ))}
         </ul>
       </Card>
+
+      <EmailCheck />
 
       <Card>
         <CardHeader title="Email outbox" description={relayEnabled() ? 'Emails the app has sent. Every one is delivered through Resend.' : 'Emails the app has sent (simulated).'} icon={<Mail />} />
@@ -169,5 +171,83 @@ export function System() {
         }
       />
     </div>
+  );
+}
+
+type RelaySettings = Awaited<ReturnType<typeof relaySettings>>;
+type TestResult = Awaited<ReturnType<typeof sendTestEmail>>;
+
+/** Plain advice for the errors Resend and the relay give most often. */
+function emailAdvice(error: string): string | undefined {
+  if (/only send testing emails to your own email/i.test(error))
+    return 'Resend’s test sender (onboarding@resend.dev) only delivers to the email you signed up to Resend with. Set EMAIL_REDIRECT_TO in .env to exactly that address, or verify a domain in Resend and send from it.';
+  if (/api key is invalid|invalid api key|unauthor/i.test(error)) return 'RESEND_API_KEY in .env is wrong or was revoked. Create a new key on resend.com (API Keys) and restart the dev server.';
+  if (/domain.*(not verified|verify)/i.test(error)) return 'EMAIL_FROM uses a domain that isn’t verified in Resend. Verify it there, or use onboarding@resend.dev while testing.';
+  if (/could not reach resend|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|fetch failed|timeout/i.test(error)) return 'The machine running the dev server can’t reach api.resend.com: no internet, or a firewall or proxy blocks it. Try another network.';
+  if (/not configured/i.test(error)) return 'Fill in the missing values in .env, then stop and restart npm run dev.';
+  return undefined;
+}
+
+/** Shows what the email relay can see of its settings and sends one test email, with Resend's answer. */
+function EmailCheck() {
+  const user = useUser();
+  const [settings, setSettings] = useState<RelaySettings | null>(null);
+  const [to, setTo] = useState(user.email);
+  const [sending, setSending] = useState(false);
+  const [result, setResult] = useState<TestResult | null>(null);
+  useEffect(() => {
+    void relaySettings().then(setSettings);
+  }, []);
+  const send = async () => {
+    setSending(true);
+    setResult(await sendTestEmail(to.trim()));
+    setSending(false);
+  };
+  const row = (ok: boolean, text: string) => (
+    <li className="flex items-start gap-2 text-sm">
+      {ok ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success-600" aria-hidden /> : <XCircle className="mt-0.5 size-4 shrink-0 text-danger-600" aria-hidden />}
+      <span className={ok ? 'text-ink-soft' : 'text-danger-700'}>{text}</span>
+    </li>
+  );
+  const advice = result && !result.ok ? emailAdvice(result.error) : undefined;
+  return (
+    <Card>
+      <CardHeader title="Email delivery check" description="What the server can see of your .env, and one test email through Resend with its exact answer." icon={<MailCheck />} />
+      <CardBody className="space-y-4">
+        {!settings ? (
+          <p className="text-sm text-muted">Checking the email settings…</p>
+        ) : 'unreachable' in settings ? (
+          <Alert tone="error" title="The email relay isn’t running here">
+            {settings.unreachable}
+          </Alert>
+        ) : (
+          <ul className="space-y-1.5" aria-label="Email settings">
+            {row(relayEnabled(), relayEnabled() ? 'VITE_EMAIL_DELIVERY=resend: the app sends its emails through Resend.' : 'VITE_EMAIL_DELIVERY is not "resend": the app only fills the outbox. Add it to .env and restart npm run dev.')}
+            {row(!settings.missing.length, settings.missing.length ? `Missing in .env: ${settings.missing.join(', ')}. Add ${settings.missing.length === 1 ? 'it' : 'them'} and restart npm run dev.` : `RESEND_API_KEY, EMAIL_FROM and APP_URL are set. Sending from ${settings.from}.`)}
+            {settings.redirect ? row(true, `EMAIL_REDIRECT_TO is set: every email goes to ${settings.redirect}.`) : row(true, 'EMAIL_REDIRECT_TO is not set: each email goes to its real recipient.')}
+          </ul>
+        )}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Field label="Send a test email to" className="sm:w-80">
+            <Input type="email" value={to} onChange={(e) => (setTo(e.target.value), setResult(null))} />
+          </Field>
+          <Button icon={<Send className="size-4" />} loading={sending} disabled={!to.trim()} onClick={() => void send()}>
+            Send test email
+          </Button>
+        </div>
+        {settings && !('unreachable' in settings) && settings.redirect && <p className="-mt-2 text-xs text-muted">EMAIL_REDIRECT_TO sends it to {settings.redirect} instead.</p>}
+        {result &&
+          (result.ok ? (
+            <Alert tone="success" title="Resend accepted the test email">
+              Resend id {result.id}. If it doesn’t arrive within a minute, look in Spam / Junk, and on the Emails page of your Resend account, which says whether it was delivered or bounced.
+            </Alert>
+          ) : (
+            <Alert tone="error" title="Resend did not send it">
+              <span className="font-medium">{result.error}</span>
+              {advice && <span className="mt-1 block">{advice}</span>}
+            </Alert>
+          ))}
+      </CardBody>
+    </Card>
   );
 }

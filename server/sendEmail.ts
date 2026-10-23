@@ -81,7 +81,25 @@ export function renderEmail(msg: RelayRequest, appUrl: string): { text: string; 
   return { text, html };
 }
 
+/** What the relay can see of its configuration, for the Admin "Send test email" check. Never the values. */
+export interface RelayStatus {
+  /** Settings that are missing; email can't be sent until they're set. */
+  missing: string[];
+  /** The sender's address (not secret: it is on every email). */
+  from?: string;
+  /** Where every email is redirected, masked ("d…@example.com"), when EMAIL_REDIRECT_TO is set. */
+  redirect?: string;
+}
+
+export function relayStatus(env: RelayEnv): RelayStatus {
+  const missing = (['RESEND_API_KEY', 'EMAIL_FROM', 'APP_URL'] as const).filter((k) => !env[k]?.trim());
+  const from = env.EMAIL_FROM?.trim().match(/<([^>]+)>/)?.[1] ?? env.EMAIL_FROM?.trim();
+  const r = env.EMAIL_REDIRECT_TO?.trim();
+  return { missing, from: from || undefined, redirect: r ? r.replace(/^(.)[^@]*(@.*)$/, '$1…$2') : undefined };
+}
+
 export async function handleSendEmail(req: Request, env: RelayEnv, fetchImpl: typeof fetch = fetch): Promise<Response> {
+  if (req.method === 'GET') return json(200, relayStatus(env));
   if (req.method !== 'POST') return json(405, { error: 'Use POST.' });
   if (!env.RESEND_API_KEY || !env.EMAIL_FROM || !env.APP_URL) {
     return json(503, { error: 'Email is not configured (RESEND_API_KEY, EMAIL_FROM and APP_URL are required).' });

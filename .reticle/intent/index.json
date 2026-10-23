@@ -49,6 +49,12 @@
       "subject": "agreements"
     },
     {
+      "id": "inline:admin-system-has-an-email-delivery-check-it-list-bd765b35",
+      "statement": "Admin → System has an Email delivery check: it lists which email settin…",
+      "status": "proposed",
+      "subject": "api"
+    },
+    {
       "id": "inline:every-notification-email-is-sent-through-resend-36da3fc3",
       "statement": "Every notification email is sent through Resend, including event notice…",
       "status": "proved",
