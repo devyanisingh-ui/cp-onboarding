@@ -25,6 +25,12 @@
       "subject": "agreements"
     },
     {
+      "id": "inline:the-agreements-filter-switches-mine-only-non-sta-233d8d9e",
+      "statement": "The Agreements filter switches ('Mine only', 'Non-standard') keep their…",
+      "status": "proved",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21",
       "statement": "The 'How will this be signed?' card on a ready-for-signing agreement of…",
       "status": "proved",

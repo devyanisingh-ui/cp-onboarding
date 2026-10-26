@@ -178,6 +178,50 @@
       },
       "updatedAt": 1792582647735
     },
+    "inline:the-agreements-filter-switches-mine-only-non-sta-233d8d9e": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Non-standard",
+              "role": "switch"
+            },
+            "state": "checked"
+          },
+          {
+            "contains": "EduBridge Services Pvt. Ltd",
+            "kind": "text",
+            "visible": true
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1793007810426,
+      "id": "inline:the-agreements-filter-switches-mine-only-non-sta-233d8d9e",
+      "provenBy": {
+        "at": 1793007827063,
+        "grade": "presence",
+        "runId": "drive-s0aa77e06-39d0-41dc-ba2d-3656a6dc9af0",
+        "verdictId": "reticle_act_and_wait:1793007827063"
+      },
+      "state": "proved",
+      "statement": "The Agreements filter switches ('Mine only', 'Non-standard') keep their label on one line at every width, and the filter row never pushes the page sideways.",
+      "status": "proved",
+      "subject": "agreements",
+      "surface": {
+        "files": [
+          "src/components/ui/Form.tsx"
+        ],
+        "route": "/agreements"
+      },
+      "updatedAt": 1793007827112
+    },
     "inline:the-how-will-this-be-signed-card-on-a-ready-for-b3231a21": {
       "binding": {
         "kind": "allOf",

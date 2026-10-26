@@ -50,7 +50,7 @@ export function AgreementsList() {
       <Card>
         <div className="space-y-3 border-b border-line p-4 sm:p-5">
           <SearchInput label="Search agreements" placeholder="Search by CP name or agreement ID" value={q} onChange={(v) => (setQ(v), setPage(1))} />
-          <div className="grid grid-cols-2 gap-3 lg:flex lg:items-center">
+          <div className="grid grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:items-center">
             <label className="lg:w-52">
               <span className="sr-only">Status</span>
               <Select value={status} onChange={(e) => set('status', e.target.value)}>
@@ -89,7 +89,7 @@ export function AgreementsList() {
               </label>
             )}
             {/* Phones: the two switches share their own row. From lg up they sit inline with the filters. */}
-            <div className="col-span-2 grid grid-cols-2 gap-x-6 py-1 lg:contents">
+            <div className="col-span-2 grid grid-cols-2 gap-x-4 py-1 lg:contents">
               {can('agreement.create') && <Toggle checked={mine} onChange={(v) => set('mine', v ? '1' : '')} label="Mine only" />}
               <Toggle checked={nonStandard} onChange={(v) => set('nonStandard', v ? '1' : '')} label="Non-standard" />
             </div>

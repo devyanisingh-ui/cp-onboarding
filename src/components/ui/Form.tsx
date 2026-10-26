@@ -213,7 +213,7 @@ export function Toggle({
   return (
     <div className={cn('flex justify-between gap-4', description ? 'items-start' : 'items-center')}>
       <div className="text-sm">
-        <label htmlFor={id} className="font-medium text-ink">
+        <label htmlFor={id} className="whitespace-nowrap font-medium text-ink">
           {label}
         </label>
         {description && <p className="mt-0.5 text-muted">{description}</p>}
