@@ -134,7 +134,7 @@ export function Tabs<T extends string>({
     onChange(tabs[next]!.id);
   };
   return (
-    <div role="tablist" aria-label={label} className="-mb-px flex gap-1 overflow-x-auto border-b border-line/80 [scrollbar-width:none]">
+    <div role="tablist" aria-label={label} className="-mb-px flex overflow-x-auto border-b border-line/80 [scrollbar-width:none] sm:gap-1">
       {tabs.map((t, i) => {
         const selected = t.id === active;
         return (
@@ -150,7 +150,7 @@ export function Tabs<T extends string>({
             onClick={() => onChange(t.id)}
             onKeyDown={(e) => onKey(e, i)}
             className={cn(
-              'relative flex shrink-0 items-center gap-2 rounded-t-md border-b-2 px-3 py-2.5 text-sm transition-colors duration-150',
+              'relative flex shrink-0 items-center gap-1.5 rounded-t-md border-b-2 px-2.5 py-2.5 text-sm transition-colors duration-150 sm:gap-2 sm:px-3',
               selected ? 'border-primary-600 font-semibold text-primary-700' : 'border-transparent font-medium text-muted hover:border-line-strong hover:bg-[var(--surface-hover)] hover:text-ink',
             )}
           >

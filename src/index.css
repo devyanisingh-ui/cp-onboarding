@@ -237,6 +237,11 @@
 }
 
 @layer base {
+  /* IDs and codes (AGR-ASU-2026-0008, PANs, IFSC) never break at a hyphen on narrow screens. */
+  :where(span, p, a, td).font-mono {
+    white-space: nowrap;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;

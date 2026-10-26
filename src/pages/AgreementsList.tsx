@@ -76,7 +76,7 @@ export function AgreementsList() {
               </Select>
             </label>
             {myInstitutions.length > 1 && (
-              <label className="lg:w-40">
+              <label className="col-span-2 lg:w-40">
                 <span className="sr-only">Institution</span>
                 <Select value={inst} onChange={(e) => set('inst', e.target.value)}>
                   <option value="">All institutions</option>
@@ -88,8 +88,11 @@ export function AgreementsList() {
                 </Select>
               </label>
             )}
-            {can('agreement.create') && <Toggle checked={mine} onChange={(v) => set('mine', v ? '1' : '')} label="Mine only" />}
-            <Toggle checked={nonStandard} onChange={(v) => set('nonStandard', v ? '1' : '')} label="Non-standard" />
+            {/* Phones: the two switches share their own row. From lg up they sit inline with the filters. */}
+            <div className="col-span-2 grid grid-cols-2 gap-x-6 py-1 lg:contents">
+              {can('agreement.create') && <Toggle checked={mine} onChange={(v) => set('mine', v ? '1' : '')} label="Mine only" />}
+              <Toggle checked={nonStandard} onChange={(v) => set('nonStandard', v ? '1' : '')} label="Non-standard" />
+            </div>
             {filtered && (
               <button type="button" className="justify-self-start text-sm font-semibold text-primary-700 hover:underline lg:ml-auto" onClick={() => (setQ(''), setParams({}, { replace: true }))}>
                 Clear filters

@@ -84,7 +84,7 @@ export function AuditLog() {
                 ))}
               </Select>
             </Field>
-            <Field label="Entity">
+            <Field label="Entity" className="max-md:col-span-2">
               <Select value={entityType} onChange={(e) => reset(() => setEntity(e.target.value))}>
                 <option value="">All entities</option>
                 {ENTITIES.map((a) => (

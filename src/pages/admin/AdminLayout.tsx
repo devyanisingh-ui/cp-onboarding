@@ -23,7 +23,8 @@ export function AdminLayout() {
     <div>
       <PageHeader title={can('config.manage') ? 'Admin console' : 'Templates & configuration'} subtitle={can('config.manage') ? 'Master data, versions, people and rules. Every change is audit-logged.' : 'Read-only unless your role approves versions.'} />
       <div className="grid grid-cols-[minmax(0,1fr)] gap-6 xl:grid-cols-[220px_minmax(0,1fr)]">
-        <nav ref={navRef} aria-label="Admin sections" className="min-w-0 -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:mx-0 xl:px-0">
+        {/* Below xl the sections scroll sideways; the faded right edge shows there are more. */}
+        <nav ref={navRef} aria-label="Admin sections" className="min-w-0 -mx-4 overflow-x-auto px-4 [scrollbar-width:none] max-xl:[mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 xl:mx-0 xl:px-0">
           <ul className="flex gap-1.5 xl:flex-col">
             {items.map((i) => (
               <li key={i.to} className="shrink-0">

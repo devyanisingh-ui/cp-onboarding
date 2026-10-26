@@ -161,7 +161,7 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
             <tr>
               <TH>Programme group</TH>
               {SLABS.map((s) => (
-                <TH key={s} className="text-right">
+                <TH key={s} className="whitespace-nowrap text-right">
                   {s}
                 </TH>
               ))}
@@ -170,13 +170,14 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
           <tbody>
             {rates.rows.map((r) => (
               <tr key={r.id}>
-                <TD>
+                <TD className="min-w-[10rem]">
                   <span className="font-medium">{r.programmeGroup}</span>
                   <span className="block text-xs text-muted">{r.programmes}</span>
                 </TD>
                 {SLABS.map((s) => (
                   <TD key={s} className="text-right">
-                    <div className="flex justify-end">{cell(`${r.id}:${s}`, r.slabs[s])}</div>
+                    {/* Fixed width, so on phones the table scrolls sideways instead of squeezing the amounts. */}
+                    <div className="flex min-w-28 justify-end">{cell(`${r.id}:${s}`, r.slabs[s])}</div>
                   </TD>
                 ))}
               </tr>

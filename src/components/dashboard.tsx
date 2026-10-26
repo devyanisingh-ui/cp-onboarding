@@ -155,19 +155,20 @@ export function ageLabel(days: number): string {
 export function DashRow({ to, icon, tile, urgent, title, sub, badges, pill, when, action }: { to: string; icon: ReactNode; tile: string; urgent?: boolean; title: ReactNode; sub: ReactNode; badges?: ReactNode; pill: ReactNode; when: ReactNode; action: string }) {
   return (
     <li>
-      <Link to={to} className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
+      {/* Phones: the pill, date and action drop to their own line under the text, so the title gets the full width. */}
+      <Link to={to} className={cn('group flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3.5 transition-colors hover:bg-[var(--surface-hover)] sm:flex-nowrap sm:px-5', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
         <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', tile)} aria-hidden>
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-ink group-hover:text-primary-800">{title}</p>
+          <p className="text-sm font-semibold text-ink group-hover:text-primary-800 sm:truncate">{title}</p>
           <p className="mt-0.5 text-xs text-muted">{sub}</p>
           {badges && <div className="mt-1.5 flex flex-wrap gap-1.5">{badges}</div>}
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+        <div className="flex shrink-0 items-center gap-2 max-sm:basis-full max-sm:pl-12 sm:flex-col sm:items-end sm:gap-1 sm:text-right">
           {pill}
           <p className="text-xs text-subtle">{when}</p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline">
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline max-sm:ml-auto">
             {action} <ChevronRight className="size-3.5" aria-hidden />
           </span>
         </div>

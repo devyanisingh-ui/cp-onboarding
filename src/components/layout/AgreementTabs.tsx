@@ -4,16 +4,19 @@ import { cn } from '@/lib/cn';
 import { AGREEMENT_PAGES } from './SubHeader';
 
 /** Section tabs for one agreement: its main pages, plus the action page currently open. */
-function agreementTabs(pathname: string): { to: string; label: string; end?: boolean }[] {
+/** Short tab names for phones, where four tabs share the width. */
+const SHORT: Record<string, string> = { upload: 'Upload', esign: 'E-sign', verify: 'Gate 2', 'legal-review': 'Review', terminate: 'Terminate', edit: 'Edit' };
+
+function agreementTabs(pathname: string): { to: string; label: string; short?: string; end?: boolean }[] {
   const [section, id, sub] = pathname.split('/').filter(Boolean);
   if (section !== 'agreements' || !id || id === 'new') return [];
   const base = `/agreements/${id}`;
-  const tabs = [
+  const tabs: { to: string; label: string; short?: string; end?: boolean }[] = [
     { to: base, label: 'Overview', end: true },
     { to: `${base}/preview`, label: 'Preview' },
     { to: `${base}/deviation`, label: 'Deviations' },
   ];
-  if (sub && !['preview', 'deviation'].includes(sub) && AGREEMENT_PAGES[sub]) tabs.push({ to: `${base}/${sub}`, label: AGREEMENT_PAGES[sub] });
+  if (sub && !['preview', 'deviation'].includes(sub) && AGREEMENT_PAGES[sub]) tabs.push({ to: `${base}/${sub}`, label: AGREEMENT_PAGES[sub], short: SHORT[sub] });
   return tabs;
 }
 
@@ -69,20 +72,33 @@ export function AgreementTabs() {
       )}
     >
     <nav ref={tabsRef} aria-label="Agreement sections" className="max-w-full overflow-x-auto [scrollbar-width:none]">
-      <ul className="inline-flex gap-1 rounded-lg border border-line/70 bg-sunken/60 p-1">
+      {/* Phones: the tabs share the full width so four fit; from sm up they size to their labels. */}
+      <ul className="flex min-w-full gap-0.5 rounded-lg border border-line/70 bg-sunken/60 p-1 sm:inline-flex sm:min-w-0 sm:gap-1">
         {tabs.map((t) => (
-          <li key={t.to} className="shrink-0">
+          <li key={t.to} className="shrink-0 max-sm:flex-1">
             <NavLink
               to={t.to}
               end={t.end}
+              aria-label={t.short ? t.label : undefined}
               className={({ isActive }) =>
                 cn(
-                  'inline-flex h-8 items-center rounded-md px-3 text-sm font-medium transition-colors',
+                  'inline-flex h-8 w-full items-center justify-center whitespace-nowrap rounded-md px-2 text-[13px] font-medium transition-colors sm:w-auto sm:px-3 sm:text-sm',
                   isActive ? 'bg-white text-primary-800 shadow-card ring-1 ring-line' : 'text-ink-soft hover:bg-white/70 hover:text-ink',
                 )
               }
             >
-              {t.label}
+              {t.short ? (
+                <>
+                  <span className="sm:hidden" aria-hidden>
+                    {t.short}
+                  </span>
+                  <span className="max-sm:hidden" aria-hidden>
+                    {t.label}
+                  </span>
+                </>
+              ) : (
+                t.label
+              )}
             </NavLink>
           </li>
         ))}

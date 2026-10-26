@@ -211,7 +211,7 @@ export function Toggle({
 }) {
   const id = useId();
   return (
-    <div className="flex items-start justify-between gap-4">
+    <div className={cn('flex justify-between gap-4', description ? 'items-start' : 'items-center')}>
       <div className="text-sm">
         <label htmlFor={id} className="font-medium text-ink">
           {label}
