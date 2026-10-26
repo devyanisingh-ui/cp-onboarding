@@ -635,24 +635,46 @@ export async function requestDeviation(id: string, items: DeviationRequestItem[]
 }
 
 export async function decideDeviation(devId: string, decision: 'approve' | 'reject', opts: { agreedValue?: string; comment?: string }): Promise<void> {
+  const dev = getDb().deviations.find((x) => x.id === devId);
+  if (!dev) {
+    await delay('write');
+    throw notFound('Deviation');
+  }
+  return decideDeviations(dev.agreementId, [{ id: devId, decision, agreedValue: opts.agreedValue }], opts.comment);
+}
+
+export interface DeviationDecision {
+  id: string;
+  decision: 'approve' | 'reject';
+  agreedValue?: string;
+}
+
+/** Legal decides a whole request in one go. All items are checked before any is changed. */
+export async function decideDeviations(agreementId: string, decisions: DeviationDecision[], comment?: string): Promise<void> {
   await delay('write');
   const user = ctx();
   assertCan(user, 'deviation.decide', 'Only Legal can decide deviations.');
   const d = getDb();
-  const dev = d.deviations.find((x) => x.id === devId);
-  if (!dev) throw notFound('Deviation');
-  const a = load(dev.agreementId, user);
-  if (dev.status !== 'pending') throw conflict('This deviation has already been decided.');
+  const a = load(agreementId, user);
   if (a.status !== 'draft') throw conflict('The agreement is no longer a draft.');
-  if (decision === 'approve') {
-    const agreed = (opts.agreedValue ?? dev.proposedValue).trim();
-    if (dev.type === 'rate' && !(Number(agreed) > 0)) throw invalid('Agreed rate must be a positive amount.');
-    Object.assign(dev, { status: 'approved', agreedValue: dev.type === 'rate' ? String(Number(agreed)) : agreed, decidedById: user.id, decidedAt: now(), legalComment: opts.comment?.trim() });
-    audit(user, 'approve', 'deviation', dev.id, `Approved deviation on ${a.id}: ${dev.label}`, { value: dev.standardValue }, { value: dev.agreedValue });
-  } else {
-    const c = requireComment(opts.comment);
-    Object.assign(dev, { status: 'rejected', decidedById: user.id, decidedAt: now(), legalComment: c });
-    audit(user, 'reject', 'deviation', dev.id, `Rejected deviation on ${a.id} — standard terms apply: ${c}`);
+  if (!decisions.length) throw invalid('Choose at least one deviation to decide.');
+  const items = decisions.map((x) => {
+    const dev = d.deviations.find((v) => v.id === x.id && v.agreementId === a.id);
+    if (!dev) throw notFound('Deviation');
+    if (dev.status !== 'pending') throw conflict('This deviation has already been decided.');
+    const agreed = (x.agreedValue ?? dev.proposedValue).trim();
+    if (x.decision === 'approve' && dev.type === 'rate' && !(Number(agreed) > 0)) throw invalid(`Agreed rate for ${dev.label} must be a positive amount.`);
+    return { dev, decision: x.decision, agreed };
+  });
+  const c = items.some((x) => x.decision === 'reject') ? requireComment(comment) : comment?.trim() || undefined;
+  for (const { dev, decision, agreed } of items) {
+    if (decision === 'approve') {
+      Object.assign(dev, { status: 'approved', agreedValue: dev.type === 'rate' ? String(Number(agreed)) : agreed, decidedById: user.id, decidedAt: now(), legalComment: c });
+      audit(user, 'approve', 'deviation', dev.id, `Approved deviation on ${a.id}: ${dev.label}`, { value: dev.standardValue }, { value: dev.agreedValue });
+    } else {
+      Object.assign(dev, { status: 'rejected', decidedById: user.id, decidedAt: now(), legalComment: c });
+      audit(user, 'reject', 'deviation', dev.id, `Rejected deviation on ${a.id} — standard terms apply: ${c}`);
+    }
   }
   const wasNon = a.nonStandard;
   a.nonStandard = d.deviations.some((x) => x.agreementId === a.id && x.status === 'approved');

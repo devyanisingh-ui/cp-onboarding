@@ -11,69 +11,141 @@ import { cn } from '@/lib/cn';
 import { Badge, Button, Menu, useToast } from '@/components/ui';
 import { DocumentViewer } from '@/components/common';
 
-/** Side-by-side standard vs agreed values (PRD §6.2, screen 7). */
-export function DeviationCompare({ deviations, names, docs = [] }: { deviations: Deviation[]; names: Record<string, string>; docs?: DocumentRecord[] }) {
+/** Side-by-side standard vs agreed values (PRD §6.2, screen 7). Items sent in one request share one reason and set of documents, shown once above them. */
+export function DeviationCompare({
+  deviations,
+  names,
+  docs = [],
+  shared,
+}: {
+  deviations: Deviation[];
+  names: Record<string, string>;
+  docs?: DocumentRecord[];
+  /** What a summary above already shows; omit to group the items by request, each under its own summary. */
+  shared?: ReturnType<typeof sharedRequest>;
+}) {
   const [viewing, setViewing] = useState<DocumentRecord | null>(null);
   if (!deviations.length) return null;
+  if (!shared)
+    return (
+      <div className="divide-y divide-line">
+        {groupByRequest(deviations).map((group) => (
+          <section key={group[0]!.id}>
+            <RequestSummary deviations={group} names={names} docs={docs} />
+            <DeviationCompare deviations={group} names={names} docs={docs} shared={sharedRequest(group)} />
+          </section>
+        ))}
+      </div>
+    );
+  const { reason, docIds } = shared;
   return (
     <>
-    <ul className="divide-y divide-line">
-      {deviations.map((d) => {
-        const fmt = (v?: string) => (d.type === 'rate' ? formatInr(Number(v)) : v);
-        const agreed = d.status === 'approved' ? d.agreedValue : d.proposedValue;
-        return (
-          <li key={d.id} className="px-5 py-4">
-            <div className="mb-2 flex flex-wrap items-center gap-2">
-              <p className="text-sm font-semibold text-ink">{d.label}</p>
-              <Badge tone={d.status === 'approved' ? 'green' : d.status === 'rejected' ? 'red' : 'amber'}>
-                {d.status === 'approved' ? 'Approved by Legal' : d.status === 'rejected' ? 'Rejected — standard applies' : 'Awaiting Legal'}
-              </Badge>
-            </div>
-            <div className={cn('grid items-stretch gap-2', d.type === 'rate' ? 'grid-cols-[1fr_auto_1fr]' : 'sm:grid-cols-[1fr_auto_1fr]')}>
-              <div className="rounded-lg border border-line bg-canvas p-3">
-                <p className="text-2xs font-semibold uppercase tracking-wider text-muted">Standard</p>
-                <p className={cn('mt-1 text-ink-soft', d.type === 'rate' ? 'text-base font-semibold tabular-nums' : 'text-sm')}>{fmt(d.standardValue)}</p>
+      <ul className="divide-y divide-line">
+        {deviations.map((d) => {
+          const fmt = (v?: string) => (d.type === 'rate' ? formatInr(Number(v)) : v);
+          const agreed = d.status === 'approved' ? d.agreedValue : d.proposedValue;
+          const ownDocs = (d.documentIds ?? []).filter((id) => !docIds.includes(id));
+          return (
+            <li key={d.id} className="px-5 py-4">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <p className="text-sm font-semibold text-ink">{d.label}</p>
+                <Badge tone={d.status === 'approved' ? 'green' : d.status === 'rejected' ? 'red' : 'amber'}>
+                  {d.status === 'approved' ? 'Approved by Legal' : d.status === 'rejected' ? 'Rejected — standard applies' : 'Awaiting Legal'}
+                </Badge>
               </div>
-              <ArrowRight className={cn('size-4 self-center text-subtle', d.type === 'clause' && 'hidden sm:block')} aria-hidden />
-              <div className={cn('rounded-lg border p-3', d.status === 'rejected' ? 'border-line bg-canvas opacity-60' : 'border-orange-200 bg-orange-50')}>
-                <p className="text-2xs font-semibold uppercase tracking-wider text-orange-800">{d.status === 'approved' ? 'Agreed' : 'Proposed'}</p>
-                <p className={cn('mt-1 text-ink', d.type === 'rate' ? 'text-base font-semibold tabular-nums' : 'text-sm', d.status === 'rejected' && 'line-through')}>{fmt(agreed)}</p>
-                {d.status === 'approved' && d.agreedValue !== d.proposedValue && <p className="mt-1 text-xs text-muted">Requested {fmt(d.proposedValue)}</p>}
+              <div className={cn('grid items-stretch gap-2', d.type === 'rate' ? 'grid-cols-[1fr_auto_1fr]' : 'sm:grid-cols-[1fr_auto_1fr]')}>
+                <div className="rounded-lg border border-line bg-canvas p-3">
+                  <p className="text-2xs font-semibold uppercase tracking-wider text-muted">Standard</p>
+                  <p className={cn('mt-1 text-ink-soft', d.type === 'rate' ? 'text-base font-semibold tabular-nums' : 'text-sm')}>{fmt(d.standardValue)}</p>
+                </div>
+                <ArrowRight className={cn('size-4 self-center text-subtle', d.type === 'clause' && 'hidden sm:block')} aria-hidden />
+                <div className={cn('rounded-lg border p-3', d.status === 'rejected' ? 'border-line bg-canvas opacity-60' : 'border-orange-200 bg-orange-50')}>
+                  <p className="text-2xs font-semibold uppercase tracking-wider text-orange-800">{d.status === 'approved' ? 'Agreed' : 'Proposed'}</p>
+                  <p className={cn('mt-1 text-ink', d.type === 'rate' ? 'text-base font-semibold tabular-nums' : 'text-sm', d.status === 'rejected' && 'line-through')}>{fmt(agreed)}</p>
+                  {d.status === 'approved' && d.agreedValue !== d.proposedValue && <p className="mt-1 text-xs text-muted">Requested {fmt(d.proposedValue)}</p>}
+                </div>
               </div>
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              <span className="font-medium text-ink-soft">Reason:</span> {d.reason} — {names[d.requestedById] ?? '—'}, {formatShortDate(d.requestedAt)}
-            </p>
-            {!!d.documentIds?.length && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-medium text-ink-soft">Supporting documents:</span>
-                {d.documentIds.map((id) => {
-                  const doc = docs.find((x) => x.id === id);
-                  return doc ? (
-                    <button
-                      key={id}
-                      type="button"
-                      onClick={() => setViewing(doc)}
-                      className="hit-area inline-flex max-w-full items-center gap-1 rounded-md border border-line bg-white px-2 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-50"
-                    >
-                      <Paperclip className="size-3 shrink-0" aria-hidden />
-                      <span className="truncate">{doc.fileName}</span>
-                    </button>
-                  ) : null;
-                })}
-              </div>
-            )}
-            {d.legalComment && (
-              <p className="mt-1 text-xs text-muted">
-                <span className="font-medium text-ink-soft">Legal:</span> {d.legalComment} — {names[d.decidedById ?? ''] ?? '—'}, {formatShortDate(d.decidedAt)}
-              </p>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-    <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
+              {reason === undefined && (
+                <p className="mt-2 text-xs text-muted">
+                  <span className="font-medium text-ink-soft">Reason:</span> {d.reason} — {names[d.requestedById] ?? '—'}, {formatShortDate(d.requestedAt)}
+                </p>
+              )}
+              {ownDocs.length > 0 && <DocChips ids={ownDocs} docs={docs} onView={setViewing} className="mt-2" />}
+              {d.legalComment && (
+                <p className="mt-1 text-xs text-muted">
+                  <span className="font-medium text-ink-soft">Legal:</span> {d.legalComment} — {names[d.decidedById ?? ''] ?? '—'}, {formatShortDate(d.decidedAt)}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+      <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />
     </>
+  );
+}
+
+/** Items sent together: same requester, reason and documents, requested within the same minute. */
+function groupByRequest(deviations: Deviation[]) {
+  const groups = new Map<string, Deviation[]>();
+  for (const d of deviations) {
+    const key = [d.requestedById, d.reason, d.requestedAt.slice(0, 16), [...(d.documentIds ?? [])].sort().join(',')].join('|');
+    groups.set(key, [...(groups.get(key) ?? []), d]);
+  }
+  return [...groups.values()];
+}
+
+/** The reason and documents every item in the list shares — a request's rate changes carry one of each. */
+export function sharedRequest(deviations: Deviation[]) {
+  const first = deviations[0];
+  const reason = first && deviations.every((d) => d.reason === first.reason && d.requestedById === first.requestedById) ? first.reason : undefined;
+  const docIds = (first?.documentIds ?? []).filter((id) => deviations.every((d) => d.documentIds?.includes(id)));
+  return { reason, docIds };
+}
+
+/** The request-level reason and supporting documents, shown once above the changed items. */
+export function RequestSummary({ deviations, names, docs, onView }: { deviations: Deviation[]; names: Record<string, string>; docs: DocumentRecord[]; onView?: (doc: DocumentRecord) => void }) {
+  const [viewing, setViewing] = useState<DocumentRecord | null>(null);
+  const { reason, docIds } = sharedRequest(deviations);
+  if (reason === undefined && !docIds.length) return null;
+  const first = deviations[0]!;
+  const latest = deviations.map((d) => d.requestedAt).sort().at(-1);
+  return (
+    <div className="space-y-2 border-b border-line bg-canvas/60 px-5 py-4">
+      {reason !== undefined && (
+        <p className="text-sm text-ink-soft">
+          <span className="font-medium text-ink">Reason:</span> {reason}
+          <span className="text-muted">
+            {' '}
+            — {names[first.requestedById] ?? '—'}, {formatShortDate(latest)}
+          </span>
+        </p>
+      )}
+      {docIds.length > 0 && <DocChips ids={docIds} docs={docs} onView={onView ?? setViewing} />}
+      {!onView && <DocumentViewer doc={viewing} onClose={() => setViewing(null)} />}
+    </div>
+  );
+}
+
+function DocChips({ ids, docs, onView, className }: { ids: string[]; docs: DocumentRecord[]; onView: (doc: DocumentRecord) => void; className?: string }) {
+  return (
+    <div className={cn('flex flex-wrap items-center gap-1.5', className)}>
+      <span className="text-xs font-medium text-ink-soft">Supporting documents:</span>
+      {ids.map((id) => {
+        const doc = docs.find((x) => x.id === id);
+        return doc ? (
+          <button
+            key={id}
+            type="button"
+            onClick={() => onView(doc)}
+            className="hit-area inline-flex max-w-full items-center gap-1 rounded-md border border-line bg-white px-2 py-0.5 text-xs font-medium text-primary-700 hover:bg-primary-50"
+          >
+            <Paperclip className="size-3 shrink-0" aria-hidden />
+            <span className="truncate">{doc.fileName}</span>
+          </button>
+        ) : null;
+      })}
+    </div>
   );
 }
 

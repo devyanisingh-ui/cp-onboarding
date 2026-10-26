@@ -7,6 +7,12 @@
       "subject": "admin"
     },
     {
+      "id": "deviation-request-once",
+      "statement": "A deviation request's shared reason and supporting document show once,…",
+      "status": "proposed",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:an-agreement-that-is-ready-for-signing-offers-on-518785cf",
       "statement": "An agreement that is ready for signing offers only the paper route: no…",
       "status": "proved",

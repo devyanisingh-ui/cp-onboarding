@@ -50,6 +50,7 @@ export const api = {
     acceptCpDocs: docRequests.acceptCpDocs,
     requestDeviation: agreements.requestDeviation,
     decideDeviation: agreements.decideDeviation,
+    decideDeviations: agreements.decideDeviations,
     uploadSigned: agreements.uploadSignedCopy,
     decideGate2: agreements.decideGate2,
     decideRenewal: agreements.decideRenewal,

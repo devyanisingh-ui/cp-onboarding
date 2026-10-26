@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, Plus, Scale, Send, Trash2, X } from 'lucide-react';
+import { Check, Plus, Scale, Send, Trash2, Undo2, X } from 'lucide-react';
 import { SLABS, type Deviation, type DocumentRecord } from '@/types';
 import { api } from '@/services/mockApi';
 import type { DeviationRequestItem } from '@/services/api/agreements';
@@ -11,7 +11,7 @@ import { formatInr } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Field, Input, PageSkeleton, Select, Table, TD, TH, Textarea } from '@/components/ui';
 import { ActionBar, FileDrop, PageHeader } from '@/components/common';
-import { DeviationCompare } from '@/components/agreement';
+import { DeviationCompare, RequestSummary, sharedRequest } from '@/components/agreement';
 
 export function DeviationPanel() {
   const { id = '' } = useParams();
@@ -34,8 +34,12 @@ export function DeviationPanel() {
         {d.actions.decideDeviation && <LegalReview pending={pending} names={d.names} docs={d.documents} />}
         {d.actions.requestDeviation && <RequestForm detail={d} hasPending={pending.length > 0} />}
         {!d.actions.decideDeviation && !d.actions.requestDeviation && (
-          <Alert tone="info">
-            {d.agreement.status !== 'draft' ? 'Deviations can only be requested or decided while the agreement is a draft.' : 'You can view deviations here. BD Executives request them and Legal decides.'}
+          <Alert tone={d.agreement.status === 'draft' && !pending.length && decided.length ? 'success' : 'info'}>
+            {d.agreement.status !== 'draft'
+              ? 'Deviations can only be requested or decided while the agreement is a draft.'
+              : !pending.length && decided.length
+                ? 'Every deviation on this agreement has been decided. Nothing is waiting for Legal.'
+                : 'You can view deviations here. BD Executives request them and Legal decides.'}
           </Alert>
         )}
         {!d.actions.decideDeviation && pending.length > 0 && (
@@ -287,43 +291,75 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
 }
 
 function LegalReview({ pending, names, docs }: { pending: Deviation[]; names: Record<string, string>; docs: DocumentRecord[] }) {
+  const [agreed, setAgreed] = useState<Record<string, string>>({});
+  const [rejected, setRejected] = useState<Record<string, boolean>>({});
+  const [comment, setComment] = useState('');
+  const [tried, setTried] = useState(false);
+  const agreementId = pending[0]?.agreementId ?? '';
+  const rejects = pending.filter((d) => rejected[d.id]).length;
+  const approves = pending.length - rejects;
+  const decide = useAction(
+    () =>
+      api.agreements.decideDeviations(
+        agreementId,
+        pending.map((d) => ({ id: d.id, decision: rejected[d.id] ? 'reject' : 'approve', agreedValue: agreed[d.id] ?? d.proposedValue })),
+        comment,
+      ),
+    { success: rejects === 0 ? `${pending.length === 1 ? 'Deviation' : 'All deviations'} approved` : approves === 0 ? 'Deviations rejected — standard terms apply' : 'Decision sent to the BD Executive' },
+  );
   if (!pending.length) return <Alert tone="success">No deviations are waiting for your review on this agreement.</Alert>;
+  const commentError = tried && rejects > 0 && !comment.trim() ? 'Say why, so the BD Executive knows what to change.' : undefined;
+  const submit = () => {
+    setTried(true);
+    if (rejects > 0 && !comment.trim()) return;
+    void decide.run();
+  };
+  const shared = sharedRequest(pending);
+  const label = rejects === 0 ? (pending.length === 1 ? 'Approve' : `Approve all ${pending.length}`) : approves === 0 ? `Reject ${pending.length === 1 ? '' : `all ${pending.length}`}`.trim() : `Approve ${approves}, reject ${rejects}`;
   return (
     <Card>
-      <CardHeader title="Review requested deviations" description="Adjust the agreed value if needed. Rejecting returns that item to standard terms." />
+      <CardHeader
+        title="Review requested deviations"
+        description={`${pending.length} change${pending.length === 1 ? '' : 's'} in this request, decided together. Adjust an agreed value if needed, or mark an item to reject — it returns to standard terms.`}
+      />
+      <RequestSummary deviations={pending} names={names} docs={docs} />
       <ul className="divide-y divide-line">
         {pending.map((d) => (
-          <LegalItem key={d.id} d={d} names={names} docs={docs} />
+          <li key={d.id} className={cn('space-y-3 pb-4', rejected[d.id] && 'bg-red-50/40')}>
+            <DeviationCompare deviations={[d]} names={names} docs={docs} shared={shared} />
+            <div className="grid items-end gap-3 px-5 sm:grid-cols-[1fr_auto]">
+              <Field label={d.type === 'rate' ? 'Agreed amount (INR)' : 'Agreed wording'} hint={d.type === 'rate' ? `Standard ${formatInr(Number(d.standardValue))}` : undefined}>
+                {d.type === 'rate' ? (
+                  <Input type="number" value={agreed[d.id] ?? d.proposedValue} disabled={rejected[d.id]} onChange={(e) => setAgreed((m) => ({ ...m, [d.id]: e.target.value }))} />
+                ) : (
+                  <Textarea rows={5} value={agreed[d.id] ?? d.proposedValue} disabled={rejected[d.id]} onChange={(e) => setAgreed((m) => ({ ...m, [d.id]: e.target.value }))} />
+                )}
+              </Field>
+              <div className={cn('flex', d.type === 'rate' && 'sm:mb-6')}>
+                <Button
+                  variant={rejected[d.id] ? 'danger' : 'secondary'}
+                  size="sm"
+                  icon={rejected[d.id] ? <Undo2 className="size-4" /> : <X className="size-4" />}
+                  aria-pressed={!!rejected[d.id]}
+                  onClick={() => setRejected((m) => ({ ...m, [d.id]: !m[d.id] }))}
+                >
+                  {rejected[d.id] ? 'Rejected — undo' : 'Reject this item'}
+                </Button>
+              </div>
+            </div>
+          </li>
         ))}
       </ul>
-    </Card>
-  );
-}
-
-function LegalItem({ d, names, docs }: { d: Deviation; names: Record<string, string>; docs: DocumentRecord[] }) {
-  const [agreed, setAgreed] = useState(d.proposedValue);
-  const [comment, setComment] = useState('');
-  const approve = useAction(() => api.agreements.decideDeviation(d.id, 'approve', { agreedValue: agreed, comment }), { success: 'Deviation approved' });
-  const reject = useAction(() => api.agreements.decideDeviation(d.id, 'reject', { comment }), { success: 'Deviation rejected — standard terms apply' });
-  return (
-    <li className="space-y-3 px-5 py-4">
-      <DeviationCompare deviations={[d]} names={names} docs={docs} />
-      <div className="grid gap-3 px-5 sm:grid-cols-2">
-        <Field label={d.type === 'rate' ? 'Agreed amount (INR)' : 'Agreed wording'} hint={d.type === 'rate' ? `Standard ${formatInr(Number(d.standardValue))}` : undefined} className={d.type === 'clause' ? 'sm:col-span-2' : ''}>
-          {d.type === 'rate' ? <Input type="number" value={agreed} onChange={(e) => setAgreed(e.target.value)} /> : <Textarea rows={5} value={agreed} onChange={(e) => setAgreed(e.target.value)} />}
-        </Field>
-        <Field label="Comment" hint="Required when rejecting" className={d.type === 'clause' ? 'sm:col-span-2' : ''}>
+      <CardBody className="space-y-4 border-t border-line">
+        <Field label="Comment" required={rejects > 0} error={commentError} hint={rejects > 0 ? 'Required when rejecting an item. Sent to the BD Executive.' : 'Optional. Sent to the BD Executive.'}>
           <Input value={comment} onChange={(e) => setComment(e.target.value)} />
         </Field>
-      </div>
-      <div className="flex justify-end gap-2 px-5">
-        <Button variant="danger" size="sm" icon={<X className="size-4" />} loading={reject.loading} onClick={() => void reject.run()}>
-          Reject
-        </Button>
-        <Button variant="success" size="sm" icon={<Check className="size-4" />} loading={approve.loading} onClick={() => void approve.run()}>
-          Approve
-        </Button>
-      </div>
-    </li>
+        <div className="flex justify-end">
+          <Button variant={approves === 0 ? 'danger' : 'success'} icon={approves === 0 ? <X className="size-4" /> : <Check className="size-4" />} loading={decide.loading} onClick={submit}>
+            {label}
+          </Button>
+        </div>
+      </CardBody>
+    </Card>
   );
 }

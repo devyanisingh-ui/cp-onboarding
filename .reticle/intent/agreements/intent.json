@@ -1,5 +1,17 @@
 {
   "intents": {
+    "deviation-request-once": {
+      "declaredAt": 1793011236714,
+      "id": "deviation-request-once",
+      "state": "declared",
+      "statement": "A deviation request's shared reason and supporting document show once, at the top of the request, not on every changed item; Legal decides the whole request with one 'Approve all' and the agreement then leaves Legal's 'Deviations to decide' step.",
+      "status": "proposed",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0007/deviation"
+      },
+      "updatedAt": 1793011251690
+    },
     "inline:an-agreement-that-is-ready-for-signing-offers-on-518785cf": {
       "binding": {
         "kind": "allOf",

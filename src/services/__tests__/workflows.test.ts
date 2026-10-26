@@ -373,6 +373,26 @@ describe('deviations (PRD 6.2)', () => {
     expect(getDb().rateCards.find((r) => r.id === 'rc-asu-2')!.rows[0]!.slabs['1-10']).toBe(16000);
   });
 
+  it('Legal decides a whole request at once; the review task closes and nothing stays pending', async () => {
+    const { agreementId } = await createReadyDraft();
+    await api.agreements.requestDeviation(
+      agreementId,
+      [
+        { type: 'rate', ref: 'r-eng:1-10', proposedValue: '20000' },
+        { type: 'rate', ref: 'r-eng:11-15', proposedValue: '21000' },
+      ],
+      'Competitive market in Gurugram',
+    );
+    await as(PRIYA);
+    const devs = getDb().deviations.filter((d) => d.agreementId === agreementId);
+    await expect(api.agreements.decideDeviations(agreementId, [{ id: devs[0]!.id, decision: 'approve' }, { id: devs[1]!.id, decision: 'reject' }])).rejects.toThrow(/comment/i);
+    expect(getDb().deviations.filter((d) => d.agreementId === agreementId && d.status === 'pending')).toHaveLength(2);
+    await api.agreements.decideDeviations(agreementId, devs.map((d) => ({ id: d.id, decision: 'approve' as const })));
+    expect(getDb().deviations.filter((d) => d.agreementId === agreementId).map((d) => d.status)).toEqual(['approved', 'approved']);
+    expect(getDb().tasks.some((t) => t.type === 'deviation_review' && t.agreementId === agreementId && t.status === 'open')).toBe(false);
+    expect((await api.inbox.dashboard()).legal!.deviations.some((x) => x.agreement.id === agreementId)).toBe(false);
+  });
+
   it('Several deviations in one request, each with its own reason and supporting documents', async () => {
     const { agreementId } = await createReadyDraft();
     const pdf = (name: string) => ({ file: new Blob(['x'], { type: 'application/pdf' }), name });
