@@ -30,7 +30,7 @@ export function Alert({
       <div className="shrink-0">{alertTone[tone].icon}</div>
       <div className="min-w-0 flex-1">
         {title && <p className="font-semibold">{title}</p>}
-        {children && <div className={cn(title && 'mt-0.5', 'opacity-90')}>{children}</div>}
+        {children && <div className={cn(!!title && 'mt-0.5', 'opacity-90')}>{children}</div>}
         {action && <div className="mt-2.5 flex flex-wrap gap-2">{action}</div>}
       </div>
     </div>

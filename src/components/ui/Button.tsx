@@ -1,5 +1,7 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { Link, type LinkProps } from 'react-router-dom';
+'use client';
+
+import { forwardRef, type ButtonHTMLAttributes, type ComponentProps, type ReactNode } from 'react';
+import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
@@ -65,10 +67,11 @@ export function ButtonLink({
   block,
   className,
   children,
+  to,
   ...rest
-}: LinkProps & { variant?: Variant; size?: Size; icon?: ReactNode; block?: boolean }) {
+}: Omit<ComponentProps<typeof Link>, 'href'> & { to: string; variant?: Variant; size?: Size; icon?: ReactNode; block?: boolean }) {
   return (
-    <Link className={cn(base, variants[variant], sizes[size], block && 'w-full', className)} {...rest}>
+    <Link href={to} className={cn(base, variants[variant], sizes[size], block && 'w-full', className)} {...rest}>
       {icon}
       {children}
     </Link>

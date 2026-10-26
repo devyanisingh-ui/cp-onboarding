@@ -1,11 +1,10 @@
 # Dependencies
 node_modules/
 
-# Build output (regenerate with npm run build / build:mobile / build:share)
-dist/
-dist-mobile/
-cp-onboarding-mobile.html
-cp-onboarding-share.html
+# Build output (regenerate with npm run build)
+.next/
+out/
+next-env.d.ts
 *.tsbuildinfo
 
 # Local tooling and editor files

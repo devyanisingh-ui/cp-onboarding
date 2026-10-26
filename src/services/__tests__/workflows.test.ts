@@ -231,8 +231,8 @@ describe('new CP onboarding (PRD 6.1)', () => {
     await as(PRIYA);
     await api.agreements.requestDocChanges(agreementId, [{ documentId: docOf('pan').id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
 
-    // Real delivery on (as with VITE_EMAIL_DELIVERY=resend in .env); capture what the app posts to the relay.
-    vi.stubEnv('VITE_EMAIL_DELIVERY', 'resend');
+    // Real delivery on (as with NEXT_PUBLIC_EMAIL_DELIVERY=resend in .env); capture what the app posts to the relay.
+    vi.stubEnv('NEXT_PUBLIC_EMAIL_DELIVERY', 'resend');
     const relayed: unknown[] = [];
     vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => (relayed.push(JSON.parse(init.body as string)), new Response(JSON.stringify({ id: 'em_1' })))));
     try {

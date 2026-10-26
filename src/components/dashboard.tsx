@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 import { AlertTriangle, ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
@@ -22,7 +24,7 @@ function StepLink({ to, className, children }: { to: string; className: string; 
       </button>
     );
   return (
-    <Link to={to} className={className}>
+    <Link href={to} className={className}>
       {children}
     </Link>
   );
@@ -93,7 +95,7 @@ export function UrgencyChip({ tone, count, label, to }: { tone: 'red' | 'amber' 
     </>
   );
   return to && count ? (
-    <Link to={to} className={cn(cls, 'hover:brightness-95')}>
+    <Link href={to} className={cn(cls, 'hover:brightness-95')}>
       {body}
     </Link>
   ) : (
@@ -113,7 +115,7 @@ export function MiniStat({ label, value, to, icon, tone }: { label: string; valu
     </>
   );
   return to ? (
-    <Link to={to} className="flex flex-col justify-center bg-white/80 px-5 py-3.5 hover:bg-white">
+    <Link href={to} className="flex flex-col justify-center bg-white/80 px-5 py-3.5 hover:bg-white">
       {body}
     </Link>
   ) : (
@@ -158,7 +160,7 @@ export function DashRow({ to, icon, tile, urgent, title, sub, badges, pill, when
     // wide screen gets the stacked layout too.
     <li className="@container">
       {/* Narrow: the pill, date and action drop to their own line under the text, so the title gets the full width. */}
-      <Link to={to} className={cn('group flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3.5 transition-colors hover:bg-[var(--surface-hover)] @lg:flex-nowrap @lg:px-5', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
+      <Link href={to} className={cn('group flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3.5 transition-colors hover:bg-[var(--surface-hover)] @lg:flex-nowrap @lg:px-5', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
         <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', tile)} aria-hidden>
           {icon}
         </span>

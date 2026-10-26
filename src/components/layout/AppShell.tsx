@@ -1,5 +1,8 @@
-import { useEffect, useState, useSyncExternalStore } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+'use client';
+
+import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { NavLink } from '@/components/navigation';
 import { Bell, Building2, CheckCheck, ChevronDown, FileText, Inbox, LogOut, Menu as MenuIcon, Plus, RefreshCcw, UserRound, Home, Users } from 'lucide-react';
 import { useSession, useUser } from '@/context/SessionContext';
 import { api } from '@/services/mockApi';
@@ -16,11 +19,11 @@ import { BrandName } from './Brand';
 import { navFor } from './nav';
 import { SubHeader } from './SubHeader';
 
-export function AppShell() {
+export function AppShell({ children }: { children: ReactNode }) {
   const user = useUser();
-  const location = useLocation();
+  const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
-  useEffect(() => setMoreOpen(false), [location.pathname]);
+  useEffect(() => setMoreOpen(false), [pathname]);
   const items = navFor(user);
 
   return (
@@ -88,8 +91,8 @@ export function AppShell() {
         <SubHeader />
         <main id="main" tabIndex={-1} className="w-full px-4 pb-28 pt-4 outline-none sm:px-6 md:pb-16 lg:px-8 lg:pt-5 xl:px-10">
           {/* Keyed on the path so each screen enters with a short fade-up. */}
-          <div key={location.pathname} className="animate-page-in">
-            <Outlet />
+          <div key={pathname} className="animate-page-in">
+            {children}
           </div>
         </main>
       </div>
@@ -179,7 +182,7 @@ function Header() {
 function PersonaSwitcher() {
   const { user, switchPersona } = useSession();
   const toast = useToast();
-  const navigate = useNavigate();
+  const router = useRouter();
   const personas = api.auth.personas;
   const accounts = api.auth.demoAccounts();
   const roles = Object.keys(personas) as Role[];
@@ -190,7 +193,7 @@ function PersonaSwitcher() {
       await switchPersona(id);
       const a = accounts.find((x) => x.id === id);
       toast.info(`Now viewing as ${a?.name}`, a?.roles.map((r) => ROLE_LABELS[r]).join(', '));
-      navigate('/');
+      router.push('/');
     } catch (e) {
       toast.error('Could not switch', (e as Error).message);
     }
@@ -232,7 +235,7 @@ function PersonaSwitcher() {
 function NotificationBell() {
   const [open, setOpen] = useState(false);
   const unread = useUnreadCount();
-  const navigate = useNavigate();
+  const router = useRouter();
   const { data, loading } = useApi(() => (open ? api.inbox.notifications() : Promise.resolve([])), [open]);
   return (
     <>
@@ -276,7 +279,7 @@ function NotificationBell() {
                   onClick={() => {
                     void api.inbox.markRead([n.id]);
                     setOpen(false);
-                    navigate(n.link);
+                    router.push(n.link);
                   }}
                   className={cn('flex w-full gap-3 px-5 py-3.5 text-left hover:bg-[var(--surface-hover)]', !n.read && 'bg-primary-50/40')}
                 >

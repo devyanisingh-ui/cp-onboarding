@@ -3,14 +3,13 @@ import { commit } from './db';
 
 /**
  * Sends outbox emails for real through the server-side Resend relay (`server/sendEmail.ts`).
- * Off unless VITE_EMAIL_DELIVERY=resend, so tests and the single-file builds keep the simulated
- * outbox only. Every email is still written to the outbox first; this records how delivery went.
+ * Off unless NEXT_PUBLIC_EMAIL_DELIVERY=resend, so tests keep the simulated outbox only. Every email is still written to the outbox first; this records how delivery went.
  */
 export function relayEnabled(): boolean {
-  return import.meta.env.VITE_EMAIL_DELIVERY === 'resend';
+  return process.env.NEXT_PUBLIC_EMAIL_DELIVERY === 'resend';
 }
 
-const relayUrl = () => import.meta.env.VITE_EMAIL_RELAY_URL || '/api/send-email';
+const relayUrl = () => process.env.NEXT_PUBLIC_EMAIL_RELAY_URL || '/api/send-email';
 
 export function relay(m: EmailMessage): void {
   if (!relayEnabled()) return;

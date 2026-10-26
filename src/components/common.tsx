@@ -1,5 +1,7 @@
+'use client';
+
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { createPortal } from 'react-dom';
 import {
   Camera,
@@ -626,7 +628,7 @@ export function WarningBanner({ reason, children }: { reason: string; children?:
 
 export function AgreementLink({ id, className }: { id: string; className?: string }) {
   return (
-    <Link to={`/agreements/${id}`} className={cn('font-mono text-[13px] font-medium text-primary-700 hover:underline', className)}>
+    <Link href={`/agreements/${id}`} className={cn('font-mono text-[13px] font-medium text-primary-700 hover:underline', className)}>
       {id}
     </Link>
   );

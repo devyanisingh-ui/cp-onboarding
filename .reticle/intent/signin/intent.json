@@ -41,6 +41,18 @@
         "route": "/signin"
       },
       "updatedAt": 1793007176154
+    },
+    "nextjs-routing": {
+      "declaredAt": 1793017090766,
+      "id": "nextjs-routing",
+      "state": "declared",
+      "statement": "On Next.js, a signed-out user who opens a deep link (with its query string) is sent to sign-in and, after signing in, lands back on that exact link; the sidebar's Admin entry opens the first admin section the user may see (/admin/institutions for Admin).",
+      "status": "proposed",
+      "subject": "signin",
+      "surface": {
+        "route": "/signin"
+      },
+      "updatedAt": 1793017090806
     }
   },
   "subject": "signin",

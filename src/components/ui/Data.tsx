@@ -1,5 +1,7 @@
+'use client';
+
 import { useId, useRef, type KeyboardEvent, type ReactNode, type ThHTMLAttributes, type TdHTMLAttributes } from 'react';
-import { Link } from 'react-router-dom';
+import Link from 'next/link';
 import { Check, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/format';
@@ -175,7 +177,7 @@ export function Breadcrumbs({ items }: { items: { label: string; to?: string }[]
           <li key={i} className="flex items-center gap-1">
             {i > 0 && <ChevronRight className="size-3.5 text-subtle" aria-hidden />}
             {it.to ? (
-              <Link to={it.to} className="hit-area rounded transition-colors hover:text-primary-700">
+              <Link href={it.to} className="hit-area rounded transition-colors hover:text-primary-700">
                 {it.label}
               </Link>
             ) : (
@@ -316,7 +318,7 @@ export function StatTile({ label, value, icon, tone = 'accent', to, hint, hintTo
   // Light gradient over the glass: white at the top left, the tone's tint glowing from the bottom right.
   const style = { backgroundImage: `radial-gradient(14rem 9rem at 100% 100%, ${glow.wash}, transparent 70%), linear-gradient(135deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0))` };
   return to ? (
-    <Link to={to} className={cn(cls, 'surface-interactive')} style={style}>
+    <Link href={to} className={cn(cls, 'surface-interactive')} style={style}>
       {inner}
     </Link>
   ) : (

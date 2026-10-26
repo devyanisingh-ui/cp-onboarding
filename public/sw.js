@@ -1,7 +1,7 @@
 // Minimal app-shell service worker: network-first, falling back to cache when offline.
-const CACHE = 'cp-onboarding-v1';
+const CACHE = 'cp-onboarding-v2';
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/index.html', '/icon.svg', '/manifest.webmanifest'])));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['/', '/icon.svg', '/manifest.webmanifest'])));
   self.skipWaiting();
 });
 self.addEventListener('activate', (e) => {
@@ -17,6 +17,6 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy));
         return res;
       })
-      .catch(() => caches.match(e.request).then((r) => r || caches.match('/index.html'))),
+      .catch(() => caches.match(e.request).then((r) => r || caches.match('/'))),
   );
 });

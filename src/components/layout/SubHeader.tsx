@@ -1,5 +1,8 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
 import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
 import { useUser } from '@/context/SessionContext';
 import { getDb } from '@/services/db';
@@ -59,8 +62,8 @@ export function crumbsFor(pathname: string, user: User): Crumb[] {
       break;
     case 'admin': {
       crumbs.push({ label: user.roles.includes('admin') ? 'Admin' : 'Templates & rates', to: '/admin' });
-      const s = ADMIN_SECTIONS.find((x) => x.to === id);
-      if (s) crumbs.push({ label: s.label, to: `/admin/${s.to}` });
+      const s = ADMIN_SECTIONS.find((x) => x.to === `/admin/${id}`);
+      if (s) crumbs.push({ label: s.label, to: s.to });
       if (id === 'templates' && sub) {
         const t = db.templates.find((x) => x.id === sub);
         crumbs.push({ label: t ? `${CP_TYPE_LABELS[t.cpType]} v${t.version}` : sub, to: `/admin/templates/${sub}` });
@@ -80,8 +83,8 @@ export function crumbsFor(pathname: string, user: User): Crumb[] {
  * Agreement screens show their section tabs under the page title instead (AgreementTabs).
  */
 export function SubHeader() {
-  const { pathname } = useLocation();
-  const navigate = useNavigate();
+  const pathname = usePathname() ?? '';
+  const router = useRouter();
   const user = useUser();
   const scrolled = useScrolled();
   const crumbs = crumbsFor(pathname, user);
@@ -118,7 +121,7 @@ export function SubHeader() {
           {parent?.to && (
             <button
               type="button"
-              onClick={() => navigate(parent.to!)}
+              onClick={() => router.push(parent.to!)}
               aria-label={`Back to ${parent.label}`}
               title={`Back to ${parent.label}`}
               className="hit-area -ml-1.5 inline-flex size-8 shrink-0 items-center justify-center rounded-md text-ink-soft transition-colors hover:bg-[var(--surface-hover)] hover:text-ink"
@@ -136,7 +139,7 @@ export function SubHeader() {
                   <li key={i} className={cn('flex min-w-0 items-center gap-1', hideOnPhone && 'max-sm:hidden', isLast && 'shrink')}>
                     {i > 0 && <ChevronRight className={cn('size-3.5 shrink-0 text-subtle', i === crumbs.length - 2 && 'max-sm:hidden')} aria-hidden />}
                     {c.to ? (
-                      <Link to={c.to} title={i === 0 ? c.label : undefined} className="group/home hit-area flex min-w-0 items-center truncate rounded text-muted transition-colors hover:text-primary-700">
+                      <Link href={c.to} title={i === 0 ? c.label : undefined} className="group/home hit-area flex min-w-0 items-center truncate rounded text-muted transition-colors hover:text-primary-700">
                         {i === 0 ? <HomeCrumb /> : c.label}
                       </Link>
                     ) : (

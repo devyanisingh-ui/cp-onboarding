@@ -4,9 +4,10 @@ Front-end prototype of the Apeejay **Channel Partner (CP) Onboarding** app, buil
 ("PRD – CP Onboarding App", Sep 2026). Staff create, approve, sign, verify and renew CP
 agreements across Apeejay institutions.
 
-It is front-end only: there is no server. An in-browser mock data layer
-(`src/services/mockApi.ts`) with seed data and simulated latency stands in for the REST API, shaped
-like the PRD's section 4 entities so it can be swapped for a real backend later.
+Built with **Next.js** (App Router) and React. The data still lives in the browser: an in-browser
+mock data layer (`src/services/mockApi.ts`) with seed data and simulated latency stands in for the
+API, shaped like the PRD's section 4 entities so it can be swapped for a real backend later. The
+only server code today is the email relay (`app/api/send-email/route.ts`).
 
 ## Quick start
 
@@ -20,14 +21,13 @@ header lets you view the app as each persona.
 
 | Command | What it does |
 | --- | --- |
-| `npm run dev` | Development server |
-| `npm run build` | Production build in `dist/` (installable PWA) |
-| `npm run build:mobile` | One self-contained HTML file, `cp-onboarding-mobile.html`, that runs when opened directly on a phone |
-| `npm run build:share` | Variant of the mobile file for publishing as a hosted page |
+| `npm run dev` | Next.js development server on port 5173 |
+| `npm run build` | Production build in `.next/` (installable PWA) |
+| `npm start` | Serve the production build on port 5173 |
 | `npm test` | Workflow tests (Vitest) against the mock API |
 | `npm run typecheck` | TypeScript check |
 
-To try it on a phone on the same Wi-Fi: `npm run dev -- --host`, then open the printed Network address.
+To try it on a phone on the same Wi-Fi: open the Network address `npm run dev` prints.
 
 ## Email notifications (Resend)
 
@@ -41,12 +41,13 @@ Every email the app writes to its outbox is then sent through Resend: new tasks,
 escalations, notices (approvals, returns, activations…), the Legal/Admin daily digest, and signing /
 document-upload links to CPs. Each outbox entry shows whether Resend accepted it.
 
-The API key lives only on the server: the app POSTs to `/api/send-email`
-([`server/sendEmail.ts`](server/sendEmail.ts)), which the dev server serves locally and
-[`api/send-email.ts`](api/send-email.ts) serves as a Vercel function in production (set the same
-variables in the Vercel project, with `APP_URL` as the deployed address). The relay accepts only
-the email kinds above, a fixed sender and links inside the app, but it has no sign-in check yet,
-so add one before it faces the internet. The single-file mobile builds keep the simulated outbox.
+The API key lives only on the server: the app POSTs to `/api/send-email`, the Next.js route handler
+[`app/api/send-email/route.ts`](app/api/send-email/route.ts) around
+[`server/sendEmail.ts`](server/sendEmail.ts). In production set the same variables on the host, with
+`APP_URL` as the deployed address. The relay accepts only the email kinds above, a fixed sender and
+links inside the app, but it has no sign-in check yet, so add one before it faces the internet.
+`NEXT_PUBLIC_EMAIL_DELIVERY` was called `VITE_EMAIL_DELIVERY` before the move to Next.js; the old
+name still works.
 
 Because all data lives in each browser, reminders and escalations fire from whichever browser runs
 the scheduler, and a fresh browser sends the reminders for the seeded overdue tasks once.
@@ -99,10 +100,13 @@ verification, renewal, termination, reports, admin console and audit log. Also:
 ## Project structure
 
 ```
+app/             Next.js routes: one folder per URL, each page.tsx renders a screen from src/screens
+  (app)/         pages behind sign-in, sharing the app shell (layout.tsx)
+  api/           server route handlers (the email relay)
 src/
   services/      mock backend: api/*, seed-backed store, scheduler, notifications
   lib/           domain helpers: permissions, statuses, schemas, template rendering
-  components/    ui/ (design system), layout/ (app shell), shared domain components
-  pages/         one file per screen; admin/ for the admin console
+  components/    ui/ (design system), layout/ (app shell), navigation and route guards
+  screens/       one file per screen; admin/ for the admin console
   data/seed.ts   seed data (relative to today, so SLAs and expiries always look live)
 ```

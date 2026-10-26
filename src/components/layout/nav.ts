@@ -27,14 +27,14 @@ export function navFor(user: User): NavItem[] {
 
 /** Admin console sections (Admin layout tabs and the sub-header's breadcrumb labels). */
 export const ADMIN_SECTIONS: { to: string; label: string; icon: ComponentType<{ className?: string }>; cap: Capability }[] = [
-  { to: 'institutions', label: 'Institutions & locations', icon: Building2, cap: 'config.view' },
-  { to: 'templates', label: 'Templates', icon: FileText, cap: 'template.view' },
-  { to: 'rate-cards', label: 'Rate cards', icon: IndianRupee, cap: 'ratecard.view' },
-  { to: 'users', label: 'Users & roles', icon: UsersRound, cap: 'config.view' },
-  { to: 'routing', label: 'Routing rules', icon: Route, cap: 'config.view' },
-  { to: 'slas', label: 'SLAs', icon: Clock, cap: 'config.view' },
-  { to: 'lists', label: 'Master lists', icon: List, cap: 'config.view' },
-  { to: 'domains', label: 'Allowed domains', icon: Globe, cap: 'config.view' },
-  { to: 'legacy', label: 'Legacy import', icon: FileUp, cap: 'legacy.import' },
-  { to: 'system', label: 'System & notifications', icon: Server, cap: 'config.view' },
+  { to: '/admin/institutions', label: 'Institutions & locations', icon: Building2, cap: 'config.view' },
+  { to: '/admin/templates', label: 'Templates', icon: FileText, cap: 'template.view' },
+  { to: '/admin/rate-cards', label: 'Rate cards', icon: IndianRupee, cap: 'ratecard.view' },
+  { to: '/admin/users', label: 'Users & roles', icon: UsersRound, cap: 'config.view' },
+  { to: '/admin/routing', label: 'Routing rules', icon: Route, cap: 'config.view' },
+  { to: '/admin/slas', label: 'SLAs', icon: Clock, cap: 'config.view' },
+  { to: '/admin/lists', label: 'Master lists', icon: List, cap: 'config.view' },
+  { to: '/admin/domains', label: 'Allowed domains', icon: Globe, cap: 'config.view' },
+  { to: '/admin/legacy', label: 'Legacy import', icon: FileUp, cap: 'legacy.import' },
+  { to: '/admin/system', label: 'System & notifications', icon: Server, cap: 'config.view' },
 ];

@@ -307,6 +307,12 @@
       "subject": "signin"
     },
     {
+      "id": "nextjs-routing",
+      "statement": "On Next.js, a signed-out user who opens a deep link (with its query str…",
+      "status": "proposed",
+      "subject": "signin"
+    },
+    {
       "id": "inline:dashboard-list-rows-fit-their-card-at-any-width-9deed7d0",
       "statement": "Dashboard list rows fit their card at any width: long badges such as 'E…",
       "status": "proved",

@@ -1,4 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AlarmClock, AlertTriangle, Ban, ChevronRight, FilePen, FileSearch, FileSignature, FileUp, FileWarning, Flag, Gavel, RefreshCcw, Scale, ScrollText, ShieldAlert, ShieldCheck, TableProperties } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { TaskType } from '@/types';
@@ -33,13 +36,13 @@ export function AgreementFlags({ a }: { a: AgreementSummary }) {
 /** Table on desktop, cards on phone (PRD §8). `compact` forces the card list, for narrow cards. */
 export function AgreementTable({ items, caption, showOwner = true, compact }: { items: AgreementSummary[]; caption: string; showOwner?: boolean; compact?: boolean }) {
   const desktop = useMediaQuery('(min-width: 768px)');
-  const navigate = useNavigate();
+  const router = useRouter();
   if (!desktop || compact)
     return (
       <ul className="divide-y divide-line" aria-label={caption}>
         {items.map((a) => (
           <li key={a.id}>
-            <Link to={`/agreements/${a.id}`} className="flex items-start gap-3 px-4 py-3.5 hover:bg-[var(--surface-hover)] sm:px-5">
+            <Link href={`/agreements/${a.id}`} className="flex items-start gap-3 px-4 py-3.5 hover:bg-[var(--surface-hover)] sm:px-5">
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-ink">{a.cpName}</p>
                 <p className="mt-0.5 font-mono text-xs text-muted">{a.id}</p>
@@ -74,9 +77,9 @@ export function AgreementTable({ items, caption, showOwner = true, compact }: { 
       </thead>
       <tbody>
         {items.map((a) => (
-          <TR key={a.id} onClick={() => navigate(`/agreements/${a.id}`)}>
+          <TR key={a.id} onClick={() => router.push(`/agreements/${a.id}`)}>
             <TD>
-              <Link to={`/agreements/${a.id}`} className="block font-semibold text-ink hover:text-primary-700" onClick={(e) => e.stopPropagation()}>
+              <Link href={`/agreements/${a.id}`} className="block font-semibold text-ink hover:text-primary-700" onClick={(e) => e.stopPropagation()}>
                 {a.cpName}
               </Link>
               <span className="font-mono text-xs text-muted">{a.id}</span>
@@ -144,7 +147,7 @@ export function TaskRow({ t, compact }: { t: TaskItem; compact?: boolean }) {
   const meta = TASK_TYPE_META[t.type];
   return (
     <Link
-      to={t.link}
+      href={t.link}
       className={cn('group flex items-start gap-3 px-5 py-3.5 transition-colors hover:bg-[var(--surface-hover)]', t.overdue && 'bg-danger-50/40 hover:bg-danger-50/70')}
     >
       <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', meta.tone)} aria-hidden>

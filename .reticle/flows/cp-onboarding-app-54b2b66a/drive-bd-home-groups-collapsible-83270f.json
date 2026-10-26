@@ -42,7 +42,11 @@
         ]
       },
       "timeoutMs": 5000,
-      "page": "/"
+      "page": "/",
+      "source": {
+        "file": "src/screens/HomeBd.tsx",
+        "line": 104
+      }
     },
     {
       "tool": "reticle_act",
@@ -84,7 +88,11 @@
         ]
       },
       "timeoutMs": 5000,
-      "page": "/"
+      "page": "/",
+      "source": {
+        "file": "src/screens/HomeBd.tsx",
+        "line": 104
+      }
     }
   ],
   "startPath": "/",

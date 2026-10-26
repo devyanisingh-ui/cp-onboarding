@@ -1,5 +1,8 @@
+'use client';
+
 import { useEffect, useRef, useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { usePathname } from 'next/navigation';
+import { NavLink } from '@/components/navigation';
 import { cn } from '@/lib/cn';
 import { AGREEMENT_PAGES } from './SubHeader';
 
@@ -25,7 +28,7 @@ function agreementTabs(pathname: string): { to: string; label: string; short?: s
  * (PageHeader renders it). Nothing on other screens.
  */
 export function AgreementTabs() {
-  const { pathname } = useLocation();
+  const pathname = usePathname() ?? '';
   const tabs = agreementTabs(pathname);
   const tabsRef = useRef<HTMLElement>(null);
   // Phones: the tab row scrolls sideways; keep the current tab in view.

@@ -82,9 +82,12 @@
             "state": "visible"
           },
           {
-            "kind": "text",
-            "contains": "Escalated to you",
-            "absent": true
+            "kind": "element",
+            "query": {
+              "role": "link",
+              "name": "1 Overdue SLA breached"
+            },
+            "state": "visible"
           }
         ]
       },

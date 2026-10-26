@@ -1,10 +1,9 @@
 /**
  * Email relay to Resend (https://resend.com/docs/api-reference/emails/send-email).
  *
- * The app itself stays in the browser; this is the one piece that runs server-side, because the
- * Resend API key must never reach the browser. It is written against the Web `Request`/`Response`
- * API so the same handler runs as a Vercel function (`api/send-email.ts`) and inside the Vite dev
- * server (`vite.config.ts`).
+ * The app's data still lives in the browser; this is the one piece that runs server-side, because
+ * the Resend API key must never reach the browser. It is written against the Web `Request`/`Response`
+ * API and served by the Next.js route handler `app/api/send-email/route.ts`.
  *
  * The endpoint is reachable by anyone who can reach the app, so it only sends what the app sends:
  * a fixed sender, a known kind, bounded text, and links that are paths inside the app (the server
