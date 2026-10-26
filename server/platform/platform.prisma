@@ -1,0 +1,138 @@
+// Shared foundation: the database connection, people, and the records every feature writes
+// (audit trail, tasks, in-app notifications, email outbox, ID counters).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+/// A member of staff. Sign-in details live in the auth feature; institution membership in admin config.
+model User {
+  id          String     @id @db.VarChar(32)
+  name        String     @db.VarChar(120)
+  email       String     @unique @db.VarChar(254)
+  designation String     @db.VarChar(120)
+  regionId    String     @db.VarChar(32)
+  managerId   String?    @db.VarChar(32)
+  active      Boolean    @default(true)
+  roles       UserRole[]
+  createdAt   DateTime   @default(now()) @db.DateTime(3)
+  updatedAt   DateTime   @updatedAt @db.DateTime(3)
+}
+
+enum Role {
+  bd_exec
+  legal
+  admin
+}
+
+model UserRole {
+  userId String @db.VarChar(32)
+  role   Role
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, role])
+  @@index([role])
+}
+
+/// Source of the readable IDs (AGR-ASU-2026-0018, T-0042, EV-00017 …), one row per sequence.
+model Counter {
+  key   String @id @db.VarChar(64)
+  value Int
+}
+
+/// Immutable, append-only record of every change.
+model AuditEvent {
+  id         String   @id @db.VarChar(32)
+  actorId    String   @db.VarChar(32)
+  actorName  String   @db.VarChar(120)
+  action     String   @db.VarChar(40)
+  entityType String   @db.VarChar(40)
+  entityId   String   @db.VarChar(64)
+  summary    String   @db.Text
+  before     Json?
+  after      Json?
+  at         DateTime @default(now()) @db.DateTime(3)
+  ip         String   @db.VarChar(64)
+  device     String   @db.VarChar(80)
+
+  @@index([entityType, entityId])
+  @@index([actorId, at])
+  @@index([at])
+}
+
+enum TaskStatus {
+  open
+  done
+  cancelled
+}
+
+model Task {
+  id             String     @id @db.VarChar(32)
+  type           String     @db.VarChar(40)
+  title          String     @db.VarChar(300)
+  agreementId    String?    @db.VarChar(64)
+  cpId           String?    @db.VarChar(32)
+  refId          String?    @db.VarChar(64)
+  institutionId  String?    @db.VarChar(32)
+  assigneeId     String     @db.VarChar(32)
+  dueDate        String     @db.Char(10)
+  createdAt      DateTime   @default(now()) @db.DateTime(3)
+  status         TaskStatus @default(open)
+  completedAt    DateTime?  @db.DateTime(3)
+  completedById  String?    @db.VarChar(32)
+  remindedAt     DateTime?  @db.DateTime(3)
+  escalatedToId  String?    @db.VarChar(32)
+  escalatedAt    DateTime?  @db.DateTime(3)
+
+  @@index([assigneeId, status])
+  @@index([agreementId, status])
+  @@index([refId])
+}
+
+model Notification {
+  id        String   @id @db.VarChar(32)
+  userId    String   @db.VarChar(32)
+  title     String   @db.VarChar(300)
+  body      String   @db.Text
+  link      String   @db.VarChar(500)
+  createdAt DateTime @default(now()) @db.DateTime(3)
+  read      Boolean  @default(false)
+
+  @@index([userId, read])
+}
+
+enum EmailKind {
+  task
+  reminder
+  escalation
+  digest
+  event
+  signature
+}
+
+enum DeliveryStatus {
+  sending
+  sent
+  failed
+}
+
+/// Every email the app sends, in order. Real delivery (Resend) is recorded on the row after commit.
+model EmailMessage {
+  id         String          @id @db.VarChar(32)
+  to         String          @db.VarChar(254)
+  subject    String          @db.VarChar(300)
+  body       String          @db.Text
+  link       String?         @db.VarChar(500)
+  kind       EmailKind
+  sentAt     DateTime        @default(now()) @db.DateTime(3)
+  status     DeliveryStatus?
+  providerId String?         @db.VarChar(100)
+  error      String?         @db.VarChar(500)
+
+  @@index([sentAt])
+}

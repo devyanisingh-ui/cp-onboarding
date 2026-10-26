@@ -29,6 +29,21 @@ header lets you view the app as each persona.
 
 To try it on a phone on the same Wi-Fi: open the Network address `npm run dev` prints.
 
+## Database (MySQL, in progress)
+
+The move from the in-browser mock to MySQL (via Prisma) is being built feature by feature under
+`server/`; the app keeps using the mock until every feature is done. To work on it:
+
+```bash
+npm run db:up        # MySQL 8.4 in Docker (compose.yaml), with a separate test database
+npm run db:migrate   # apply migrations to the local database
+npm run test:db      # server tests against MySQL
+```
+
+`server/platform/` is the shared foundation (connection, transactions, readable IDs, audit trail,
+tasks, notifications, email outbox, RPC at `/api/rpc/<feature>.<function>`). Each feature gets its
+own folder in `server/features/` with its Prisma models, server functions and tests.
+
 ## Email notifications (Resend)
 
 By default emails only go to the simulated outbox (Admin → System). To send them for real:

@@ -3,6 +3,7 @@ node_modules/
 
 # Build output (regenerate with npm run build)
 .next/
+server/generated/
 out/
 next-env.d.ts
 *.tsbuildinfo
