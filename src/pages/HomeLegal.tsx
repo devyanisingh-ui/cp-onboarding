@@ -93,7 +93,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
           )}
         </Card>
 
-        <Card className="flex flex-col max-xl:order-3">
+        <Card className="flex flex-col overflow-hidden max-xl:order-3">
           <CardHeader title="Your last 30 days" description="Decisions you made" icon={<BadgeCheck />} action={<ButtonLink to="/reports" variant="link" size="sm">Reports</ButtonLink>} />
           <StatGrid className="flex-1">
             <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />

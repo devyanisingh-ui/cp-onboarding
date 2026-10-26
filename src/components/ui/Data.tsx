@@ -19,8 +19,9 @@ export function Card({ children, className, interactive, as: As = 'section', ...
 
 export function CardHeader({ title, description, action, className, icon }: { title: ReactNode; description?: ReactNode; action?: ReactNode; className?: string; icon?: ReactNode }) {
   return (
-    <div className={cn('flex items-start justify-between gap-3 border-b border-line/70 px-5 py-4', className)}>
-      <div className="flex min-w-0 items-start gap-3">
+    <div className={cn('flex items-center justify-between gap-3 border-b border-line/70 px-5 py-4', className)}>
+      {/* The icon, and the action on the right, sit centred against the title and description together. */}
+      <div className="flex min-w-0 items-center gap-3">
         {icon && <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-600 ring-1 ring-inset ring-primary-100 [&_svg]:size-4">{icon}</div>}
         <div className="min-w-0">
           <h2 className="text-[15px] font-semibold leading-8">{title}</h2>

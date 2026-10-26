@@ -178,7 +178,7 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
             )}
           </Card>
 
-          <Card className="flex-1">
+          <Card className="flex-1 overflow-hidden">
             <CardHeader title="My portfolio" description="Your agreements across institutions" icon={<Users />} />
             <StatGrid>
               <MiniStat label="Active agreements" value={bd.stats.active} to="/agreements?status=active&mine=1" icon={<ShieldCheck />} tone="text-green-600" />
@@ -222,10 +222,11 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
 }
 
 function summaryLine(tasks: number, overdue: number, waiting: number): string {
-  const parts: string[] = [];
-  parts.push(tasks ? `${tasks} thing${tasks === 1 ? '' : 's'} need${tasks === 1 ? 's' : ''} you${overdue ? `, ${overdue} overdue` : ''}` : 'Nothing needs you right now');
-  if (waiting) parts.push(`${waiting} waiting on others`);
-  return `${parts.join(' · ')}.`;
+  const others = waiting ? `${waiting} agreement${waiting === 1 ? ' is' : 's are'} with Legal or the CP` : '';
+  if (!tasks) return `You’re all caught up: nothing needs you right now.${others ? ` ${others}.` : ''}`;
+  const todo = `You have ${tasks} task${tasks === 1 ? '' : 's'} to work on`;
+  if (overdue) return `${todo}, and ${overdue} ${overdue === 1 ? 'is' : 'are'} overdue.${others ? ` ${others}.` : ''}`;
+  return others ? `${todo}, and ${others}.` : `${todo}.`;
 }
 
 // ---------- Needs your action ----------

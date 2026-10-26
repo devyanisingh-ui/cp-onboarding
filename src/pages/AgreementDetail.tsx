@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, ThumbsUp, Upload } from 'lucide-react';
+import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, IdCard, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, ThumbsUp, Upload } from 'lucide-react';
 import type { DocRequest, DocumentRecord, ESigner, ESignRequest } from '@/types';
 import { api, type AgreementDetail as AgreementDetailData } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
@@ -205,7 +205,7 @@ export function AgreementDetail() {
             <DocumentList docs={d.documents} names={d.names} empty="The signed copy and stamp paper scan appear here after upload." />
           </Card>
           <Card>
-            <CardHeader title="CP KYC documents" />
+            <CardHeader title="CP KYC documents" icon={<IdCard />} />
             <DocumentList docs={d.cpDocuments} names={d.names} />
           </Card>
         </div>
@@ -379,7 +379,7 @@ function SigningChoice({ agreementId, signatory, cpName }: { agreementId: string
   );
   return (
     <Card>
-      <CardHeader title="How will this be signed?" description="Sign it on paper and upload it. It then goes to Legal for review; Legal’s approval makes it Active." />
+      <CardHeader title="How will this be signed?" description="Sign it on paper and upload it. It then goes to Legal for review; Legal’s approval makes it Active." icon={<FileSignature />} />
       <CardBody>
         <div className="space-y-4">
           <h3 className="flex items-center gap-2 font-semibold">
