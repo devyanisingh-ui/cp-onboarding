@@ -98,10 +98,12 @@ export function ActionBar({ children, className, pinned = false }: { children: R
         ref={bar}
         className={cn(
           // Mobile: the buttons float over the page with no bar behind them; taps between them reach the page.
-          // Buttons wrap to a second row rather than run off a narrow screen, and disabled ones are solid grey
-          // (not faded) so the page doesn't show through them.
+          // Buttons wrap to a second row rather than run off a narrow screen. Every button is solid white
+          // underneath (coloured ones keep their colour on top) with a soft shadow, so the page never shows
+          // through; disabled ones are white with grey text rather than faded.
           'pointer-events-none fixed inset-x-0 bottom-16 z-20 flex flex-wrap gap-2 px-4 py-3 [&>*]:pointer-events-auto [&>*]:flex-1 md:mt-6 md:flex-nowrap md:justify-end md:[&>*]:flex-none',
-          'max-md:[&>*:disabled]:border max-md:[&>*:disabled]:border-line max-md:[&>*:disabled]:bg-sunken max-md:[&>*:disabled]:bg-none max-md:[&>*:disabled]:text-subtle max-md:[&>*:disabled]:opacity-100 max-md:[&>*:disabled]:shadow-none',
+          'max-md:[&>*]:bg-white max-md:[&>*]:backdrop-blur-none max-md:[&>*]:shadow-[0_6px_18px_-6px_rgb(22_28_56/0.28)]',
+          'max-md:[&>*:disabled]:border max-md:[&>*:disabled]:border-line max-md:[&>*:disabled]:bg-white max-md:[&>*:disabled]:bg-none max-md:[&>*:disabled]:text-subtle max-md:[&>*:disabled]:opacity-100',
           pinned
             ? // Same insets as the content column (right of the sidebar), flush with the window bottom.
               'md:glass-3 md:pointer-events-auto md:bottom-0 md:left-[72px] md:border-t md:border-line/70 md:px-6 md:py-3 md:pb-[calc(0.75rem+env(safe-area-inset-bottom))] md:shadow-[0_-8px_24px_-14px_rgb(22_28_56/0.2)] lg:left-60 lg:px-8 xl:px-10'
