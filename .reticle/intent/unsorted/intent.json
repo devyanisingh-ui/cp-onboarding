@@ -1,5 +1,43 @@
 {
   "intents": {
+    "inline:dashboard-list-rows-fit-their-card-at-any-width-9deed7d0": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "element",
+            "query": {
+              "name": "Legal approval: EduBridge Services Pvt. Ltd Legal approval · AGR-ASU-2026-0004 · ASU Escalated to you · assigned to Priya Sharma 6 days overdue 20 Oct 2026 Review",
+              "role": "link"
+            },
+            "state": "visible"
+          },
+          {
+            "contains": "Escalated to you · assigned to Priya Sharma",
+            "kind": "text",
+            "visible": true
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1792998671939,
+      "id": "inline:dashboard-list-rows-fit-their-card-at-any-width-9deed7d0",
+      "provenBy": {
+        "at": 1792998672119,
+        "grade": "presence",
+        "runId": "drive-s65852c2d-87eb-4b4c-a187-c6976cc394e4",
+        "verdictId": "reticle_assert:1792998672119"
+      },
+      "state": "proved",
+      "statement": "Dashboard list rows fit their card at any width: long badges such as 'Escalated to you · assigned to …' stay inside the card, and narrow cards stack the pill, date and action under the text.",
+      "status": "proved",
+      "subject": "unsorted",
+      "updatedAt": 1792998672186
+    },
     "inline:legal-s-home-workflow-strip-has-no-admin-approva-1fc601e5": {
       "binding": {
         "kind": "allOf",

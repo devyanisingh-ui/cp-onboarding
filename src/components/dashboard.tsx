@@ -154,21 +154,24 @@ export function ageLabel(days: number): string {
 /** One row in any dashboard list: the same tile, text, pill, date and action on every role's Home. */
 export function DashRow({ to, icon, tile, urgent, title, sub, badges, pill, when, action }: { to: string; icon: ReactNode; tile: string; urgent?: boolean; title: ReactNode; sub: ReactNode; badges?: ReactNode; pill: ReactNode; when: ReactNode; action: string }) {
   return (
-    <li>
-      {/* Phones: the pill, date and action drop to their own line under the text, so the title gets the full width. */}
-      <Link to={to} className={cn('group flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3.5 transition-colors hover:bg-[var(--surface-hover)] sm:flex-nowrap sm:px-5', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
+    // A container query: the row follows the width of its card, not the screen, so a narrow card on a
+    // wide screen gets the stacked layout too.
+    <li className="@container">
+      {/* Narrow: the pill, date and action drop to their own line under the text, so the title gets the full width. */}
+      <Link to={to} className={cn('group flex flex-wrap items-start gap-x-3 gap-y-2 px-4 py-3.5 transition-colors hover:bg-[var(--surface-hover)] @lg:flex-nowrap @lg:px-5', urgent && 'bg-danger-50/40 hover:bg-danger-50/70')}>
         <span className={cn('mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg ring-1 ring-inset [&_svg]:size-[18px]', tile)} aria-hidden>
           {icon}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-ink group-hover:text-primary-800 sm:truncate">{title}</p>
+          <p className="text-sm font-semibold text-ink group-hover:text-primary-800 @lg:truncate">{title}</p>
           <p className="mt-0.5 text-xs text-muted">{sub}</p>
-          {badges && <div className="mt-1.5 flex flex-wrap gap-1.5">{badges}</div>}
+          {/* Long badges (escalation notes) wrap inside the card instead of running out of it. */}
+          {badges && <div className="mt-1.5 flex flex-wrap gap-1.5 [&>*]:max-w-full [&>*]:whitespace-normal">{badges}</div>}
         </div>
-        <div className="flex shrink-0 items-center gap-2 max-sm:basis-full max-sm:pl-12 sm:flex-col sm:items-end sm:gap-1 sm:text-right">
+        <div className="flex shrink-0 items-center gap-2 @max-lg:basis-full @max-lg:pl-12 @lg:flex-col @lg:items-end @lg:gap-1 @lg:text-right">
           {pill}
           <p className="text-xs text-subtle">{when}</p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline max-sm:ml-auto">
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-700 group-hover:underline @max-lg:ml-auto">
             {action} <ChevronRight className="size-3.5" aria-hidden />
           </span>
         </div>
