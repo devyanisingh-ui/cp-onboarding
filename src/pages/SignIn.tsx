@@ -152,11 +152,11 @@ export function SignIn() {
           </details>
 
           <div className="mt-8 space-y-2 rounded-lg bg-sunken/70 p-4 text-xs text-muted">
-            <p className="flex items-center gap-2">
-              <ShieldCheck className="size-4 text-primary-600" aria-hidden /> Only users set up by the central Admin team can sign in.
+            <p className="flex items-start gap-2">
+              <ShieldCheck className="mt-px size-3.5 shrink-0 text-primary-600" aria-hidden /> Only users set up by the central Admin team can sign in.
             </p>
-            <p className="flex items-center gap-2">
-              <Clock className="size-4 text-primary-600" aria-hidden /> Sessions end after 30 minutes of inactivity.
+            <p className="flex items-start gap-2">
+              <Clock className="mt-px size-3.5 shrink-0 text-primary-600" aria-hidden /> Sessions end after 30 minutes of inactivity.
             </p>
           </div>
         </div>

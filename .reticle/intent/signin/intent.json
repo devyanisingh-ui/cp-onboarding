@@ -1,0 +1,48 @@
+{
+  "intents": {
+    "inline:the-two-notes-under-the-sign-in-form-show-a-14px-5334fd0a": {
+      "binding": {
+        "kind": "allOf",
+        "predicates": [
+          {
+            "kind": "route",
+            "pathname": "/signin"
+          },
+          {
+            "contains": "Only users set up by the central Admin team can sign in.",
+            "kind": "text",
+            "visible": true
+          },
+          {
+            "contains": "Sessions end after 30 minutes of inactivity.",
+            "kind": "text",
+            "visible": true
+          },
+          {
+            "absent": true,
+            "kind": "console",
+            "level": "error"
+          }
+        ]
+      },
+      "declaredAt": 1793007175945,
+      "id": "inline:the-two-notes-under-the-sign-in-form-show-a-14px-5334fd0a",
+      "provenBy": {
+        "at": 1793007176094,
+        "grade": "presence",
+        "runId": "drive-s0aa77e06-39d0-41dc-ba2d-3656a6dc9af0",
+        "verdictId": "reticle_assert:1793007176094"
+      },
+      "state": "proved",
+      "statement": "The two notes under the sign-in form show a 14px icon that matches the 12px text, aligned with the first line, and keep their size when the text wraps on a phone.",
+      "status": "proved",
+      "subject": "signin",
+      "surface": {
+        "route": "/signin"
+      },
+      "updatedAt": 1793007176154
+    }
+  },
+  "subject": "signin",
+  "version": 1
+}
