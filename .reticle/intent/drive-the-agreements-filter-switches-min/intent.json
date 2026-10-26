@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "flow:drive-the-agreements-filter-switches-mine-only-non-sta": {
+      "declaredAt": 1793008970978,
+      "id": "flow:drive-the-agreements-filter-switches-mine-only-non-sta",
+      "state": "declared",
+      "statement": "The Agreements filter switches ('Mine only', 'Non-standard') keep their label on one line at every width, and the filter row never pushes the page sideways.",
+      "status": "proposed",
+      "subject": "drive-the-agreements-filter-switches-min",
+      "surface": {
+        "flow": "drive-the-agreements-filter-switches-mine-only-non-sta"
+      },
+      "updatedAt": 1793008970995
+    }
+  },
+  "subject": "drive-the-agreements-filter-switches-min",
+  "version": 1
+}

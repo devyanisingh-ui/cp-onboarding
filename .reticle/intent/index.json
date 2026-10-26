@@ -187,6 +187,12 @@
       "subject": "drive-tasks-summary-cards"
     },
     {
+      "id": "flow:drive-the-agreements-filter-switches-mine-only-non-sta",
+      "statement": "The Agreements filter switches ('Mine only', 'Non-standard') keep their…",
+      "status": "proposed",
+      "subject": "drive-the-agreements-filter-switches-min"
+    },
+    {
       "id": "legal-home-deviations",
       "statement": "Legal’s Home lists draft agreements with deviation requests awaiting Le…",
       "status": "proposed",
