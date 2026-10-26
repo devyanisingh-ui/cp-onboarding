@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AlarmClock, AlertTriangle, CalendarClock, CheckCircle2, Inbox, Info } from 'lucide-react';
 import type { TaskType } from '@/types';
@@ -22,20 +22,26 @@ export function Tasks() {
   const [type, setType] = useState<TaskType | ''>('');
   const [inst, setInst] = useState('');
   const overdueOnly = params.get('overdue') === '1';
+  // The Overdue tile (a link to ?overdue=1) is about open tasks: show them, whichever tab was active.
+  useEffect(() => {
+    if (overdueOnly) setTab('open');
+  }, [overdueOnly]);
   const institutionId = inst || headerInst;
   const { data, error, loading, reload } = useApi(() => api.inbox.tasks({ type, institutionId: institutionId || undefined, status: tab }), [type, institutionId, tab]);
+  // The tiles always describe the open workload, whichever tab the list is showing.
+  const openTasks = useApi(() => api.inbox.tasks({ type, institutionId: institutionId || undefined, status: 'open' }), [type, institutionId, tab]);
   const items = (data ?? []).filter((t) => !overdueOnly || t.overdue);
-  const overdue = data?.filter((t) => t.overdue).length ?? 0;
-  const open = tab === 'open' ? (data ?? []) : [];
+  const open = openTasks.data ?? [];
+  const overdue = open.filter((t) => t.overdue).length;
   const dueWeek = open.filter((t) => !t.overdue && t.daysLeft <= 7).length;
   const escalated = open.filter((t) => t.escalatedToMe).length;
 
   return (
     <div>
       <PageHeader title="My Tasks" subtitle="Everything waiting on you, sorted by due date. Open a task to act on it." />
-      {tab === 'open' && data && (
+      {openTasks.data && (
         <div className="mb-5 grid auto-rows-fr grid-cols-2 gap-4 lg:grid-cols-4">
-          <StatTile label="Open tasks" value={data.length} icon={<Inbox />} tone="accent" />
+          <StatTile label="Open tasks" value={open.length} icon={<Inbox />} tone="accent" />
           <StatTile label="Overdue" hint="SLA breached" hintTone={overdue ? 'danger' : 'muted'} value={overdue} icon={<AlarmClock />} tone={overdue ? 'red' : 'grey'} to={overdueOnly ? '/tasks' : '/tasks?overdue=1'} />
           <StatTile label="Due this week" value={dueWeek} icon={<CalendarClock />} tone="amber" />
           <StatTile label="Escalated to you" value={escalated} icon={<AlertTriangle />} tone={escalated ? 'orange' : 'grey'} />
@@ -48,7 +54,7 @@ export function Tasks() {
             active={tab}
             onChange={setTab}
             tabs={[
-              { id: 'open', label: 'Open', count: tab === 'open' ? data?.length : undefined },
+              { id: 'open', label: 'Open', count: openTasks.data?.length },
               { id: 'done', label: 'Completed' },
             ]}
           />
