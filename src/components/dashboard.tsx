@@ -216,10 +216,14 @@ export function TaskDashRow({ t }: { t: TaskItem }) {
         </>
       }
       badges={
+        // Two short badges rather than one long one, so they wrap onto separate lines in a narrow card.
         t.escalatedToId && (
-          <Badge tone="orange" icon={<AlertTriangle className="size-3" aria-hidden />}>
-            {t.escalatedToMe ? `Escalated to you · assigned to ${t.assigneeName}` : `Escalated to ${t.escalatedToName}`}
-          </Badge>
+          <>
+            <Badge tone="orange" icon={<AlertTriangle className="size-3" aria-hidden />}>
+              {t.escalatedToMe ? 'Escalated to you' : `Escalated to ${t.escalatedToName}`}
+            </Badge>
+            {t.escalatedToMe && <Badge tone="grey">Assigned to {t.assigneeName}</Badge>}
+          </>
         )
       }
       pill={<DuePill t={t} />}
