@@ -34,11 +34,11 @@ You will use up to four places. Each step below starts with a **Where:** line na
   press Enter.
 - **VS Code:** *File → Open Folder…* → `cp-onboarding`, then *Terminal → New Terminal*. Use the
   **+** in the terminal panel for a second one.
-- **Start menu → PowerShell**, then `cd` into the folder (Step 2 shows how to find it).
+- **Start menu → PowerShell**, then paste the block from Step 2 to move into the folder.
 
-Check the prompt before every command: it must end in `\cp-onboarding>`, e.g.
-`PS C:\Users\<you>\Documents\cp-onboarding>`. If it shows `PS C:\Users\<you>>`, you are in the
-wrong folder and the commands will fail with *not a git repository* or *Could not read package.json*.
+Check the prompt before every command: it must end in `\cp-onboarding>` (for example
+`PS C:\Users\user\Documents\cp-onboarding>`). If it ends in just your user name (for example
+`PS C:\Users\user>`), you are in the wrong folder and the commands will fail with *not a git repository* or *Could not read package.json*.
 
 ---
 
@@ -65,29 +65,20 @@ wrong folder and the commands will fail with *not a git repository* or *Could no
 end of this step it **becomes Window 1**: keep it open.
 
 All later commands must run **inside the project folder**. Your PowerShell prompt shows where you
-are: it should end in `\cp-onboarding>`, not `PS C:\Users\<you>>`.
+are: it should end in `\cp-onboarding>`, not just your user name (`PS C:\Users\user>`).
 
-**A. You already have the project on this PC.** Find its folder:
-
-```powershell
-Get-ChildItem -Path $HOME -Directory -Recurse -Depth 4 -Filter cp-onboarding -ErrorAction SilentlyContinue | Select-Object FullName
-```
-
-Go into the folder it prints (yours may differ), for example:
+Paste this block **as it is** (nothing to edit). It finds the project folder under your user
+folder and moves into it; if there is no copy on this PC yet, it downloads one first:
 
 ```powershell
-cd C:\Users\<you>\Documents\cp-onboarding
+$p = Get-ChildItem -Path $HOME -Directory -Recurse -Depth 4 -Filter cp-onboarding -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName 'package.json') } | Select-Object -First 1
+if ($p) { Set-Location $p.FullName } else { Set-Location $HOME; git clone https://github.com/devyanisingh-ui/cp-onboarding.git; Set-Location cp-onboarding }
+Get-Location
 ```
 
-**B. You don't have it yet** (the command above printed nothing). Download it into your home folder:
+The last line prints the folder you are now in: it must end in `\cp-onboarding`.
 
-```powershell
-cd $HOME
-git clone https://github.com/devyanisingh-ui/cp-onboarding.git
-cd cp-onboarding
-```
-
-**Then, in either case**, switch to the branch with the database work and install:
+**Then** switch to the branch with the database work and install:
 
 ```powershell
 git fetch origin
@@ -99,7 +90,7 @@ npm install
 `npm install` also prepares the database client (you will see `Generated Prisma Client`).
 
 If you see `fatal: not a git repository` or `Could not read package.json`, you are not in the
-project folder: go back to A or B.
+project folder: paste the block above again.
 
 ## Step 3 — Start MySQL
 
