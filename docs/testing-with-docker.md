@@ -305,7 +305,7 @@ Things worth trying (these **do** change the demo data; see *Start again* below)
 | `db:migrate` or tests: *Can't reach database server at 127.0.0.1:3306* | MySQL is not running: `npm run db:up`. |
 | `npm run test:db`: *Could not prepare the test database* | Same as above. The `cp_onboarding_test` database is created the first time the container starts; if you created the container before pulling this branch, run `docker compose down -v` and `npm run db:up`. |
 | `smoke:api`: *Cannot reach http://localhost:5173* | Start the app with `npm run dev` in **Window 2** and wait for `Ready`. |
-| *not a git repository* / *Could not read package.json* / *Missing script* | The window is not in the project folder. Check the prompt ends in `\cp-onboarding>` (see *Where things run*). |
+| *not a git repository* / *Could not read package.json* / *Missing script* | The window is not in the project folder: `Test-Path package.json` prints False. `cd` into the project folder (see *Where things run*). |
 | Typing in Window 2 does nothing | It is busy running the app. Use Window 1, or press Ctrl + C in Window 2 to stop the app first. |
 | `smoke:api`: a sign-in fails | Load the demo data (Step 5). If Kavya was locked by Step 9, wait 15 minutes or clear `lockedUntil` in Prisma Studio. |
 | Errors mentioning an unknown field or table after `git pull` | Run `npm run db:migrate` (new migrations), then retry. |
