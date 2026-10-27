@@ -30,15 +30,23 @@ You will use up to four places. Each step below starts with a **Where:** line na
 
 **Opening PowerShell in the project folder.** Any of these works:
 
-- **File Explorer:** open the `cp-onboarding` folder, click the address bar, type `powershell` and
-  press Enter.
-- **VS Code:** *File → Open Folder…* → `cp-onboarding`, then *Terminal → New Terminal*. Use the
+- **File Explorer:** open the project folder, click the address bar, type `powershell` and press
+  Enter.
+- **VS Code:** *File → Open Folder…* → the project folder, then *Terminal → New Terminal*. Use the
   **+** in the terminal panel for a second one.
-- **Start menu → PowerShell**, then paste the block from Step 2 to move into the folder.
+- **Start menu → PowerShell**, then `cd` to the folder, e.g. `cd D:\cp-onboarding-app` (Step 2 helps
+  you find it).
 
-Check the prompt before every command: it must end in `\cp-onboarding>` (for example
-`PS C:\Users\user\Documents\cp-onboarding>`). If it ends in just your user name (for example
-`PS C:\Users\user>`), you are in the wrong folder and the commands will fail with *not a git repository* or *Could not read package.json*.
+**The project folder** is the one holding the project's `package.json`. Its name depends on how it
+was downloaded (`cp-onboarding`, `cp-onboarding-app`, …) and it can be on any drive, e.g.
+`D:\cp-onboarding-app`. To check that a window is in it:
+
+```powershell
+Test-Path package.json      # must print True
+```
+
+If it prints `False` (for example the prompt is just `PS C:\Users\user>`), you are in the wrong
+folder and the commands will fail with *not a git repository* or *Could not read package.json*.
 
 ---
 
@@ -64,19 +72,27 @@ Check the prompt before every command: it must end in `\cp-onboarding>` (for exa
 **Where:** a PowerShell window opened from the Start menu (you may not know the folder yet). At the
 end of this step it **becomes Window 1**: keep it open.
 
-All later commands must run **inside the project folder**. Your PowerShell prompt shows where you
-are: it should end in `\cp-onboarding>`, not just your user name (`PS C:\Users\user>`).
+All later commands must run **inside the project folder** (see *Where things run*).
 
-Paste this block **as it is** (nothing to edit). It finds the project folder under your user
-folder and moves into it; if there is no copy on this PC yet, it downloads one first:
+**If you know where it is**, go there, for example:
 
 ```powershell
-$p = Get-ChildItem -Path $HOME -Directory -Recurse -Depth 4 -Filter cp-onboarding -ErrorAction SilentlyContinue | Where-Object { Test-Path (Join-Path $_.FullName 'package.json') } | Select-Object -First 1
-if ($p) { Set-Location $p.FullName } else { Set-Location $HOME; git clone https://github.com/devyanisingh-ui/cp-onboarding.git; Set-Location cp-onboarding }
-Get-Location
+cd D:\cp-onboarding-app
 ```
 
-The last line prints the folder you are now in: it must end in `\cp-onboarding`.
+**If you don't**, paste this block **as it is** (nothing to edit). It looks for the project in your
+user folder and at the top of every drive (C:, D:, …), moves into it, and, if there is no copy on
+this PC yet, downloads one into your user folder:
+
+```powershell
+$roots = @($HOME) + (Get-PSDrive -PSProvider FileSystem | ForEach-Object { $_.Root })
+$p = $roots | ForEach-Object { Get-ChildItem -Path $_ -Directory -Recurse -Depth 3 -Filter 'cp-onboarding*' -ErrorAction SilentlyContinue } | Where-Object { Test-Path (Join-Path $_.FullName 'package.json') } | Select-Object -First 1
+if ($p) { Set-Location $p.FullName } else { Set-Location $HOME; git clone https://github.com/devyanisingh-ui/cp-onboarding.git; Set-Location cp-onboarding }
+Get-Location
+Test-Path package.json
+```
+
+The last two lines print the folder you are now in and `True`.
 
 **Then** switch to the branch with the database work and install:
 
@@ -90,7 +106,7 @@ npm install
 `npm install` also prepares the database client (you will see `Generated Prisma Client`).
 
 If you see `fatal: not a git repository` or `Could not read package.json`, you are not in the
-project folder: paste the block above again.
+project folder: `cd` into it (or paste the block above again).
 
 ## Step 3 — Start MySQL
 
@@ -284,6 +300,7 @@ Things worth trying (these **do** change the demo data; see *Start again* below)
 | Problem | Fix |
 | --- | --- |
 | `npm run db:up`: *error during connect* / *cannot find the file specified* | Docker Desktop is not running. Start it and wait for **Engine running**. |
+| `npm run db:up`: *Docker Desktop is unable to start* | Docker's engine cannot start; usually a Windows set-up issue. In order: (1) open Docker Desktop and read its message; use *Troubleshoot → Restart Docker Desktop*. (2) In PowerShell **as Administrator**: `wsl --update` (or `wsl --install` if `wsl --status` says WSL is missing), then restart the PC. (3) Task Manager → *Performance* → *CPU* must show **Virtualization: Enabled**; if not, enable Intel VT-x / AMD-V in the BIOS (on a company laptop, ask IT). If Docker cannot be used on your PC, install MySQL 8.4 directly instead and skip `npm run db:up` (see *Without Docker* below). |
 | `npm run db:up`: *port is already allocated* / *3306* in use | A MySQL installed on Windows is using port 3306. Stop it (Start → *Services* → MySQL → Stop), then retry. |
 | `db:migrate` or tests: *Can't reach database server at 127.0.0.1:3306* | MySQL is not running: `npm run db:up`. |
 | `npm run test:db`: *Could not prepare the test database* | Same as above. The `cp_onboarding_test` database is created the first time the container starts; if you created the container before pulling this branch, run `docker compose down -v` and `npm run db:up`. |
@@ -292,3 +309,24 @@ Things worth trying (these **do** change the demo data; see *Start again* below)
 | Typing in Window 2 does nothing | It is busy running the app. Use Window 1, or press Ctrl + C in Window 2 to stop the app first. |
 | `smoke:api`: a sign-in fails | Load the demo data (Step 5). If Kavya was locked by Step 9, wait 15 minutes or clear `lockedUntil` in Prisma Studio. |
 | Errors mentioning an unknown field or table after `git pull` | Run `npm run db:migrate` (new migrations), then retry. |
+
+## Without Docker
+
+If Docker Desktop cannot run on your PC, use MySQL installed directly on Windows; everything else
+in this guide stays the same, except that you skip `npm run db:up`.
+
+1. Install **MySQL Server 8.4** with *MySQL Installer for Windows*
+   (<https://dev.mysql.com/downloads/installer/>): choose *Server only*, keep port **3306**, set a
+   root password, run it as a Windows service.
+2. Open **MySQL 8.4 Command Line Client** (Start menu), enter the root password and paste:
+   ```sql
+   CREATE DATABASE cp_onboarding CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+   CREATE DATABASE cp_onboarding_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+   CREATE USER 'cp'@'%' IDENTIFIED BY 'cp_local';
+   GRANT ALL PRIVILEGES ON *.* TO 'cp'@'%';
+   FLUSH PRIVILEGES;
+   ```
+   These match the project's default connection, so nothing needs configuring. (The wide grant
+   lets Prisma create a temporary database while it builds migrations: fine on your own PC, never
+   on a shared server.)
+3. Continue from **Step 4** in Window 1.
