@@ -32,8 +32,32 @@ A step-by-step guide for Windows (PowerShell). The same commands work on macOS a
 
 ## Step 2 — Get the code
 
+All later commands must run **inside the project folder**. Your PowerShell prompt shows where you
+are: it should end in `\cp-onboarding>`, not `PS C:\Users\<you>>`.
+
+**A. You already have the project on this PC.** Find its folder:
+
 ```powershell
-cd C:\path\to\cp-onboarding
+Get-ChildItem -Path $HOME -Directory -Recurse -Depth 4 -Filter cp-onboarding -ErrorAction SilentlyContinue | Select-Object FullName
+```
+
+Go into the folder it prints (yours may differ), for example:
+
+```powershell
+cd C:\Users\<you>\Documents\cp-onboarding
+```
+
+**B. You don't have it yet** (the command above printed nothing). Download it into your home folder:
+
+```powershell
+cd $HOME
+git clone https://github.com/devyanisingh-ui/cp-onboarding.git
+cd cp-onboarding
+```
+
+**Then, in either case**, switch to the branch with the database work and install:
+
+```powershell
 git fetch origin
 git checkout claude/awesome-hawking-3djyrr
 git pull
@@ -41,6 +65,9 @@ npm install
 ```
 
 `npm install` also prepares the database client (you will see `Generated Prisma Client`).
+
+If you see `fatal: not a git repository` or `Could not read package.json`, you are not in the
+project folder: go back to A or B.
 
 ## Step 3 — Start MySQL
 
