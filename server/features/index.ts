@@ -4,3 +4,4 @@
  * imports only from server/platform/ and earlier features' index.ts.
  */
 import '../platform/health';
+import './auth';

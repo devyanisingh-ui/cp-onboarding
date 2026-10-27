@@ -37,12 +37,18 @@ The move from the in-browser mock to MySQL (via Prisma) is being built feature b
 ```bash
 npm run db:up        # MySQL 8.4 in Docker (compose.yaml), with a separate test database
 npm run db:migrate   # apply migrations to the local database
+npx prisma db seed   # demo users (password Apeejay@123); more demo data as features move over
 npm run test:db      # server tests against MySQL
 ```
 
 `server/platform/` is the shared foundation (connection, transactions, readable IDs, audit trail,
 tasks, notifications, email outbox, RPC at `/api/rpc/<feature>.<function>`). Each feature gets its
 own folder in `server/features/` with its Prisma models, server functions and tests.
+
+Done so far: **auth** (`server/features/auth/`): argon2id passwords, session cookies stored as
+hashes in MySQL (signed out after 30 minutes idle or 12 hours), lockout for 15 minutes after 5 wrong
+passwords, and one-time emailed links to set a password (Admin invitation, 24 h; "forgot
+password", 1 h).
 
 ## Email notifications (Resend)
 

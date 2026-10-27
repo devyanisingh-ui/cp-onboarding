@@ -30,14 +30,25 @@ export function procedureNames(): string[] {
 }
 
 /** Who sent the request. Set by the auth feature (session cookie); until then nobody is signed in. */
-type UserResolver = (request: Request) => Promise<User | null>;
+type UserResolver = (cookies: Map<string, string>) => Promise<User | null>;
 let resolveUser: UserResolver = async () => null;
 export function setUserResolver(fn: UserResolver) {
   resolveUser = fn;
 }
 
-function json(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+function json(status: number, body: unknown, setCookies: string[] = []): Response {
+  const headers = new Headers({ 'content-type': 'application/json', 'cache-control': 'no-store' });
+  for (const c of setCookies) headers.append('set-cookie', c);
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+export function parseCookies(header: string | null): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const part of (header ?? '').split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0) map.set(part.slice(0, i).trim(), decodeURIComponent(part.slice(i + 1).trim()));
+  }
+  return map;
 }
 
 export async function handleRpc(name: string, request: Request): Promise<Response> {
@@ -51,12 +62,14 @@ export async function handleRpc(name: string, request: Request): Promise<Respons
     return json(400, { error: 'Body must be JSON: { "args": [...] }.' });
   }
   try {
-    const user = await resolveUser(request);
+    const cookies = parseCookies(request.headers.get('cookie'));
+    const user = await resolveUser(cookies);
     if (!proc.public && !user) throw new ApiError(401, 'Your session has ended. Please sign in again.');
     const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
     const device = deviceFrom(request.headers.get('user-agent') ?? '');
-    const result = await inTransaction({ user, ip, device }, () => proc.handler(...args));
-    return json(200, { result: result ?? null });
+    const setCookies: string[] = [];
+    const result = await inTransaction({ user, ip, device, cookies }, () => proc.handler(...args), setCookies);
+    return json(200, { result: result ?? null }, setCookies);
   } catch (e) {
     if (e instanceof ApiError) return json(e.status, { error: e.message, fieldErrors: e.fieldErrors });
     console.error(`[rpc] ${name} failed`, e);

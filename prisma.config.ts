@@ -6,7 +6,7 @@ import { defineConfig } from 'prisma/config';
  */
 export default defineConfig({
   schema: 'server',
-  migrations: { path: 'server/migrations' },
+  migrations: { path: 'server/migrations', seed: 'tsx server/seed/index.ts' },
   datasource: {
     // Local default matches compose.yaml; production sets DATABASE_URL.
     url: process.env.DATABASE_URL ?? 'mysql://cp:cp_local@127.0.0.1:3306/cp_onboarding',

@@ -12,16 +12,20 @@ datasource db {
 
 /// A member of staff. Sign-in details live in the auth feature; institution membership in admin config.
 model User {
-  id          String     @id @db.VarChar(32)
-  name        String     @db.VarChar(120)
-  email       String     @unique @db.VarChar(254)
-  designation String     @db.VarChar(120)
-  regionId    String     @db.VarChar(32)
-  managerId   String?    @db.VarChar(32)
-  active      Boolean    @default(true)
-  roles       UserRole[]
-  createdAt   DateTime   @default(now()) @db.DateTime(3)
-  updatedAt   DateTime   @updatedAt @db.DateTime(3)
+  id            String         @id @db.VarChar(32)
+  name          String         @db.VarChar(120)
+  email         String         @unique @db.VarChar(254)
+  designation   String         @db.VarChar(120)
+  regionId      String         @db.VarChar(32)
+  managerId     String?        @db.VarChar(32)
+  active        Boolean        @default(true)
+  roles         UserRole[]
+  // Auth feature (server/features/auth):
+  credential    Credential?
+  sessions      Session[]
+  passwordLinks PasswordLink[]
+  createdAt     DateTime       @default(now()) @db.DateTime(3)
+  updatedAt     DateTime       @updatedAt @db.DateTime(3)
 }
 
 enum Role {
@@ -72,22 +76,22 @@ enum TaskStatus {
 }
 
 model Task {
-  id             String     @id @db.VarChar(32)
-  type           String     @db.VarChar(40)
-  title          String     @db.VarChar(300)
-  agreementId    String?    @db.VarChar(64)
-  cpId           String?    @db.VarChar(32)
-  refId          String?    @db.VarChar(64)
-  institutionId  String?    @db.VarChar(32)
-  assigneeId     String     @db.VarChar(32)
-  dueDate        String     @db.Char(10)
-  createdAt      DateTime   @default(now()) @db.DateTime(3)
-  status         TaskStatus @default(open)
-  completedAt    DateTime?  @db.DateTime(3)
-  completedById  String?    @db.VarChar(32)
-  remindedAt     DateTime?  @db.DateTime(3)
-  escalatedToId  String?    @db.VarChar(32)
-  escalatedAt    DateTime?  @db.DateTime(3)
+  id            String     @id @db.VarChar(32)
+  type          String     @db.VarChar(40)
+  title         String     @db.VarChar(300)
+  agreementId   String?    @db.VarChar(64)
+  cpId          String?    @db.VarChar(32)
+  refId         String?    @db.VarChar(64)
+  institutionId String?    @db.VarChar(32)
+  assigneeId    String     @db.VarChar(32)
+  dueDate       String     @db.Char(10)
+  createdAt     DateTime   @default(now()) @db.DateTime(3)
+  status        TaskStatus @default(open)
+  completedAt   DateTime?  @db.DateTime(3)
+  completedById String?    @db.VarChar(32)
+  remindedAt    DateTime?  @db.DateTime(3)
+  escalatedToId String?    @db.VarChar(32)
+  escalatedAt   DateTime?  @db.DateTime(3)
 
   @@index([assigneeId, status])
   @@index([agreementId, status])

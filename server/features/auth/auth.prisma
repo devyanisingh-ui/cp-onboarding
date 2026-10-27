@@ -1,0 +1,44 @@
+// Auth & sessions: passwords, signed-in sessions, and one-time links to set a password.
+
+/// A staff member's password (argon2id) and lockout state. No row = no password set yet.
+model Credential {
+  userId         String    @id @db.VarChar(32)
+  passwordHash   String    @db.VarChar(255)
+  passwordSetAt  DateTime  @default(now()) @db.DateTime(3)
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime? @db.DateTime(3)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// A signed-in browser. The cookie holds a random token; only its SHA-256 is stored here.
+model Session {
+  id         String    @id @db.Char(64)
+  userId     String    @db.VarChar(32)
+  createdAt  DateTime  @default(now()) @db.DateTime(3)
+  lastSeenAt DateTime  @default(now()) @db.DateTime(3)
+  endedAt    DateTime? @db.DateTime(3)
+  endReason  String?   @db.VarChar(20)
+  ip         String    @db.VarChar(64)
+  device     String    @db.VarChar(80)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, endedAt])
+}
+
+enum PasswordLinkPurpose {
+  invite
+  reset
+}
+
+/// One-time link emailed to set a password (invitation or "forgot password"). Stores the token's SHA-256.
+model PasswordLink {
+  id        String              @id @db.Char(64)
+  userId    String              @db.VarChar(32)
+  purpose   PasswordLinkPurpose
+  createdAt DateTime            @default(now()) @db.DateTime(3)
+  expiresAt DateTime            @db.DateTime(3)
+  usedAt    DateTime?           @db.DateTime(3)
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

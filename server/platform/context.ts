@@ -14,6 +14,16 @@ export interface RequestContext {
   tx: Tx;
   /** Work that must only happen once the transaction has committed (sending email). */
   afterCommit: (() => Promise<void>)[];
+  /** Cookies sent with the request, and Set-Cookie headers for the response. */
+  cookies: Map<string, string>;
+  setCookies: string[];
+}
+
+export interface Caller {
+  user: User | null;
+  ip?: string;
+  device?: string;
+  cookies?: Map<string, string>;
 }
 
 const storage = new AsyncLocalStorage<RequestContext>();
@@ -28,9 +38,10 @@ function current(): RequestContext {
  * Runs `fn` as one database transaction: every write inside it lands together or not at all.
  * Work queued with afterCommit() runs once the commit succeeds, and never if it fails.
  */
-export async function inTransaction<T>(who: { user: User | null; ip?: string; device?: string }, fn: () => Promise<T>): Promise<T> {
+export async function inTransaction<T>(who: Caller, fn: () => Promise<T>, setCookies: string[] = []): Promise<T> {
   const afterCommit: RequestContext['afterCommit'] = [];
-  const result = await prisma.$transaction((tx) => storage.run({ user: who.user, ip: who.ip ?? 'unknown', device: who.device ?? 'Unknown', tx, afterCommit }, fn), {
+  const base = { user: who.user, ip: who.ip ?? 'unknown', device: who.device ?? 'Unknown', cookies: who.cookies ?? new Map<string, string>(), setCookies, afterCommit };
+  const result = await prisma.$transaction((tx) => storage.run({ ...base, tx }, fn), {
     // A request that waits longer than this on a locked row fails instead of piling up.
     maxWait: 5_000,
     timeout: 20_000,
@@ -60,6 +71,15 @@ export function ctx(): User {
 export function requestInfo(): { ip: string; device: string } {
   const { ip, device } = current();
   return { ip, device };
+}
+
+export function cookie(name: string): string | undefined {
+  return current().cookies.get(name);
+}
+
+/** Adds a Set-Cookie header to the response (sent only if the request succeeds). */
+export function setCookie(header: string) {
+  current().setCookies.push(header);
 }
 
 export function afterCommit(job: () => Promise<void>) {
