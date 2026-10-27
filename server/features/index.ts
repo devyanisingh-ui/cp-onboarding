@@ -5,3 +5,4 @@
  */
 import '../platform/health';
 import './auth';
+import './config';

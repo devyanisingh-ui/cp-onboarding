@@ -12,20 +12,22 @@ datasource db {
 
 /// A member of staff. Sign-in details live in the auth feature; institution membership in admin config.
 model User {
-  id            String         @id @db.VarChar(32)
-  name          String         @db.VarChar(120)
-  email         String         @unique @db.VarChar(254)
-  designation   String         @db.VarChar(120)
-  regionId      String         @db.VarChar(32)
-  managerId     String?        @db.VarChar(32)
-  active        Boolean        @default(true)
+  id            String            @id @db.VarChar(32)
+  name          String            @db.VarChar(120)
+  email         String            @unique @db.VarChar(254)
+  designation   String            @db.VarChar(120)
+  regionId      String            @db.VarChar(32)
+  managerId     String?           @db.VarChar(32)
+  active        Boolean           @default(true)
   roles         UserRole[]
+  // Admin-config feature (server/features/config):
+  institutions  UserInstitution[]
   // Auth feature (server/features/auth):
   credential    Credential?
   sessions      Session[]
   passwordLinks PasswordLink[]
-  createdAt     DateTime       @default(now()) @db.DateTime(3)
-  updatedAt     DateTime       @updatedAt @db.DateTime(3)
+  createdAt     DateTime          @default(now()) @db.DateTime(3)
+  updatedAt     DateTime          @updatedAt @db.DateTime(3)
 }
 
 enum Role {

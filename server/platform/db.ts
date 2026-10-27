@@ -17,10 +17,14 @@ function adapter() {
 }
 
 // One client per process. Next.js dev reloads modules on every edit, so keep it on globalThis
-// rather than opening a new connection pool each time.
+// rather than opening a new connection pool each time — unless the generated client itself was
+// rebuilt (`npm run db:migrate` while the dev server runs): then the cached one no longer knows
+// the new tables, so replace it.
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const cached = globalForPrisma.prisma;
+if (cached && !(cached instanceof PrismaClient)) void (cached as PrismaClient).$disconnect();
 
-export const prisma: PrismaClient = globalForPrisma.prisma ?? new PrismaClient({ adapter: adapter() });
+export const prisma: PrismaClient = cached instanceof PrismaClient ? cached : new PrismaClient({ adapter: adapter() });
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
 
 export type { PrismaClient };

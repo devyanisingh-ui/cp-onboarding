@@ -37,7 +37,7 @@ The move from the in-browser mock to MySQL (via Prisma) is being built feature b
 ```bash
 npm run db:up        # MySQL 8.4 in Docker (compose.yaml), with a separate test database
 npm run db:migrate   # apply migrations to the local database
-npx prisma db seed   # demo users (password Apeejay@123); more demo data as features move over
+npx prisma db seed   # demo institutions, users (password Apeejay@123), rate cards, templates
 npm run test:db      # server tests against MySQL
 ```
 
@@ -49,6 +49,12 @@ Done so far: **auth** (`server/features/auth/`): argon2id passwords, session coo
 hashes in MySQL (signed out after 30 minutes idle or 12 hours), lockout for 15 minutes after 5 wrong
 passwords, and one-time emailed links to set a password (Admin invitation, 24 h; "forgot
 password", 1 h).
+
+**config** (`server/features/config/`): institutions and campuses, users with their roles and
+institutions, approval routing, SLAs, master lists, allowed domains, and the versioned rate cards
+and templates (Admin drafts, Legal approves, Admin publishes; status changes are checked in the
+database so two people cannot move the same version at once). Importing a Word document as a
+template comes with the documents feature.
 
 ## Email notifications (Resend)
 

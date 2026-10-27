@@ -16,3 +16,4 @@ defineFeature('auth', {
 });
 
 export { SESSION_COOKIE, hashPassword } from './service';
+export { seedAuth } from './seed';
