@@ -41,6 +41,8 @@ npx prisma db seed   # demo institutions, users (password Apeejay@123), rate car
 npm run test:db      # server tests against MySQL
 ```
 
+Step-by-step testing guide (Docker Desktop on Windows): [docs/testing-with-docker.md](docs/testing-with-docker.md).
+
 `server/platform/` is the shared foundation (connection, transactions, readable IDs, audit trail,
 tasks, notifications, email outbox, RPC at `/api/rpc/<feature>.<function>`). Each feature gets its
 own folder in `server/features/` with its Prisma models, server functions and tests.

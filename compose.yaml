@@ -1,5 +1,8 @@
 # Local MySQL for development and the server tests: `npm run db:up`.
 # Matches production (Amazon RDS for MySQL 8.4). Credentials are for this machine only.
+# A fixed project name, so the container is always cp-onboarding-mysql-1 whatever the folder is called.
+name: cp-onboarding
+
 services:
   mysql:
     image: mysql:8.4
