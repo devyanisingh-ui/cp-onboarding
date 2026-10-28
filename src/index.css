@@ -302,6 +302,17 @@
     opacity: 0.55;
     cursor: pointer;
   }
+  /* Chrome/Edge draw the date text (or its dd/mm/yyyy placeholder) in an inner box with its own
+     padding and line height, which sits off-centre on Windows. Let it follow the control's line
+     like a text input; iOS Safari also centres it sideways, so keep it at the start. */
+  input[type='date']::-webkit-datetime-edit,
+  input[type='date']::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+    line-height: inherit;
+  }
+  input[type='date']::-webkit-date-and-time-value {
+    text-align: start;
+  }
   * {
     scrollbar-width: thin;
     scrollbar-color: rgb(22 28 56 / 0.18) transparent;
