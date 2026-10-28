@@ -22,7 +22,11 @@ export type MockDocType =
   | 'partnership_deed'
   | 'incorporation_certificate'
   | 'stamp_paper_scan'
-  | 'signed_copy';
+  | 'signed_copy'
+  // Demo files only (scripts/make-demo-documents.mts); never drawn for records in the app.
+  | 'bank_letter'
+  | 'deviation_approval'
+  | 'termination_notice';
 
 export interface MockDocData {
   cpName: string;
@@ -65,6 +69,18 @@ export interface MockDocData {
     electronic?: boolean;
     stamp?: { number: string; valueInr: number; purchaseDate: string; state: string; vendor: string };
   };
+  /** Management approval letter for a deviation (uploaded as its supporting document). */
+  deviation?: {
+    ref: string;
+    date: string;
+    reason: string;
+    items: { label: string; standard: string; approved: string }[];
+    approverName: string;
+    approverDesignation: string;
+    requestedBy: string;
+  };
+  /** Termination notice. */
+  termination?: { ref: string; date: string; reason: string; effectiveDate: string; noticeDays: number; issuedBy: string; issuedByDesignation: string };
 }
 
 export const MOCK_DOC_TYPES: MockDocType[] = [
@@ -146,7 +162,7 @@ function pan(d: MockDocData): string {
 ${photo(44, 132, 150, 186)}
 ${field(230, 140, 'Name', d.panHolder ?? d.personName, { size: (d.panHolder ?? d.personName).length > 28 ? 18 : 22 })}
 ${d.fatherName ? field(230, 214, "Father's name", d.fatherName) : field(230, 214, d.panHolder ? 'Signing for the holder' : 'Holder', d.panHolder ? d.personName : d.cpName, { size: 18 })}
-${field(230, 288, d.panHolder ? 'Date of incorporation' : 'Date of birth', d.dob ?? '—', { size: 18 })}
+${field(230, 288, d.panHolder ? 'Date of incorporation / formation' : 'Date of birth', d.dob ?? '—', { size: 18 })}
 ${field(44, 370, 'Permanent account number', d.panMasked, { size: 34, mono: true })}
 ${signature(d.personName, 560, 430, 220)}
 <line x1="550" y1="452" x2="800" y2="452" stroke="#94a3b8"/>
@@ -277,6 +293,19 @@ ${signature(a?.signatoryName ?? 'Signatory', 470, sigY, 200, '#0f172a')}
   );
 }
 
+/** Label/value rows down the page; a value may take two lines, and the next row moves down for it. */
+function fieldRows(rows: [string, string][]): string {
+  let y = 232;
+  return rows
+    .map(([k, v]) => {
+      const lines = wrap(v || '—', 58).slice(0, 2);
+      const out = `<text x="70" y="${y}" ${FONT} font-size="12" fill="#64748b" letter-spacing="0.6">${esc(k.toUpperCase())}</text>${lines.map((l, j) => `<text x="70" y="${y + 26 + j * 22}" ${FONT} font-size="18" font-weight="600" fill="#0f172a">${esc(l)}</text>`).join('')}`;
+      y += 70 + (lines.length - 1) * 22;
+      return out;
+    })
+    .join('');
+}
+
 /** A registration certificate / record page: title, a list of fields, a seal and a signature. */
 function certificate(title: string, subtitle: string, rows: [string, string][], d: MockDocData): string {
   const w = 800, h = 1060;
@@ -285,7 +314,7 @@ function certificate(title: string, subtitle: string, rows: [string, string][], 
     h,
     title,
     subtitle,
-    `${rows.map(([k, v], i) => `<text x="70" y="${232 + i * 70}" ${FONT} font-size="12" fill="#64748b" letter-spacing="0.6">${esc(k.toUpperCase())}</text>${wrap(v || '—', 58).slice(0, 2).map((l, j) => `<text x="70" y="${258 + i * 70 + j * 22}" ${FONT} font-size="18" font-weight="600" fill="#0f172a">${esc(l)}</text>`).join('')}`).join('')}
+    `${fieldRows(rows)}
 <circle cx="${w - 170}" cy="${h - 220}" r="62" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="4 3" opacity="0.7"/>
 <text x="${w - 170}" y="${h - 224}" ${FONT} font-size="13" font-weight="700" fill="#7c3aed" text-anchor="middle" opacity="0.8">SPECIMEN</text>
 <text x="${w - 170}" y="${h - 206}" ${FONT} font-size="11" fill="#7c3aed" text-anchor="middle" opacity="0.8">not issued</text>
@@ -381,5 +410,126 @@ export function mockDocumentSvg(type: MockDocType, d: MockDocData): string {
       return stamp(d);
     case 'signed_copy':
       return signed(d);
+    case 'bank_letter':
+      return bankLetter(d);
+    case 'deviation_approval':
+      return deviationApproval(d);
+    case 'termination_notice':
+      return terminationNotice(d);
   }
+}
+
+/** A letter on a plain letterhead: sender, reference and date, addressee, subject, body. */
+function letter(o: { from: string; fromLine: string; ref: string; date: string; to: string[]; subject: string; body: string }): string {
+  const w = 800, h = 1060;
+  const to = o.to.map((l, i) => `<text x="70" y="${246 + i * 22}" ${FONT} font-size="15" fill="#0f172a">${esc(l)}</text>`).join('');
+  const subjectY = 262 + o.to.length * 22;
+  return svg(
+    w,
+    h,
+    `<rect x="30" y="30" width="${w - 60}" height="${h - 60}" fill="#fff" stroke="#cbd5e1"/>
+<text x="70" y="96" ${FONT} font-size="26" font-weight="800" fill="#0f172a">${esc(o.from)}</text>
+<text x="70" y="122" ${FONT} font-size="14" fill="#64748b">${esc(o.fromLine)}</text>
+<line x1="70" y1="142" x2="${w - 70}" y2="142" stroke="#0f172a" stroke-width="2"/>
+<text x="70" y="186" ${FONT} font-size="14" fill="#475569">Ref: ${esc(o.ref)}</text>
+<text x="${w - 70}" y="186" ${FONT} font-size="14" fill="#475569" text-anchor="end">Date: ${esc(o.date)}</text>
+<text x="70" y="222" ${FONT} font-size="13" fill="#64748b">To</text>${to}
+<text x="70" y="${subjectY + 20}" ${FONT} font-size="16" font-weight="700" fill="#0f172a">Subject: ${esc(o.subject)}</text>
+<g transform="translate(0 ${subjectY + 58})">${o.body}</g>`,
+    '#f1f5f9',
+  );
+}
+
+/** Wrapped paragraph lines starting at y; returns the markup and the y after it. */
+function para(text: string, y: number, max = 82): { svg: string; y: number } {
+  const lines = wrap(text, max);
+  return { svg: lines.map((l, i) => `<text x="70" y="${y + i * 22}" ${FONT} font-size="15" fill="#1e293b">${esc(l)}</text>`).join(''), y: y + lines.length * 22 + 14 };
+}
+
+function signOff(name: string, designation: string, y: number, seal: string): string {
+  return `${signature(name, 70, y + 30, 170)}
+<line x1="70" y1="${y + 54}" x2="300" y2="${y + 54}" stroke="#94a3b8"/>
+<text x="70" y="${y + 76}" ${FONT} font-size="15" font-weight="700" fill="#0f172a">${esc(name)}</text>
+<text x="70" y="${y + 96}" ${FONT} font-size="14" fill="#475569">${esc(designation)}</text>
+<circle cx="610" cy="${y + 50}" r="58" fill="none" stroke="#7c3aed" stroke-width="3" stroke-dasharray="4 3" opacity="0.7"/>
+<text x="610" y="${y + 46}" ${FONT} font-size="13" font-weight="700" fill="#7c3aed" text-anchor="middle" opacity="0.8">SPECIMEN</text>
+<text x="610" y="${y + 64}" ${FONT} font-size="11" fill="#7c3aed" text-anchor="middle" opacity="0.8">${esc(seal)}</text>`;
+}
+
+/** Bank's account confirmation letter: the alternative to a cancelled cheque. */
+function bankLetter(d: MockDocData): string {
+  const b = d.bank!;
+  let y = 0;
+  const p1 = para(`This is to confirm that the account below is maintained with us and is in operation as on the date of this letter. Issued at the request of the account holder.`, 0);
+  y = p1.y;
+  const rows: [string, string][] = [
+    ['Account holder', b.holderName],
+    ['Account number', b.accountMasked],
+    ['Account type', 'Current account'],
+    ['IFSC', b.ifsc],
+    ['Bank and branch', `${b.bankName}, ${b.branch}`],
+  ];
+  const table = rows.map(([k, v], i) => `<rect x="70" y="${y + i * 44}" width="660" height="44" fill="${i % 2 ? '#fff' : '#f8fafc'}" stroke="#e2e8f0"/><text x="88" y="${y + i * 44 + 28}" ${FONT} font-size="14" fill="#64748b">${esc(k)}</text><text x="300" y="${y + i * 44 + 28}" ${k === 'IFSC' || k === 'Account number' ? MONO : FONT} font-size="16" font-weight="600" fill="#0f172a">${esc(v)}</text>`).join('');
+  y += rows.length * 44 + 30;
+  const p2 = para('This letter is issued without any risk or responsibility on the part of the bank or its officials.', y);
+  return letter({
+    from: b.bankName,
+    fromLine: `${b.branch} branch · demo specimen, not a real bank`,
+    ref: `ACL/${b.ifsc.slice(-4)}/2026`,
+    date: d.agreement?.signedOn ?? '—',
+    to: ['Whomsoever it may concern'],
+    subject: 'Account confirmation',
+    body: p1.svg + table + p2.svg + signOff('Branch Manager', `${b.bankName}, ${b.branch}`, p2.y + 10, 'bank seal'),
+  });
+}
+
+/** Management approval for a deviation, uploaded with the request as its supporting document. */
+function deviationApproval(d: MockDocData): string {
+  const v = d.deviation!;
+  const a = d.agreement!;
+  const p1 = para(`With reference to the request from ${v.requestedBy} (Business Development) for the channel partner below, management approves the following non-standard commercial terms for this agreement only. The master rate card is not changed.`, 0);
+  let y = p1.y;
+  const facts: [string, string][] = [
+    ['Channel partner', d.cpName],
+    ['Institution', a.institutionName],
+    ['Agreement', a.id],
+  ];
+  const factsSvg = facts.map(([k, v2], i) => `<text x="70" y="${y + i * 24}" ${FONT} font-size="14" fill="#64748b">${esc(k)}</text><text x="250" y="${y + i * 24}" ${FONT} font-size="15" font-weight="600" fill="#0f172a">${esc(v2)}</text>`).join('');
+  y += facts.length * 24 + 16;
+  const head = `<rect x="70" y="${y}" width="660" height="38" fill="#0f172a"/><text x="88" y="${y + 25}" ${FONT} font-size="13" font-weight="700" fill="#fff">ITEM</text><text x="470" y="${y + 25}" ${FONT} font-size="13" font-weight="700" fill="#fff">STANDARD</text><text x="600" y="${y + 25}" ${FONT} font-size="13" font-weight="700" fill="#fff">APPROVED</text>`;
+  const rowsSvg = v.items.map((it, i) => {
+    const ry = y + 38 + i * 40;
+    return `<rect x="70" y="${ry}" width="660" height="40" fill="${i % 2 ? '#fff' : '#f8fafc'}" stroke="#e2e8f0"/><text x="88" y="${ry + 26}" ${FONT} font-size="14" fill="#0f172a">${esc(it.label)}</text><text x="470" y="${ry + 26}" ${FONT} font-size="15" fill="#475569">${esc(it.standard)}</text><text x="600" y="${ry + 26}" ${FONT} font-size="15" font-weight="700" fill="#15803d">${esc(it.approved)}</text>`;
+  }).join('');
+  y += 38 + v.items.length * 40 + 30;
+  const p2 = para(`Reason: ${v.reason}`, y);
+  const p3 = para('This approval is valid for the agreement named above and is subject to Legal review of the deviation in the CP Onboarding app.', p2.y);
+  return letter({
+    from: `${a.institutionName} — Management`,
+    fromLine: 'Internal approval · demo specimen',
+    ref: v.ref,
+    date: v.date,
+    to: ['Legal Department', a.institutionName],
+    subject: 'Approval of rate deviation for a channel partner',
+    body: p1.svg + factsSvg + head + rowsSvg + p2.svg + p3.svg + signOff(v.approverName, v.approverDesignation, p3.y + 10, 'approved'),
+  });
+}
+
+/** Notice ending a CP agreement (uploaded when terminating). */
+function terminationNotice(d: MockDocData): string {
+  const t = d.termination!;
+  const a = d.agreement!;
+  const p1 = para(`This is to notify you that ${a.institutionName} is terminating the Channel Partner Agreement ${a.id} dated ${a.signedOn ?? '—'} under its termination clause, for the reason below.`, 0);
+  const p2 = para(`Reason: ${t.reason}`, p1.y);
+  const p3 = para(`The agreement ends on ${t.effectiveDate}, after ${t.noticeDays} days' notice. Until then please complete applications already in progress; no new applications may be sourced on our behalf. Commission due for admissions confirmed before that date will be settled as per the agreement.`, p2.y);
+  const p4 = para('Please return any brochures, branding material and applicant records belonging to the institution by the same date.', p3.y);
+  return letter({
+    from: a.institutionName,
+    fromLine: `${a.institutionAddress ?? 'Registered office'} · demo specimen`,
+    ref: t.ref,
+    date: t.date,
+    to: [a.cpSignerName, d.cpName, d.extra?.businessAddress ?? d.address ?? ''],
+    subject: `Notice of termination — agreement ${a.id}`,
+    body: p1.svg + p2.svg + p3.svg + p4.svg + signOff(t.issuedBy, t.issuedByDesignation, p4.y + 10, 'institution seal'),
+  });
 }
