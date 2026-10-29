@@ -347,6 +347,12 @@
       "statement": "The workflow strip card on the dashboard has no icon in its header; the…",
       "status": "proved",
       "subject": "unsorted"
+    },
+    {
+      "id": "cp-contact-verification",
+      "statement": "A CP verifies their email (link) and mobile (6-digit code) from a perso…",
+      "status": "proposed",
+      "subject": "verify"
     }
   ],
   "version": 1

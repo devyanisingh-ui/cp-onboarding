@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { api } from '../mockApi';
+import { api, type CpDTO } from '../mockApi';
 import { setLatency, containsSensitive } from '../api/core';
 import { getDb } from '../db';
 import { runScheduledJobs } from '../api/scheduler';
@@ -724,5 +724,117 @@ describe('manual signing upload', () => {
     const a = getDb().agreements.find((x) => x.id === agreementId)!;
     expect(a.status).toBe('pending_approval');
     expect(a.signedOn).toBe(today());
+  });
+});
+
+describe('CP contact verification (email link + mobile code)', () => {
+  const codeFromSms = () => /^(\d{6}) /.exec(getDb().sms!.at(-1)!.body)![1]!;
+  const tokenFromEmail = () => getDb().emails.filter((e) => e.kind === 'verification').at(-1)!.link!.replace('/verify/', '');
+  const contactOf = async (cpId: string) => ((await api.cps.get(cpId)).cp as CpDTO).contact;
+
+  it('starts by itself when the agreement goes to Legal, without holding up Legal’s review', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    expect((await contactOf(cpId))).toMatchObject({ email: 'not_started', mobile: 'not_started' });
+    await finaliseAndSignOnPaper(agreementId);
+    const a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.status).toBe('pending_approval');
+    const email = getDb().emails.filter((e) => e.kind === 'verification').at(-1)!;
+    expect(email).toMatchObject({ to: 'ravi@sunrise.in', subject: 'Please verify your contact details for Apeejay', link: expect.stringMatching(/^\/verify\/[0-9a-f]{32}$/) });
+    expect((await contactOf(cpId))).toMatchObject({ email: 'pending', mobile: 'pending', linkExpired: false });
+    // The token and code never reach the screens.
+    expect(JSON.stringify(await api.cps.get(cpId))).not.toContain(tokenFromEmail());
+
+    // Legal can approve while the CP has not verified yet: the two run side by side.
+    await as(PRIYA);
+    await api.agreements.decideGate1(agreementId, 'approve');
+    expect(a.status).toBe('active');
+  });
+
+  it('the CP confirms their email, then their mobile with a code; the BD and Legal are told', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const token = tokenFromEmail();
+    sessionStorage.clear(); // the CP has no account
+
+    const s = await api.verifyContact.session(token);
+    expect(s).toMatchObject({ cpName: 'Sunrise Education Services', emailMasked: 'ra••@sunrise.in', mobileMasked: '•••••••345', email: 'pending', mobile: 'pending', codeSent: false });
+    await api.verifyContact.confirmEmail(token);
+    expect((await api.verifyContact.session(token)).email).toBe('verified');
+
+    expect(await api.verifyContact.sendCode(token)).toEqual({ sentTo: '•••••••345' });
+    const sms = getDb().sms!.at(-1)!;
+    expect(sms).toMatchObject({ to: '9812012345', kind: 'otp' });
+    expect(sms.body).toMatch(/^\d{6} is your Apeejay CP verification code/);
+    // Only a hash of the code is stored.
+    expect(JSON.stringify(getDb().cps.find((c) => c.id === cpId)!.contactVerification)).not.toContain(codeFromSms());
+
+    await expect(api.verifyContact.verifyCode(token, '12345')).rejects.toThrow('Enter the 6-digit code from the text message.');
+    const wrong = codeFromSms() === '000000' ? '111111' : '000000';
+    await expect(api.verifyContact.verifyCode(token, wrong)).rejects.toThrow('That code is not right. 4 attempts left.');
+    await api.verifyContact.verifyCode(token, codeFromSms());
+
+    await as(KAVYA);
+    expect((await contactOf(cpId))).toMatchObject({ email: 'verified', mobile: 'verified', emailVerifiedAt: expect.any(String), mobileVerifiedAt: expect.any(String) });
+    const told = getDb().notifications.filter((n) => n.title === 'CP contact details verified').map((n) => n.userId);
+    expect(told).toEqual(expect.arrayContaining(['u-neha', 'u-priya']));
+    // Reopening the link shows that both are done (and confirming again changes nothing).
+    expect(await api.verifyContact.session(token)).toMatchObject({ email: 'verified', mobile: 'verified' });
+    await api.verifyContact.confirmEmail(token);
+    expect(getDb().notifications.filter((n) => n.title === 'CP contact details verified').map((n) => n.userId)).toEqual(told);
+  });
+
+  it('limits codes: wait before resending, 5 wrong tries, expiry', async () => {
+    const { agreementId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const token = tokenFromEmail();
+    await api.verifyContact.sendCode(token);
+    await expect(api.verifyContact.sendCode(token)).rejects.toThrow('Please wait 30 seconds before asking for another code.');
+    const wrong = codeFromSms() === '000000' ? '111111' : '000000';
+    for (let i = 0; i < 4; i++) await expect(api.verifyContact.verifyCode(token, wrong)).rejects.toThrow(/not right/);
+    await expect(api.verifyContact.verifyCode(token, wrong)).rejects.toThrow('Too many wrong codes. Ask for a new code.');
+    // Even the right code no longer works after 5 wrong tries.
+    await expect(api.verifyContact.verifyCode(token, codeFromSms())).rejects.toThrow('Too many wrong codes. Ask for a new code.');
+
+    const cp = getDb().cps.find((c) => c.contactVerification?.token === token)!;
+    cp.contactVerification!.otp = { ...cp.contactVerification!.otp!, attempts: 0, expiresAt: new Date(Date.now() - 1000).toISOString() };
+    await expect(api.verifyContact.verifyCode(token, codeFromSms())).rejects.toThrow('This code has expired. Ask for a new code.');
+    cp.contactVerification!.linkExpiresAt = new Date(Date.now() - 1000).toISOString();
+    await expect(api.verifyContact.confirmEmail(token)).rejects.toThrow('This link has expired. Ask your Apeejay contact to send a new one.');
+  });
+
+  it('the BD can resend; a new link replaces the old one; changing the mobile asks for it again', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const first = tokenFromEmail();
+    await as(KAVYA);
+    const { link } = await api.cps.sendVerification(cpId);
+    expect(link).not.toBe(`/verify/${first}`);
+    await expect(api.verifyContact.session(first)).rejects.toThrow('This verification link is not valid. Ask your Apeejay contact to send you a new one.');
+
+    const token = tokenFromEmail();
+    await api.verifyContact.confirmEmail(token);
+    await api.verifyContact.sendCode(token);
+    await api.verifyContact.verifyCode(token, codeFromSms());
+    await expect(api.cps.sendVerification(cpId)).rejects.toThrow('This CP’s email and mobile are already verified.');
+
+    // A new mobile has not been verified, so it shows as not verified again and can be re-sent.
+    getDb().cps.find((c) => c.id === cpId)!.mobile = '9876543210';
+    expect((await contactOf(cpId))).toMatchObject({ email: 'verified', mobile: 'pending' });
+    await expect(api.cps.sendVerification(cpId)).resolves.toMatchObject({ link: expect.stringMatching(/^\/verify\//) });
+
+    await as(PRIYA);
+    await expect(api.cps.sendVerification(cpId)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('sends the verification email through the relay with its own button', async () => {
+    const res = await handleSendEmail(
+      new Request('http://x', { method: 'POST', body: JSON.stringify({ to: 'ravi@sunrise.in', subject: 'Please verify your contact details for Apeejay', body: 'Hello', link: '/verify/abc', kind: 'verification' }) }),
+      { RESEND_API_KEY: 're_x', EMAIL_FROM: 'CP <n@example.com>', APP_URL: 'https://app.example.com' },
+      async (_u, init) => {
+        expect(String((init as RequestInit).body)).toContain('Verify my details');
+        return new Response(JSON.stringify({ id: 'em_9' }), { status: 200 });
+      },
+    );
+    expect(res.status).toBe(200);
   });
 });

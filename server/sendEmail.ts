@@ -29,7 +29,7 @@ export interface RelayRequest {
 }
 
 /** Which emails go out for real: every kind the app writes to its outbox. */
-export const RELAY_KINDS = ['task', 'reminder', 'escalation', 'signature', 'event', 'digest'] as const;
+export const RELAY_KINDS = ['task', 'reminder', 'escalation', 'signature', 'event', 'digest', 'verification'] as const;
 export type RelayKind = (typeof RELAY_KINDS)[number];
 
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
@@ -43,6 +43,7 @@ const KIND_ACTION: Record<RelayKind, string> = {
   signature: 'Open the agreement',
   event: 'Open in CP Onboarding',
   digest: 'Open your tasks',
+  verification: 'Verify my details',
 };
 
 function json(status: number, data: unknown): Response {

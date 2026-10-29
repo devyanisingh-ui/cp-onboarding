@@ -81,6 +81,25 @@ name still works.
 Because all data lives in each browser, reminders and escalations fire from whichever browser runs
 the scheduler, and a fresh browser sends the reminders for the seeded overdue tasks once.
 
+## CP contact verification
+
+The CP confirms that the email and mobile on their record reach them. It starts by itself when an
+agreement goes to Legal and runs **alongside** Legal's review: it never holds the agreement up, and
+Legal sees its status on the review screen. A BD Executive can also send or resend it from the
+agreement or CP page (*Contact verification* card).
+
+1. The CP gets an email with a personal link (`/verify/<token>`, valid 7 days).
+2. On that page they press **This is my email** (email verified), then **Send me a code** and type
+   the 6-digit code sent to their mobile (mobile verified). Codes last 10 minutes, a new one can be
+   sent every 30 seconds (at most 5 an hour), and 5 wrong tries end a code.
+3. The BD Executive (and Legal, if reviewing) are notified; the card shows both as **Verified**.
+   Changing the CP's email or mobile later makes that one unverified again.
+
+No SMS provider is connected yet: codes go to the **SMS outbox** in Admin → System (like emails
+go to the email outbox when Resend is not set up). Only a hash of each code is stored. To send
+real texts, connect an SMS provider (in India this needs DLT registration of the sender ID and
+template).
+
 ## Demo personas
 
 | Role | Account | What they do |

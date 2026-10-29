@@ -99,7 +99,7 @@ export async function resetDemoData() {
 }
 
 /**
- * Deletes every record (CPs, agreements, deviations, their documents, tasks, notifications, emails,
+ * Deletes every record (CPs, agreements, deviations, their documents, tasks, notifications, emails, texts,
  * audit events, legacy imports and saved wizard drafts) so testing can start from scratch. Keeps the
  * set-up: users, institutions, regions, templates, rate cards, routing, master lists and settings.
  */
@@ -118,6 +118,7 @@ export async function clearAllRecords() {
   d.tasks = d.tasks.filter((t) => t.status === 'open' && !t.agreementId && !t.cpId && (t.type === 'template_approval' || t.type === 'rate_card_approval'));
   d.notifications = [];
   d.emails = [];
+  d.sms = [];
   d.audit = [];
   d.legacyBatches = [];
   d.wizardDrafts = [];

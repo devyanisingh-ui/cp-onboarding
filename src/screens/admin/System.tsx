@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { CheckCircle2, Eraser, Mail, MailCheck, Play, RotateCcw, Send, XCircle } from 'lucide-react';
+import { CheckCircle2, Eraser, Mail, MailCheck, MessageSquareText, Play, RotateCcw, Send, XCircle } from 'lucide-react';
 import { api } from '@/services/mockApi';
 import { getDb } from '@/services/db';
 import { channels } from '@/services/notificationChannels';
@@ -17,6 +17,7 @@ export function System() {
   useDocumentTitle('System');
   const { can } = useSession();
   const emails = useApi(() => api.inbox.emails(), []);
+  const sms = useApi(() => api.inbox.sms(), []);
   const [simulate, setSimulate] = useState(getDb().settings.simulateErrors);
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -98,6 +99,26 @@ export function System() {
           </ul>
         ) : (
           <EmptyState compact icon={<Mail />} title="No emails yet" description="Emails appear here as tasks are created, reminders fall due and digests are sent." />
+        )}
+      </Card>
+
+      <Card>
+        <CardHeader title="SMS outbox" description="Text messages the app has sent: verification codes for CPs confirming their mobile. No SMS provider is connected yet, so they are kept here (simulated)." icon={<MessageSquareText />} />
+        {sms.data?.length ? (
+          <ul className="max-h-[360px] divide-y divide-line overflow-y-auto">
+            {sms.data.map((m) => (
+              <li key={m.id} className="px-5 py-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge tone="accent">Verification code</Badge>
+                  <span className="text-sm font-medium">To +91 {m.to}</span>
+                  <span className="text-xs text-muted">{formatDateTime(m.sentAt)}</span>
+                </div>
+                <p className="mt-1 text-sm text-ink-soft">{m.body}</p>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState compact icon={<MessageSquareText />} title="No text messages yet" description="Verification codes appear here when a CP asks for one on their verification link." />
         )}
       </Card>
 

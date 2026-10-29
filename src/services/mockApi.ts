@@ -13,6 +13,7 @@ import * as reports from './api/reports';
 import * as legacy from './api/legacy';
 import * as esign from './api/esign';
 import * as docRequests from './api/docRequests';
+import * as contactVerification from './api/contactVerification';
 
 export const api = {
   auth: {
@@ -30,6 +31,8 @@ export const api = {
     getForEdit: cps.getCpForEdit,
     update: cps.updateCp,
     reveal: cps.revealCpField,
+    /** Email the CP a link to verify their email and mobile (also starts by itself when an agreement goes to Legal). */
+    sendVerification: contactVerification.sendContactVerification,
   },
   agreements: {
     list: agreements.listAgreements,
@@ -78,6 +81,7 @@ export const api = {
     markRead: inbox.markNotificationsRead,
     audit: inbox.listAudit,
     emails: inbox.listEmails,
+    sms: inbox.listSms,
   },
   config: {
     lookups: config.lookups,
@@ -125,6 +129,13 @@ export const api = {
     sign: esign.signWithToken,
     decline: esign.declineWithToken,
   },
+  /** Public CP link for verifying their email and mobile (the link token is the credential). */
+  verifyContact: {
+    session: contactVerification.getVerifySession,
+    confirmEmail: contactVerification.confirmEmail,
+    sendCode: contactVerification.sendMobileCode,
+    verifyCode: contactVerification.verifyMobileCode,
+  },
   /** Public CP links for re-uploading documents Legal flagged (the link token is the credential). */
   cpDocs: {
     session: docRequests.getCpDocSession,
@@ -134,6 +145,7 @@ export const api = {
 };
 
 export type Api = typeof api;
+export type { ContactVerifySession } from './api/contactVerification';
 export type { CpListItem, CpDTO, AgreementSummary, AgreementDetail, AgreementActions, CpStatus } from './api/dto';
 export { CP_STATUS_META } from './api/dto';
 export type { TaskItem, Dashboard } from './api/inbox';

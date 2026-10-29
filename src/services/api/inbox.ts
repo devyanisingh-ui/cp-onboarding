@@ -1,4 +1,4 @@
-import type { AppNotification, AuditEvent, EmailMessage, Task, TaskType } from '@/types';
+import type { AppNotification, AuditEvent, EmailMessage, SmsMessage, Task, TaskType } from '@/types';
 import { daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
 import { can } from '@/lib/permissions';
 import { taskLink } from '@/lib/links';
@@ -322,4 +322,11 @@ export async function listEmails(): Promise<EmailMessage[]> {
   await delay();
   assertCan(ctx(), 'config.view');
   return getDb().emails.slice().reverse().slice(0, 200);
+}
+
+/** Text messages (verification codes), newest first. Admin → System, while no SMS provider is connected. */
+export async function listSms(): Promise<SmsMessage[]> {
+  await delay();
+  assertCan(ctx(), 'config.view');
+  return (getDb().sms ?? []).slice().reverse().slice(0, 200);
 }

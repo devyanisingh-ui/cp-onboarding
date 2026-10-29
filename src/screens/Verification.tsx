@@ -15,6 +15,7 @@ import { cn } from '@/lib/cn';
 import { correctedDocsToRecheck } from '@/lib/status';
 import { Alert, Button, Card, ErrorState, Field, Input, Modal, PageSkeleton, Tabs, Textarea } from '@/components/ui';
 import { ActionBar, AgreementHtml, CommentDialog, DocumentFrame, MaskedValue, PageHeader } from '@/components/common';
+import { ContactVerificationCard } from '@/components/contactVerification';
 
 /**
  * Checklist review of a signed agreement against its documents.
@@ -172,6 +173,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
 
         <div className="min-w-0 space-y-4">
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
+          {/* Runs alongside this review; for information, it does not block approval. */}
+          {legal && <ContactVerificationCard cpId={d!.cp.id} email={d!.cp.email} mobile={d!.cp.mobile} contact={d!.cp.contact} />}
           {recheck && (
             <Alert tone="success" title={`Corrected document${recheck.length === 1 ? '' : 's'} only`}>
               The CP re-uploaded {recheck.length === 1 ? 'this document' : `these ${recheck.length} documents`} and the BD Executive sent them back on {formatDateTime(d!.agreement.docRequest!.closedAt)}. The signed agreement and the other documents were covered in your earlier review, so only check what changed.

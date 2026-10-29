@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "cp-contact-verification": {
+      "declaredAt": 1793253958694,
+      "id": "cp-contact-verification",
+      "state": "declared",
+      "statement": "A CP verifies their email (link) and mobile (6-digit code) from a personal link; it starts when an agreement goes to Legal (or when a BD sends it), runs alongside Legal's review without blocking it, and the agreement/CP pages show each channel as Verified once done.",
+      "status": "proposed",
+      "subject": "verify",
+      "surface": {
+        "route": "/verify"
+      },
+      "updatedAt": 1793253958723
+    }
+  },
+  "subject": "verify",
+  "version": 1
+}

@@ -110,8 +110,51 @@ export interface CpMaster {
   warning?: WarningFlag;
   reverificationRequired?: boolean;
   consent?: { statement: string; recordedAt: ISODateTime; recordedById: string };
+  /** The CP confirming their email (link) and mobile (one-time code); see services/api/contactVerification.ts. */
+  contactVerification?: ContactVerification;
   createdAt: ISODateTime;
   createdById: string;
+}
+
+/**
+ * Proof that the CP's email and mobile reach the CP. Each channel records the address it verified,
+ * so changing the CP's email or mobile later makes that channel unverified again.
+ */
+export interface ContactVerification {
+  /** The CP's personal link (/verify/<token>), emailed to them. A new one replaces the old. */
+  token?: string;
+  linkSentAt?: ISODateTime;
+  linkExpiresAt?: ISODateTime;
+  sentById?: string;
+  /** Who or what started it: an agreement going to Legal, or a BD Executive by hand. */
+  reason?: string;
+  emailVerified?: { value: string; at: ISODateTime };
+  mobileVerified?: { value: string; at: ISODateTime };
+  /** The current one-time code for the mobile (only its hash is kept). */
+  otp?: { codeHash: string; sentAt: ISODateTime; expiresAt: ISODateTime; attempts: number };
+  /** Codes sent in the last hour, for the sending limit. */
+  otpSends?: ISODateTime[];
+}
+
+export type ContactCheck = 'verified' | 'pending' | 'not_started';
+
+/** What screens see: the status of each channel, never the token or the code. */
+export interface ContactVerificationView {
+  email: ContactCheck;
+  mobile: ContactCheck;
+  emailVerifiedAt?: ISODateTime;
+  mobileVerifiedAt?: ISODateTime;
+  linkSentAt?: ISODateTime;
+  linkExpired: boolean;
+}
+
+/** A text message to a mobile. No SMS provider yet: the app keeps them in an outbox (Admin → System). */
+export interface SmsMessage {
+  id: string;
+  to: string;
+  body: string;
+  kind: 'otp';
+  sentAt: ISODateTime;
 }
 
 /** Stored lifecycle states. "Expiring" and "Rejected" are derived display states. */
@@ -507,7 +550,7 @@ export interface EmailMessage {
   subject: string;
   body: string;
   link?: string;
-  kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event' | 'signature';
+  kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event' | 'signature' | 'verification';
   sentAt: ISODateTime;
   /** Real delivery through the Resend relay. Absent when the email only went to the simulated outbox. */
   delivery?: { status: 'sending' | 'sent' | 'failed'; providerId?: string; error?: string };
@@ -595,6 +638,8 @@ export interface Database {
   tasks: Task[];
   notifications: AppNotification[];
   emails: EmailMessage[];
+  /** Text messages (one-time codes). Absent in data saved before they existed. */
+  sms?: SmsMessage[];
   audit: AuditEvent[];
   routing: RoutingRule[];
   masterLists: MasterLists;

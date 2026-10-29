@@ -10,7 +10,7 @@ export interface OutboundMessage {
   title: string;
   body: string;
   link: string;
-  kind: 'task' | 'reminder' | 'escalation' | 'event' | 'digest' | 'signature';
+  kind: 'task' | 'reminder' | 'escalation' | 'event' | 'digest' | 'signature' | 'verification';
 }
 
 export interface NotificationChannel {

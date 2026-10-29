@@ -19,7 +19,11 @@ function load(): Database {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Database;
-      if (parsed.schemaVersion === SCHEMA_VERSION) return parsed;
+      if (parsed.schemaVersion === SCHEMA_VERSION) {
+        // Collections added since this data was saved start empty (no reset, nothing lost).
+        parsed.sms ??= [];
+        return parsed;
+      }
       if (parsed.schemaVersion > SCHEMA_VERSION) {
         outdated = true;
         return buildSeed();

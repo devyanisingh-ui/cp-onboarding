@@ -31,6 +31,7 @@ import {
 import { toCpDTO, toSummary, type AgreementActions, type AgreementDetail, type AgreementSummary } from './dto';
 import { upsertCp } from './cps';
 import { assertUploadable, storeDocument } from './documents';
+import { startForAgreement } from './contactVerification';
 
 // ---------------- Helpers ----------------
 
@@ -465,6 +466,8 @@ export function sendToLegal(a: Agreement, by: User | 'system') {
   touch(a);
   closeTasks({ agreementId: a.id, types: ['signing_upload', 'cp_doc_request', 'cp_doc_review'] }, by);
   createTask({ type: 'gate1_approval', title: `Legal approval: ${cpName(a)}`, assigneeId: legalId, slaDays: d.settings.sla.gate1Days, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
+  // The CP verifies their email and mobile while Legal reviews; it does not hold the review up.
+  startForAgreement(a, by);
 }
 
 /**

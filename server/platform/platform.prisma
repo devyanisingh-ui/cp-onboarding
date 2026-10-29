@@ -119,6 +119,7 @@ enum EmailKind {
   digest
   event
   signature
+  verification
 }
 
 enum DeliveryStatus {

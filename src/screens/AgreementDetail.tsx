@@ -14,6 +14,7 @@ import { rejectionTitle, STATUS_META, type StatusTone } from '@/lib/status';
 import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, ErrorState, Field, Input, PageSkeleton, StatusBadge } from '@/components/ui';
 import { AgreementLink, CommentDialog, DocumentList, PageHeader, StatusStepper, Timeline, WarningBanner, docLabel } from '@/components/common';
 import { DeviationCompare, DownloadMenu } from '@/components/agreement';
+import { ContactVerificationCard } from '@/components/contactVerification';
 
 export function AgreementDetail() {
   const { id = '' } = useParams<{ id: string }>();
@@ -214,6 +215,7 @@ export function AgreementDetail() {
         </div>
 
         <aside className="min-w-0 space-y-5">
+          <ContactVerificationCard cpId={d.cp.id} email={d.cp.email} mobile={d.cp.mobile} contact={d.cp.contact} />
           {d.openTasks.length > 0 && (
             <Card>
               <CardHeader title="Waiting on" icon={<ShieldAlert />} />

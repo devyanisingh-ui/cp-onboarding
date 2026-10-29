@@ -20,6 +20,7 @@ import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, Empty
 import { DocumentList, MaskedValue, PageHeader, Timeline, WarningBanner, docLabel } from '@/components/common';
 import { AgreementTable } from '@/components/lists';
 import { CpFields } from '@/components/CpFields';
+import { ContactVerificationCard } from '@/components/contactVerification';
 
 type Tab = 'details' | 'kyc' | 'agreements' | 'history';
 
@@ -203,6 +204,7 @@ function CpDetails({ cp, names }: { cp: CpDTO; names: Record<string, string> }) 
           />
         </CardBody>
       </Card>
+      <ContactVerificationCard cpId={cp.id} email={cp.email} mobile={cp.mobile} contact={cp.contact} />
       <Card>
         <CardHeader title="Tax and bank" />
         <CardBody>
