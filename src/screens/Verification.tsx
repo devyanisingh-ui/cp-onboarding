@@ -1,9 +1,9 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Check, FileWarning, ShieldCheck, ThumbsDown, ThumbsUp, X } from 'lucide-react';
-import type { DocumentType, FieldCheck } from '@/types';
+import type { DocumentRecord, DocumentType, FieldCheck } from '@/types';
 import { kycDocsFor, kycLabel, PAN_OF, PERSON_ROLE } from '@/lib/kyc';
 import { api } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
@@ -35,8 +35,11 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const [rejecting, setRejecting] = useState(false);
   const [askingDocs, setAskingDocs] = useState(false);
   const [note, setNote] = useState('');
-  // Phones: document and checklist are tabs instead of a long stacked page.
-  const [mobileView, setMobileView] = useState<'checks' | 'doc'>('checks');
+  const [agreementTab, setAgreementTab] = useState('');
+  const cpPaneRef = useRef<HTMLDivElement>(null);
+  const agreementPaneRef = useRef<HTMLDivElement>(null);
+  // Phones: documents and checklist are tabs instead of a long stacked page.
+  const [mobileView, setMobileView] = useState<MobileView>('checks');
   useDocumentTitle(`${legal ? 'Legal review' : 'Gate 2'} ${id}`);
   const remarksOf = (c: string) => {
     const notes = Object.entries(checks).filter(([, v]) => v.remark?.trim()).map(([k, v]) => `${fields.find((f) => f.key === k)?.label ?? k}: ${v.remark!.trim()}`);
@@ -118,6 +121,33 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
     ? newest(d!.cpDocuments).filter((x) => recheck.some((it) => it.documentType === x.type))
     : [...newest(d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan')), ...(legal ? newest(d!.cpDocuments) : d!.cpDocuments)];
   const current = docs.find((x) => x.id === docTab) ?? docs[0];
+  // Legal sees the agreement and the CP's documents in two panes.
+  const agreementDocs = newest(d!.documents.filter((x) => x.type === 'signed_copy' || x.type === 'stamp_paper_scan')).sort((a, b) => Number(b.type === 'signed_copy') - Number(a.type === 'signed_copy'));
+  const agreementDoc = agreementDocs.find((x) => x.id === agreementTab) ?? agreementDocs[0];
+  const cpDocs = recheck ? docs : newest(d!.cpDocuments);
+  const cpDoc = cpDocs.find((x) => x.id === docTab) ?? cpDocs[0];
+  /** The document a checklist row is checked against: stamp details on the stamp paper, the rest of the agreement on the signed copy. */
+  const docFor = (f: (typeof fields)[number]) => {
+    const type: DocumentType = f.doc ?? (f.key.startsWith('stamp_') ? 'stamp_paper_scan' : 'signed_copy');
+    return f.doc ? cpDocs.find((x) => x.type === type) : agreementDocs.find((x) => x.type === type);
+  };
+  /** From a checklist row: open its document in the agreement or CP documents pane. */
+  const showDoc = (x: DocumentRecord) => {
+    const cp = cpDocs.includes(x);
+    if (cp) setDocTab(x.id);
+    else setAgreementTab(x.id);
+    setMobileView(cp ? 'doc' : 'agreement');
+    (cp ? cpPaneRef : agreementPaneRef).current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  const specimenFor = (x: DocumentRecord) =>
+    x.type === 'signed_copy' ? (
+      <div className="relative rounded-md bg-white p-6 shadow-card">
+        <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl font-black uppercase tracking-widest text-slate-200/80 [transform:rotate(-24deg)]" aria-hidden>
+          Specimen scan
+        </span>
+        <AgreementHtml html={doc.data!.html} />
+      </div>
+    ) : undefined;
   const set = (key: string, v: Partial<FieldCheck>) => setChecks((c) => ({ ...c, [key]: { ...(c[key] ?? { status: 'verified' }), ...v } as FieldCheck }));
   const done = fields.filter((f) => checks[f.key]?.status === 'verified').length;
   const mismatched = fields.filter((f) => checks[f.key]?.status === 'mismatch');
@@ -139,42 +169,60 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
         <Tabs
           label={legal ? 'Legal review sections' : 'Gate 2 sections'}
           active={mobileView}
-          onChange={setMobileView}
+          onChange={(v) => setMobileView(v as MobileView)}
           tabs={[
             { id: 'checks', label: `Checks ${done}/${fields.length}` },
-            { id: 'doc', label: 'Documents', count: docs.length },
+            ...(legal
+              ? [
+                  { id: 'agreement', label: 'Agreement' },
+                  { id: 'doc', label: 'CP documents', count: cpDocs.length },
+                ]
+              : [{ id: 'doc', label: 'Documents', count: docs.length }]),
           ]}
         />
       </div>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card className={cn('min-w-0 overflow-hidden lg:sticky lg:top-[7.5rem] lg:self-start', mobileView !== 'doc' && 'max-lg:hidden')}>
-          <div className="px-4 pt-2">
-            <Tabs label="Uploaded documents" active={current?.id ?? ''} onChange={setDocTab} tabs={docs.map((x) => ({ id: x.id, label: kycLabel(d!.cp.type, x.type) }))} />
-          </div>
-          <div className="max-h-[75vh] overflow-y-auto bg-sunken p-3">
-            {current && (
-              <DocumentFrame
-                key={current.id}
-                doc={current}
-                specimen={
-                  current.type === 'signed_copy' ? (
-                    <div className="relative rounded-md bg-white p-6 shadow-card">
-                      <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl font-black uppercase tracking-widest text-slate-200/80 [transform:rotate(-24deg)]" aria-hidden>
-                        Specimen scan
-                      </span>
-                      <AgreementHtml html={doc.data!.html} />
-                    </div>
-                  ) : undefined
-                }
-              />
-            )}
-          </div>
-        </Card>
+      {legal && (
+        // Legal: the agreement and the CP's documents side by side, so each detail can be checked against both.
+        <div className="mb-5 grid gap-5 lg:grid-cols-2">
+          <DocPane
+            className={cn(mobileView !== 'agreement' && 'max-lg:hidden')}
+            title="Agreement"
+            label="Agreement documents"
+            docs={agreementDocs}
+            active={agreementDoc?.id ?? 'text'}
+            onChange={setAgreementTab}
+            emptyTab="Agreement text"
+            labelOf={(x) => kycLabel(d!.cp.type, x.type)}
+            paneRef={agreementPaneRef}
+          >
+            {agreementDoc ? <DocumentFrame key={agreementDoc.id} doc={agreementDoc} specimen={specimenFor(agreementDoc)} /> : <div className="rounded-md bg-white p-6 shadow-card"><AgreementHtml html={doc.data!.html} /></div>}
+          </DocPane>
+          <DocPane
+            className={cn(mobileView !== 'doc' && 'max-lg:hidden')}
+            title={recheck ? 'Corrected CP documents' : 'CP documents'}
+            label="CP documents"
+            docs={cpDocs}
+            active={cpDoc?.id ?? ''}
+            onChange={setDocTab}
+            labelOf={(x) => kycLabel(d!.cp.type, x.type)}
+            paneRef={cpPaneRef}
+          >
+            {cpDoc ? <DocumentFrame key={cpDoc.id} doc={cpDoc} /> : <p className="p-6 text-center text-sm text-muted">The CP hasn’t uploaded any documents.</p>}
+          </DocPane>
+        </div>
+      )}
+      <div className={cn('grid gap-5', !legal && 'lg:grid-cols-2')}>
+        {!legal && (
+          <Card className={cn('min-w-0 overflow-hidden lg:sticky lg:top-[7.5rem] lg:self-start', mobileView !== 'doc' && 'max-lg:hidden')}>
+            <div className="px-4 pt-2">
+              <Tabs label="Uploaded documents" active={current?.id ?? ''} onChange={setDocTab} tabs={docs.map((x) => ({ id: x.id, label: kycLabel(d!.cp.type, x.type) }))} />
+            </div>
+            <div className="max-h-[75vh] overflow-y-auto bg-sunken p-3">{current && <DocumentFrame key={current.id} doc={current} specimen={specimenFor(current)} />}</div>
+          </Card>
+        )}
 
         <div className="min-w-0 space-y-4">
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
-          {/* Runs alongside this review; for information, it does not block approval. */}
-          {legal && <ContactVerificationCard cpId={d!.cp.id} email={d!.cp.email} mobile={d!.cp.mobile} contact={d!.cp.contact} />}
           {recheck && (
             <Alert tone="success" title={`Corrected document${recheck.length === 1 ? '' : 's'} only`}>
               The CP re-uploaded {recheck.length === 1 ? 'this document' : `these ${recheck.length} documents`} and the BD Executive sent them back on {formatDateTime(d!.agreement.docRequest!.closedAt)}. The signed agreement and the other documents were covered in your earlier review, so only check what changed.
@@ -199,6 +247,11 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
                         <p className="text-xs text-muted">
                           {f.label}
                           {legal && f.doc && c?.status === 'mismatch' && <span className="ml-1.5 font-medium text-danger-700">· CP will re-upload</span>}
+                          {legal && docFor(f) && (
+                            <button type="button" className="hit-area ml-2 font-medium text-primary-700 hover:underline" onClick={() => showDoc(docFor(f)!)} aria-label={`View ${kycLabel(d!.cp.type, docFor(f)!.type)} for ${f.label}`}>
+                              View
+                            </button>
+                          )}
                         </p>
                         <p className="mt-0.5 text-sm font-medium text-ink">{f.value}</p>
                       </div>
@@ -229,6 +282,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               })}
             </ul>
           </Card>
+          {/* Runs alongside this review; for information, it does not block approval. */}
+          {legal && <ContactVerificationCard cpId={d!.cp.id} email={d!.cp.email} mobile={d!.cp.mobile} contact={d!.cp.contact} />}
           </div>
           <ActionBar>
             <Button variant="danger" icon={<ThumbsDown className="size-4" />} onClick={() => setRejecting(true)}>
@@ -312,5 +367,46 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
         </Modal>
       )}
     </div>
+  );
+}
+
+type MobileView = 'checks' | 'agreement' | 'doc';
+
+/** One document viewer: tabs over its documents and a scrolling frame. */
+function DocPane({
+  title,
+  label,
+  docs,
+  active,
+  onChange,
+  labelOf,
+  emptyTab,
+  paneRef,
+  className,
+  children,
+}: {
+  title: string;
+  label: string;
+  docs: DocumentRecord[];
+  active: string;
+  onChange: (id: string) => void;
+  labelOf: (x: DocumentRecord) => string;
+  /** Tab shown when there are no documents (e.g. the agreement text). */
+  emptyTab?: string;
+  paneRef?: Ref<HTMLDivElement>;
+  className?: string;
+  children: ReactNode;
+}) {
+  const tabs = docs.length ? docs.map((x) => ({ id: x.id, label: labelOf(x) })) : emptyTab ? [{ id: active, label: emptyTab }] : [];
+  return (
+    <section ref={paneRef} aria-label={title} className={cn('min-w-0 scroll-mt-48', className)}>
+      <Card className="flex h-full flex-col overflow-hidden">
+        <div className="px-4 pt-3">
+          <h2 className="text-sm font-semibold text-ink">{title}</h2>
+          {tabs.length > 0 && <Tabs label={label} active={active} onChange={onChange} tabs={tabs} />}
+        </div>
+        <div className="h-[70vh] overflow-y-auto bg-sunken p-3 max-lg:h-auto max-lg:max-h-[75vh]">{children}</div>
+      </Card>
+    </section>
   );
 }

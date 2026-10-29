@@ -251,6 +251,15 @@
       "status": "proved",
       "subject": "unsorted",
       "updatedAt": 1792645686690
+    },
+    "legal-split-panes": {
+      "declaredAt": 1793261545557,
+      "id": "legal-split-panes",
+      "state": "declared",
+      "statement": "On Legal review the agreement (signed copy first, stamp paper as a second tab) shows in one pane and the CP's documents in a pane beside it; each checklist row's View link opens the document it is checked against in the matching pane.",
+      "status": "proposed",
+      "subject": "unsorted",
+      "updatedAt": 1793261545574
     }
   },
   "subject": "unsorted",
