@@ -11,6 +11,7 @@ import { useAction, useApi } from '@/hooks/useApi';
 import { useSession, useUser } from '@/context/SessionContext';
 import { useDocumentTitle } from '@/hooks/misc';
 import { formatDateTime } from '@/lib/dates';
+import { CrmSyncCard } from '@/components/cpLeads';
 import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, Field, Input, Modal, Toggle } from '@/components/ui';
 
 export function System() {
@@ -101,6 +102,8 @@ export function System() {
           <EmptyState compact icon={<Mail />} title="No emails yet" description="Emails appear here as tasks are created, reminders fall due and digests are sent." />
         )}
       </Card>
+
+      <CrmSyncCard />
 
       <Card>
         <CardHeader title="SMS outbox" description="Text messages the app has sent: verification codes for CPs confirming their mobile. No SMS provider is connected yet, so they are kept here (simulated)." icon={<MessageSquareText />} />

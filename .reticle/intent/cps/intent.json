@@ -1,0 +1,18 @@
+{
+  "intents": {
+    "cp-leads-revenue": {
+      "declaredAt": 1793260994019,
+      "id": "cp-leads-revenue",
+      "state": "declared",
+      "statement": "A CP's page has a Leads & revenue tab showing, from the CRM sync, leads → applications → admissions, conversion and revenue (fees of admitted students) per institution and a lead list without personal data; only Admin can correct a lead (kept across syncs) or change the CRM partner code, and run Sync now from Admin → System.",
+      "status": "proposed",
+      "subject": "cps",
+      "surface": {
+        "route": "/cps"
+      },
+      "updatedAt": 1793260994038
+    }
+  },
+  "subject": "cps",
+  "version": 1
+}

@@ -121,6 +121,12 @@
       "subject": "bd-home-overdue"
     },
     {
+      "id": "cp-leads-revenue",
+      "statement": "A CP's page has a Leads & revenue tab showing, from the CRM sync, leads…",
+      "status": "proposed",
+      "subject": "cps"
+    },
+    {
       "id": "flow:drive-bd-home-actions-grouped",
       "statement": "bd-home-actions-grouped",
       "status": "proposed",

@@ -110,6 +110,8 @@ export interface CpMaster {
   warning?: WarningFlag;
   reverificationRequired?: boolean;
   consent?: { statement: string; recordedAt: ISODateTime; recordedById: string };
+  /** The CP's partner / source code in the CRM, used to match synced leads. Falls back to the CP ID. */
+  crmPartnerCode?: string;
   /** The CP confirming their email (link) and mobile (one-time code); see services/api/contactVerification.ts. */
   contactVerification?: ContactVerification;
   createdAt: ISODateTime;
@@ -146,6 +148,41 @@ export interface ContactVerificationView {
   mobileVerifiedAt?: ISODateTime;
   linkSentAt?: ISODateTime;
   linkExpired: boolean;
+}
+
+// ---------- Leads and revenue (pulled from the CRM; see services/api/leads.ts) ----------
+
+export type LeadStatus = 'lead' | 'applied' | 'admitted' | 'dropped';
+
+/**
+ * A student lead a CP referred, as the CRM reports it. Deliberately no personal data: the student's
+ * identity stays in the CRM, this keeps its lead ID, the programme, the status, dates and the fee.
+ */
+export interface CpLead {
+  id: string;
+  /** The CRM's own ID for the lead (the key for every later sync). */
+  crmId: string;
+  cpId: string;
+  institutionId: string;
+  programme: string;
+  /** Admission cycle, e.g. 2026-27. */
+  academicYear: string;
+  status: LeadStatus;
+  createdOn: ISODate;
+  appliedOn?: ISODate;
+  admittedOn?: ISODate;
+  droppedOn?: ISODate;
+  /** Fees from an admitted student (first-year fees): the revenue this lead brought Apeejay. */
+  feeInr?: number;
+  syncedAt: ISODateTime;
+  /** Admin's correction. Kept on later syncs until Admin clears it; the CRM's own values stay visible. */
+  correction?: { status: LeadStatus; feeInr?: number; note: string; byId: string; at: ISODateTime };
+}
+
+export interface CrmSyncState {
+  connector: string;
+  lastSyncAt?: ISODateTime;
+  lastResult?: { fetched: number; created: number; updated: number; unmatched: number; error?: string };
 }
 
 /** A text message to a mobile. No SMS provider yet: the app keeps them in an outbox (Admin → System). */
@@ -640,6 +677,9 @@ export interface Database {
   emails: EmailMessage[];
   /** Text messages (one-time codes). Absent in data saved before they existed. */
   sms?: SmsMessage[];
+  /** Leads synced from the CRM. Absent in data saved before they existed. */
+  leads?: CpLead[];
+  crmSync?: CrmSyncState;
   audit: AuditEvent[];
   routing: RoutingRule[];
   masterLists: MasterLists;

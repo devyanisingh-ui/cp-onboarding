@@ -100,6 +100,22 @@ go to the email outbox when Resend is not set up). Only a hash of each code is s
 real texts, connect an SMS provider (in India this needs DLT registration of the sender ID and
 template).
 
+## Leads and revenue per CP
+
+The CP page has a **Leads & revenue** tab: per institution, the leads the CP referred, how many
+applied and were admitted, conversion, and **revenue** (fees of admitted students), plus the lead
+list. Figures come from the CRM: a sync pulls leads every hour (and on **Sync now** in Admin →
+System), matches each to a CP by its CRM partner code (default: the CP ID) and to an institution by
+short code, and stores **no personal data** — only the CRM's lead ID, programme, admission cycle,
+status, dates and fee. Users see the institutions in their scope.
+
+Only **Admin** changes anything: correct a lead (status, fee, with a reason; kept across syncs
+until removed, audit-logged) or set a CP's CRM partner code.
+
+The CRM is not connected yet: a **demo CRM** (`src/services/crm/demoCrm.ts`) supplies sample leads
+through the same connector interface (`src/services/crm/connector.ts`). Connecting the real CRM
+means writing its connector (its API, credentials and field mapping) — nothing else changes.
+
 ## Demo personas
 
 | Role | Account | What they do |

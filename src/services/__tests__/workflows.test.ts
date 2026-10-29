@@ -838,3 +838,83 @@ describe('CP contact verification (email link + mobile code)', () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe('leads and revenue from the CRM', () => {
+  const sync = async () => {
+    const { syncCrm } = await import('../api/leads');
+    return syncCrm('system');
+  };
+
+  it('pulls leads, matches them to CPs and institutions, keeps no personal data, and is repeatable', async () => {
+    await as(ARJUN);
+    const first = await sync();
+    expect(first.created).toBeGreaterThan(10);
+    expect(first.unmatched).toBe(1); // the demo CRM's unknown partner
+    const leads = getDb().leads!;
+    expect(leads.every((l) => getDb().cps.some((c) => c.id === l.cpId) && getDb().institutions.some((i) => i.id === l.institutionId))).toBe(true);
+    const allowed = ['id', 'crmId', 'cpId', 'institutionId', 'programme', 'academicYear', 'status', 'createdOn', 'appliedOn', 'admittedOn', 'droppedOn', 'feeInr', 'syncedAt', 'correction'];
+    for (const l of leads) expect(Object.keys(l).filter((k) => !allowed.includes(k))).toEqual([]);
+    // Same data again: nothing new, nothing changed, no duplicates.
+    const again = await sync();
+    expect(again).toMatchObject({ created: 0, updated: 0 });
+    expect(getDb().leads!.length).toBe(leads.length);
+  });
+
+  it('shows the funnel and revenue per institution for the CP, within the user’s scope', async () => {
+    await as(ARJUN);
+    await sync();
+    const cpId = getDb().leads![0]!.cpId;
+    const v = await api.leads.forCp(cpId);
+    const mine = getDb().leads!.filter((l) => l.cpId === cpId);
+    expect(v.totals.leads).toBe(mine.length);
+    expect(v.totals.admissions).toBe(mine.filter((l) => l.status === 'admitted').length);
+    expect(v.totals.revenueInr).toBe(mine.filter((l) => l.status === 'admitted').reduce((s, l) => s + l.feeInr!, 0));
+    expect(v.totals.applications).toBeGreaterThanOrEqual(v.totals.admissions);
+    expect(v.totals.conversion).toBe(Math.round((v.totals.admissions / v.totals.leads) * 1000) / 10);
+    expect(v.byInstitution.reduce((s, i) => s + i.leads, 0)).toBe(v.totals.leads);
+    expect(v.canEdit).toBe(true);
+    if (v.years.length) expect((await api.leads.forCp(cpId, v.years[0])).leads.every((l) => l.academicYear === v.years[0])).toBe(true);
+
+    // A BD Executive sees only the institutions they work for.
+    await as(KAVYA);
+    const kavya = getDb().users.find((u) => u.email === KAVYA)!;
+    const cpInScope = getDb().leads!.find((l) => kavya.institutionIds.includes(l.institutionId))!.cpId;
+    const bd = await api.leads.forCp(cpInScope);
+    expect(bd.leads.every((l) => kavya.institutionIds.includes(l.institutionId))).toBe(true);
+    expect(bd.canEdit).toBe(false);
+  });
+
+  it('only Admin corrects a lead; the correction survives the next sync and can be removed', async () => {
+    await as(ARJUN);
+    await sync();
+    const lead = getDb().leads!.find((l) => l.status === 'applied')!;
+    await expect(api.leads.correct(lead.id, { status: 'admitted', note: 'Admitted on 20 Oct' })).rejects.toThrow('Enter the fee for an admitted student.');
+    await expect(api.leads.correct(lead.id, { status: 'dropped', feeInr: 1000, note: 'Withdrew' })).rejects.toThrow(/Only admitted students bring fees/);
+    await expect(api.leads.correct(lead.id, { status: 'admitted', feeInr: 150000, note: 'ok' })).rejects.toThrow(/at least 5 characters/);
+    await api.leads.correct(lead.id, { status: 'admitted', feeInr: 150000, note: 'Admitted on 20 Oct; CRM not updated yet' });
+    const before = await api.leads.forCp(lead.cpId);
+    expect(before.leads.find((l) => l.id === lead.id)).toMatchObject({ effectiveStatus: 'admitted', effectiveFeeInr: 150000, status: 'applied' });
+
+    await sync();
+    expect(getDb().leads!.find((l) => l.id === lead.id)!.correction).toMatchObject({ status: 'admitted', feeInr: 150000 });
+    expect(getDb().audit.some((e) => e.entityType === 'lead' && e.entityId === lead.id)).toBe(true);
+
+    await api.leads.correct(lead.id, null);
+    expect((await api.leads.forCp(lead.cpId)).leads.find((l) => l.id === lead.id)!.effectiveStatus).toBe('applied');
+
+    await as(KAVYA);
+    await expect(api.leads.correct(lead.id, { status: 'dropped', note: 'Student withdrew' })).rejects.toMatchObject({ status: 403 });
+    await expect(api.leads.setPartnerCode(lead.cpId, 'X-1')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('matches by the CP’s CRM partner code once Admin sets it', async () => {
+    await as(ARJUN);
+    await sync();
+    const cpId = getDb().leads![0]!.cpId;
+    await expect(api.leads.setPartnerCode(cpId, 'bad code!')).rejects.toThrow('Use 2–40 letters, digits, - or _.');
+    const other = getDb().cps.find((c) => c.id !== cpId)!;
+    await expect(api.leads.setPartnerCode(cpId, other.id)).rejects.toThrow(/already uses that CRM code/);
+    await api.leads.setPartnerCode(cpId, 'lsq-p-0042');
+    expect((await api.leads.forCp(cpId)).partnerCode).toBe('LSQ-P-0042');
+  });
+});

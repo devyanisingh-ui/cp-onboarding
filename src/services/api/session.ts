@@ -119,6 +119,8 @@ export async function clearAllRecords() {
   d.notifications = [];
   d.emails = [];
   d.sms = [];
+  d.leads = [];
+  d.crmSync = undefined;
   d.audit = [];
   d.legacyBatches = [];
   d.wizardDrafts = [];

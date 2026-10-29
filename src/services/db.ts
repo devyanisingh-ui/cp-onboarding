@@ -22,6 +22,7 @@ function load(): Database {
       if (parsed.schemaVersion === SCHEMA_VERSION) {
         // Collections added since this data was saved start empty (no reset, nothing lost).
         parsed.sms ??= [];
+        parsed.leads ??= [];
         return parsed;
       }
       if (parsed.schemaVersion > SCHEMA_VERSION) {

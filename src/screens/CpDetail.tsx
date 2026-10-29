@@ -21,8 +21,9 @@ import { DocumentList, MaskedValue, PageHeader, Timeline, WarningBanner, docLabe
 import { AgreementTable } from '@/components/lists';
 import { CpFields } from '@/components/CpFields';
 import { ContactVerificationCard } from '@/components/contactVerification';
+import { CpLeadsTab } from '@/components/cpLeads';
 
-type Tab = 'details' | 'kyc' | 'agreements' | 'history';
+type Tab = 'details' | 'kyc' | 'agreements' | 'leads' | 'history';
 
 export function CpDetail() {
   const { id = '' } = useParams<{ id: string }>();
@@ -128,6 +129,7 @@ export function CpDetail() {
             { id: 'details', label: 'Details' },
             { id: 'kyc', label: 'KYC documents', count: documents.length },
             { id: 'agreements', label: 'Agreements', count: agreements.length },
+            { id: 'leads', label: 'Leads & revenue' },
             { id: 'history', label: 'History' },
           ]}
         />
@@ -161,6 +163,7 @@ export function CpDetail() {
           )}
         </Card>
       )}
+      {tab === 'leads' && <CpLeadsTab cpId={cp.id} />}
       {tab === 'history' && (
         <Card>
           <CardHeader title="History" description="Every change to this CP and its agreements in your scope." />

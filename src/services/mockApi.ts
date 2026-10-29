@@ -14,6 +14,7 @@ import * as legacy from './api/legacy';
 import * as esign from './api/esign';
 import * as docRequests from './api/docRequests';
 import * as contactVerification from './api/contactVerification';
+import * as leads from './api/leads';
 
 export const api = {
   auth: {
@@ -129,6 +130,14 @@ export const api = {
     sign: esign.signWithToken,
     decline: esign.declineWithToken,
   },
+  /** Leads and revenue per CP, pulled from the CRM (Admin corrects). */
+  leads: {
+    forCp: leads.getCpLeads,
+    correct: leads.correctLead,
+    setPartnerCode: leads.setCrmPartnerCode,
+    syncNow: leads.syncCrmNow,
+    status: leads.crmStatus,
+  },
   /** Public CP link for verifying their email and mobile (the link token is the credential). */
   verifyContact: {
     session: contactVerification.getVerifySession,
@@ -146,6 +155,8 @@ export const api = {
 
 export type Api = typeof api;
 export type { ContactVerifySession } from './api/contactVerification';
+export type { CpLeadsView, LeadTotals } from './api/leads';
+export { LEAD_STATUS_LABELS } from './api/leads';
 export type { CpListItem, CpDTO, AgreementSummary, AgreementDetail, AgreementActions, CpStatus } from './api/dto';
 export { CP_STATUS_META } from './api/dto';
 export type { TaskItem, Dashboard } from './api/inbox';
