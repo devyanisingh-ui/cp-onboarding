@@ -126,9 +126,10 @@ means writing its connector (its API, credentials and field mapping) — nothing
 
 Every agreement goes **BD → signing → Legal → Admin**. The BD Executive fills in the agreement and
 KYC, then gets it signed: by e-signature, or on paper and uploaded. The signed agreement goes to
-Legal for review. If Legal finds a problem with a CP document, they send it back with a remark; the
-BD Executive gets the corrected documents from the CP, uploads them on the agreement and sends it
-back to Legal, who re-checks only those documents (no re-signing needed). Legal then
+Legal for review: Legal checks the CP's details (name, contact, and each KYC detail against its
+document) and marks each Verified or Mismatch. Mismatches go back to the BD Executive with a remark on
+each; the BD corrects the CP details or uploads a corrected document from the CP, and sends it back
+to Legal, who re-checks only what it flagged (no re-signing needed). Legal then
 approves it, and Admin's final approval makes it Active. If Legal or Admin rejects it, it goes back
 to Draft and must be signed again. All people, partners and agreements are fictional. Data is stored in
 your browser; **Admin → System → Reset demo data** restores the seed.
@@ -140,7 +141,7 @@ agreement wizard, draft preview, deviation panel, agreement detail, signed copy 
 verification, renewal, termination, reports, admin console and audit log. Also:
 
 - Lifecycle with Legal review (Gate 1), Admin final approval and Admin verification of legacy
-  scans (Gate 2), a CP document-correction loop (the BD uploads the corrected documents), mandatory comments on rejection, SLA due dates, reminders, escalations,
+  scans (Gate 2), a CP-details correction loop (Legal flags mismatches, the BD corrects them), mandatory comments on rejection, SLA due dates, reminders, escalations,
   renewal tasks at 60 days and auto-expiry (a scheduler runs in the browser)
 - Role permissions and institution scope enforced in the mock API on every call
 - Masked PAN, GSTIN and bank account with logged "Reveal"; nothing sensitive in notifications

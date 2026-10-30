@@ -4,12 +4,14 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, IdCard, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
-import type { CpType, DocRequest, DocRequestItem, DocumentRecord, ESigner, ESignRequest } from '@/types';
-import { api, type AgreementDetail as AgreementDetailData } from '@/services/mockApi';
+import type { DocRequest, DocRequestItem, DocumentRecord, ESigner, ESignRequest } from '@/types';
+import { api, type AgreementDetail as AgreementDetailData, type CpDTO } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
 import { useAction, useApi } from '@/hooks/useApi';
 import { combineToPdf } from '@/lib/pdf';
+import { cpCheck, cpCheckLabel } from '@/lib/cpChecks';
 import { kycLabel } from '@/lib/kyc';
+import { EditCpModal } from '@/components/EditCpModal';
 import { useDocumentTitle } from '@/hooks/misc';
 import { formatDate, formatDateTime, daysUntil } from '@/lib/dates';
 import { CP_TYPE_LABELS, formatInr } from '@/lib/format';
@@ -107,7 +109,7 @@ export function AgreementDetail() {
           </Alert>
         )}
         {a.docRequest && a.docRequest.status !== 'closed' && (
-          <DocRequestPanel agreementId={a.id} cpType={d.cp.type} req={a.docRequest} docs={d.cpDocuments} names={d.names} canUpload={act.uploadCorrectedDocs} />
+          <DocRequestPanel agreementId={a.id} cp={d.cp} req={a.docRequest} docs={d.cpDocuments} names={d.names} canFix={act.fixCpDetails} />
         )}
         {act.uploadSigned && a.source === 'app' && a.status === 'approved_for_signing' && a.esign?.status !== 'in_progress' && (
           <SigningChoice agreementId={a.id} signatory={`${a.signatoryName}, ${a.signatoryDesignation}`} cpName={d.cp.legalName} />
@@ -410,92 +412,136 @@ function SigningChoice({ agreementId, signatory, cpName }: { agreementId: string
   );
 }
 
-/** Legal → BD → Legal: the documents Legal flagged; the BD uploads corrected copies and sends it back. */
-function DocRequestPanel({ agreementId, cpType, req, docs, names, canUpload }: { agreementId: string; cpType: CpType; req: DocRequest; docs: DocumentRecord[]; names: Record<string, string>; canUpload: boolean }) {
+/** Legal → BD → Legal: the CP details Legal flagged. The BD corrects them or uploads corrected documents, then sends it back. */
+function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreementId: string; cp: CpDTO; req: DocRequest; docs: DocumentRecord[]; names: Record<string, string>; canFix: boolean }) {
   const [note, setNote] = useState('');
-  const send = useAction(() => api.agreements.resubmitCorrectedDocs(agreementId, note), { success: 'Corrected documents sent to Legal' });
+  const [editing, setEditing] = useState(false);
+  const send = useAction(() => api.agreements.resubmitCorrectedDocs(agreementId, note), { success: 'Corrected details sent to Legal' });
   const byId = (docId?: string) => docs.find((x) => x.id === docId);
-  const missing = req.items.filter((it) => !it.replacementId).length;
+  const fixed = (it: DocRequestItem) => !!(it.detailsUpdatedAt || it.replacementId);
+  const missing = req.items.filter((it) => !fixed(it)).length;
+  const editable = req.items.filter((it) => cpCheck(it.key)?.fields.length);
   return (
     <Card>
       <CardHeader
-        title="Legal asked for corrected documents"
+        title="Legal sent CP details back"
         description={`${names[req.requestedById] ?? 'Legal'} · ${formatDateTime(req.requestedAt)} · ${
-          missing ? 'Get them from the CP, upload them here and send the agreement back to Legal' : 'All uploaded — send the agreement back to Legal'
+          missing ? `${req.items.length - missing} of ${req.items.length} fixed — correct the details or upload corrected documents, then send it back to Legal` : 'All fixed — send the agreement back to Legal'
         }`}
         icon={<FileWarning />}
+        action={
+          canFix && editable.length > 0 ? (
+            <Button variant="secondary" size="sm" icon={<Pencil className="size-4" />} onClick={() => setEditing(true)}>
+              Correct CP details
+            </Button>
+          ) : undefined
+        }
       />
       <CardBody className="space-y-4">
         {req.note && <p className="text-sm text-ink-soft">“{req.note}”</p>}
         <ul className="space-y-3">
           {req.items.map((it) => (
-            <CorrectedDocItem key={it.documentId} agreementId={agreementId} label={kycLabel(cpType, it.documentType)} item={it} previous={byId(it.documentId)} replacement={byId(it.replacementId)} canUpload={canUpload} />
+            <FlaggedItem key={it.key} agreementId={agreementId} label={cpCheckLabel(it.key, cp.type)} docName={it.documentType && kycLabel(cp.type, it.documentType)} item={it} previous={byId(it.documentId)} replacement={byId(it.replacementId)} canFix={canFix} />
           ))}
         </ul>
-        {canUpload && (
+        {canFix && (
           <div className="space-y-3 border-t border-line pt-4">
             <Field label="Note for Legal" optional>
-              <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. The CP sent a clear scan of the original PAN card." />
+              <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Corrected the GSTIN; the CP sent a clear scan of the PAN card." />
             </Field>
             <div className="flex flex-wrap items-center gap-3">
               <Button variant="success" icon={<Send className="size-4" />} disabled={missing > 0} loading={send.loading} onClick={() => void send.run()}>
                 Send to Legal
               </Button>
-              {missing > 0 && <p className="text-sm text-muted">Upload {missing === 1 ? 'the corrected document' : `all ${missing} corrected documents`} first. Legal re-checks only these.</p>}
+              {missing > 0 && <p className="text-sm text-muted">Fix {missing === 1 ? 'the last flagged item' : `the ${missing} flagged items`} first. Legal re-checks only these.</p>}
             </div>
           </div>
         )}
       </CardBody>
+      {editing && (
+        <EditCpModal
+          cp={cp}
+          title="Correct CP details"
+          intro={
+            <Alert tone="warning" className="mb-4" title="Legal flagged">
+              <ul className="list-disc space-y-0.5 pl-4">
+                {editable.map((it) => (
+                  <li key={it.key}>
+                    <span className="font-medium">{cpCheckLabel(it.key, cp.type)}:</span> {it.remark}
+                  </li>
+                ))}
+              </ul>
+            </Alert>
+          }
+          save={(v) => api.agreements.correctFlaggedDetails(agreementId, v)}
+          success={(r) => (r.fixed ? `CP details saved — ${r.fixed} flagged item${r.fixed === 1 ? '' : 's'} corrected` : 'CP details saved. None of the flagged details changed.')}
+          onClose={() => setEditing(false)}
+        />
+      )}
     </Card>
   );
 }
 
-/** One flagged document: Legal's remark, the old file, and the BD's upload of the corrected copy. */
-function CorrectedDocItem({ agreementId, label, item, previous, replacement, canUpload }: { agreementId: string; label: string; item: DocRequestItem; previous?: DocumentRecord; replacement?: DocumentRecord; canUpload: boolean }) {
+/** One flagged CP detail: Legal's remark, what the BD has done, and an upload for its corrected document. */
+function FlaggedItem({ agreementId, label, docName, item, previous, replacement, canFix }: { agreementId: string; label: string; docName?: string; item: DocRequestItem; previous?: DocumentRecord; replacement?: DocumentRecord; canFix: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
+  const docType = item.documentType;
+  const editable = !!cpCheck(item.key)?.fields.length;
   const upload = async (files: File[]) => {
     setBusy(true);
     setErr(undefined);
     try {
-      const f = await combineToPdf(files, item.documentType);
-      await api.agreements.uploadCorrectedDoc(agreementId, item.documentType, f.blob, f.fileName);
-      toast.success(`Corrected ${label} uploaded`);
+      const f = await combineToPdf(files, docType!);
+      await api.agreements.uploadCorrectedDoc(agreementId, item.key, f.blob, f.fileName);
+      toast.success('Corrected document uploaded');
     } catch (e) {
       setErr(errorMessage(e));
     } finally {
       setBusy(false);
     }
   };
+  const done = [item.detailsUpdatedAt && 'Details corrected', replacement && `Corrected document: ${replacement.fileName}`].filter(Boolean);
   return (
     <li className="rounded-lg border border-line p-4">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <p className="text-sm font-semibold">{label}</p>
           <p className="text-sm text-danger-700">{item.remark}</p>
-          {previous && <p className="mt-0.5 text-xs text-muted">Flagged file: {previous.fileName}</p>}
+          {previous && <p className="mt-0.5 text-xs text-muted">Document Legal checked: {previous.fileName}</p>}
         </div>
-        <p className="shrink-0 text-xs">
-          {replacement ? (
-            <span className="inline-flex items-center gap-1 font-medium text-success-700">
-              <CheckCircle2 className="size-3.5" aria-hidden /> Corrected: {replacement.fileName}
-            </span>
+        <div className="shrink-0 text-xs sm:text-right">
+          {done.length ? (
+            done.map((t) => (
+              <p key={t as string} className="inline-flex items-center gap-1 font-medium text-success-700 sm:flex sm:justify-end">
+                <CheckCircle2 className="size-3.5" aria-hidden /> {t}
+              </p>
+            ))
           ) : (
-            <span className="text-muted">Not uploaded yet</span>
+            <span className="text-muted">Not fixed yet</span>
           )}
-        </p>
+        </div>
       </div>
-      {canUpload && (
-        <div className="mt-3">
-          <FileDrop
-            label={`${replacement ? 'Replace' : 'Upload'} the corrected copy: ${label}`}
-            hint="One PDF, or photos of each page"
-            multiple
-            disabled={busy}
-            error={err}
-            onFiles={(files) => void upload(files)}
-          />
+      {canFix && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-muted">
+            {editable && docType
+              ? 'Fix it with Correct CP details if the entered value is wrong, or upload a corrected document if the document is.'
+              : editable
+                ? 'Fix it with Correct CP details.'
+                : 'This detail can’t be edited; upload a corrected document.'}
+          </p>
+          {docType && (
+            <FileDrop
+              label={`${replacement ? 'Replace the corrected copy' : 'Upload a corrected copy'}: ${docName}`}
+              hint="One PDF, or photos of each page"
+              multiple
+              disabled={busy}
+              error={err}
+              onFiles={(files) => void upload(files)}
+            />
+          )}
         </div>
       )}
     </li>

@@ -217,7 +217,7 @@ function legalDashboard(ags: ReturnType<typeof getDb>['agreements'], userId: str
     last30: {
       approved: mine.filter((e) => e.entityType === 'agreement' && e.action === 'approve' && e.summary.startsWith('Legal approved')).length,
       returned: mine.filter((e) => e.entityType === 'agreement' && e.action === 'reject' && e.summary.startsWith('Rejected by Legal')).length,
-      docsRequested: mine.filter((e) => e.entityType === 'agreement' && e.summary.startsWith('Legal asked for corrected documents')).length,
+      docsRequested: mine.filter((e) => e.entityType === 'agreement' && (e.summary.startsWith('Legal sent CP details back') || e.summary.startsWith('Legal asked for corrected documents'))).length,
       deviationsDecided: mine.filter((e) => e.entityType === 'deviation' && (e.action === 'approve' || e.action === 'reject')).length,
     },
     nonStandardLive: ags.filter((a) => a.nonStandard && (a.status === 'active' || a.status === 'notice_period')).length,

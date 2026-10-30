@@ -67,6 +67,12 @@
       "subject": "agreements"
     },
     {
+      "id": "legal-reviews-cp-details",
+      "statement": "Legal's review checklist lists only the CP's details (legal name, conta…",
+      "status": "proposed",
+      "subject": "agreements"
+    },
+    {
       "id": "inline:admin-system-has-an-email-delivery-check-it-list-bd765b35",
       "statement": "Admin → System has an Email delivery check: it lists which email settin…",
       "status": "proposed",

@@ -4,7 +4,8 @@ import { setLatency, containsSensitive } from '../api/core';
 import { getDb } from '../db';
 import { runScheduledJobs } from '../api/scheduler';
 import { shiftDays, today } from '@/lib/dates';
-import type { CpFormValues } from '@/lib/schemas';
+import { cpFormSchema, type CpFormValues } from '@/lib/schemas';
+import { maskGstin, maskPan } from '@/lib/mask';
 import { DEMO_PASSWORD } from '@/data/seed';
 import { requiredKyc } from '@/lib/kyc';
 import { correctedDocsToRecheck } from '@/lib/status';
@@ -157,6 +158,14 @@ describe('new CP onboarding (PRD 6.1)', () => {
     await expect(api.agreements.submit(agreementId)).rejects.toThrow(/Missing fields.*Missing KYC/);
   });
 
+  it('the CP edit form accepts the masked GSTIN it is filled with (unchanged), but a new CP needs a real one', () => {
+    const gst = { ...newCp, gstRegistered: true, gstin: '06ABCPS1234D1Z5' };
+    const edit = { ...gst, pan: maskPan(gst.pan), gstin: maskGstin(gst.gstin), bank: { ...gst.bank, accountNumber: '' } };
+    expect(cpFormSchema({ requireAccount: false, existing: true }).safeParse(edit).success).toBe(true);
+    expect(cpFormSchema({ requireAccount: true }).safeParse({ ...gst, gstin: maskGstin(gst.gstin) }).success).toBe(false);
+    expect(cpFormSchema({ requireAccount: true }).safeParse(gst).success).toBe(true);
+  });
+
   it('enforces one active agreement per CP per institution', async () => {
     await as(KAVYA);
     const existing = getDb().cps.find((c) => c.id === 'CP-0001')!;
@@ -174,54 +183,68 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
   });
 
-  it('Legal asks for corrected documents; the BD uploads them and sends the agreement back', async () => {
+  it('Legal sends mismatched CP details back; the BD corrects details or uploads documents and resubmits', async () => {
     const { agreementId, cpId } = await createReadyDraft();
     await finaliseAndSignOnPaper(agreementId);
     const pan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === 'pan')!;
+    const pdf = (name: string) => [new Blob([name], { type: 'application/pdf' }), name] as const;
 
     await as(PRIYA);
-    await expect(api.agreements.requestDocChanges(agreementId, [{ documentId: pan.id, remark: ' ' }])).rejects.toThrow(/remark/);
-    await api.agreements.requestDocChanges(agreementId, [{ documentId: pan.id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
+    await expect(api.agreements.requestCpChanges(agreementId, [{ key: 'pan', remark: ' ' }])).rejects.toThrow(/doesn’t match/);
+    await expect(api.agreements.requestCpChanges(agreementId, [{ key: 'signatory', remark: 'Wrong' }])).rejects.toThrow(/not one of this CP’s details/);
+    await api.agreements.requestCpChanges(
+      agreementId,
+      [
+        { key: 'pan', remark: 'PAN copy is blurred' },
+        { key: 'msme_certificate', remark: 'Udyam number differs from the certificate' },
+        { key: 'contact', remark: 'Mobile number is wrong' },
+      ],
+      'Please fix before I approve',
+    );
     let a = getDb().agreements.find((x) => x.id === agreementId)!;
     // The signed agreement waits with the BD; it does not go back to Draft or need signing again.
     expect(a.status).toBe('signed_copy_uploaded');
     expect((await api.agreements.get(agreementId)).summary.displayStatus).toBe('docs_requested');
-    expect(a.docRequest?.status).toBe('with_bd');
-    expect(pan.verificationStatus).toBe('mismatch');
-    expect(pan.remarks).toBe('PAN copy is blurred');
+    expect(a.docRequest?.items.map((it) => [it.key, it.documentType])).toEqual([['pan', 'pan'], ['msme_certificate', 'msme_certificate'], ['contact', undefined]]);
+    // The flagged document stays as it is until a corrected copy replaces it.
+    expect(pan.verificationStatus).toBe('pending');
     expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open' && t.assigneeId === 'u-neha')).toBe(true);
-    // Legal cannot upload the corrected copy; nothing is emailed to the CP.
-    expect((await api.agreements.get(agreementId)).actions.uploadCorrectedDocs).toBe(false);
-    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan.pdf')).rejects.toThrow();
-    const emailsBefore = getDb().emails.length;
+    // Legal cannot fix them.
+    expect((await api.agreements.get(agreementId)).actions.fixCpDetails).toBe(false);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('pan.pdf'))).rejects.toThrow();
 
     await as(KAVYA);
     const detail = await api.agreements.get(agreementId);
-    expect(detail.actions.uploadCorrectedDocs).toBe(true);
+    expect(detail.actions.fixCpDetails).toBe(true);
     expect(detail.actions.verifyGate2).toBe(false);
-    await expect(api.agreements.resubmitCorrectedDocs(agreementId)).rejects.toThrow(/Upload every document Legal asked for/);
-    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'gst_certificate', new Blob(['y'], { type: 'application/pdf' }), 'gst.pdf')).rejects.toThrow(/did not ask/);
-    // A second upload replaces the first; only the latest goes to Legal.
-    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['x'], { type: 'application/pdf' }), 'pan-first.pdf');
-    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan-clear.pdf');
+    await expect(api.agreements.resubmitCorrectedDocs(agreementId)).rejects.toThrow(/Fix everything Legal flagged first/);
+    // Correcting the Udyam number fixes that item only; the contact item still waits.
+    const values = { ...newCp, gstin: '', typeFields: { ...newCp.typeFields, msmeNumber: 'UDYAM-HR-05-0099999' }, bank: { ...newCp.bank, accountNumber: '' } };
+    expect(await api.agreements.correctFlaggedDetails(agreementId, values)).toEqual({ fixed: 1 });
+    expect(getDb().cps.find((c) => c.id === cpId)!.typeFields.msmeNumber).toBe('UDYAM-HR-05-0099999');
+    expect(await api.agreements.correctFlaggedDetails(agreementId, { ...values, mobile: '9812099999' })).toEqual({ fixed: 1 });
+    // PAN can't be edited: only a corrected PAN card fixes it. A second upload replaces the first.
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'contact', ...pdf('contact.pdf'))).rejects.toThrow(/no document/);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'gst_certificate', ...pdf('gst.pdf'))).rejects.toThrow(/did not flag/);
+    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('pan-first.pdf'));
+    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('pan-clear.pdf'));
     const first = getDb().documents.find((x) => x.fileName === 'pan-first.pdf')!;
     expect(first.verificationStatus).toBe('mismatch');
-    await api.agreements.resubmitCorrectedDocs(agreementId, 'CP sent a clear scan');
+    await api.agreements.resubmitCorrectedDocs(agreementId, 'Fixed all three');
     a = getDb().agreements.find((x) => x.id === agreementId)!;
-    expect(a.docRequest).toMatchObject({ status: 'closed', closedById: 'u-neha', bdNote: 'CP sent a clear scan' });
+    expect(a.docRequest).toMatchObject({ status: 'closed', closedById: 'u-neha', bdNote: 'Fixed all three' });
     expect(a.status).toBe('pending_approval');
+    expect(pan.verificationStatus).toBe('mismatch');
     expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open')).toBe(false);
-    expect(getDb().emails.slice(emailsBefore).some((m) => m.link?.includes('cp-documents') || /re-upload/i.test(m.subject))).toBe(false);
-    // Legal re-checks only the corrected PAN, not every document again.
-    expect(correctedDocsToRecheck(a)?.map((it) => it.documentType)).toEqual(['pan']);
-    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['z'], { type: 'application/pdf' }), 'late.pdf')).rejects.toThrow(/no open document request/);
+    // Legal re-checks only what it flagged, not everything again.
+    expect(correctedDocsToRecheck(a)?.map((it) => it.key)).toEqual(['pan', 'msme_certificate', 'contact']);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('late.pdf'))).rejects.toThrow(/no open request/);
 
     await as(PRIYA);
     await api.agreements.decideGate1(agreementId, 'approve');
     expect(correctedDocsToRecheck(getDb().agreements.find((x) => x.id === agreementId)!)).toBeNull();
     const newPan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.fileName === 'pan-clear.pdf')!;
     expect(newPan.verificationStatus).toBe('verified');
-    expect(first.verificationStatus).toBe('mismatch');
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
   });
 

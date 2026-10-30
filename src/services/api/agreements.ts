@@ -131,7 +131,7 @@ function baseActions(user: User, a: Agreement): AgreementActions {
       (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId)),
     requestDocChanges: false, // set below: same rule as approveGate1
     // Legal's document request parks the signed agreement with the BD (status signed_copy_uploaded).
-    uploadCorrectedDocs: a.status === 'signed_copy_uploaded' && a.source === 'app' && a.docRequest?.status === 'with_bd' && isOwnerSide && can(user, 'kyc.upload'),
+    fixCpDetails: a.status === 'signed_copy_uploaded' && a.source === 'app' && a.docRequest?.status === 'with_bd' && isOwnerSide && can(user, 'kyc.upload'),
     uploadSigned:
       (a.status === 'approved_for_signing' || (a.source === 'legacy' && a.status === 'signed_copy_uploaded' && !hasSignedCopy(a.id))) &&
       a.esign?.status !== 'in_progress' &&

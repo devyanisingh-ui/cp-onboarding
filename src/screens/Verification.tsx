@@ -4,7 +4,8 @@ import { useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Check, FileWarning, ShieldCheck, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import type { DocumentRecord, DocumentType, FieldCheck } from '@/types';
-import { kycDocsFor, kycLabel, PAN_OF, PERSON_ROLE } from '@/lib/kyc';
+import { kycLabel } from '@/lib/kyc';
+import { cpCheck, cpCheckKeys, cpCheckLabel } from '@/lib/cpChecks';
 import { api } from '@/services/mockApi';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
@@ -19,11 +20,13 @@ import { ContactVerificationCard } from '@/components/contactVerification';
 
 /**
  * Checklist review of a signed agreement against its documents.
- *  - gate2: Admin verifies a legacy scan (approve makes it Active).
- *  - legal: Legal reviews a signed agreement. A Mismatch on a CP document (PAN, Aadhaar, cheque,
- *    GST) can be sent back for the CP to correct; approve makes it Active. When the BD resubmits
- *    the corrected documents, Legal re-checks only those, not the whole agreement again.
+ *  - gate2: Admin verifies a legacy scan, agreement and CP documents (approve makes it Active).
+ *  - legal: Legal reviews the CP's details (lib/cpChecks), each against its document, with the
+ *    agreement beside them for reference. Mismatches go back to the BD Executive with a remark on
+ *    each; approve makes it Active. When the BD resubmits, Legal re-checks only what it flagged.
  */
+type Row = { key: string; label: string; value: ReactNode; doc?: DocumentType };
+
 export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const legal = mode === 'legal';
   const { id = '' } = useParams<{ id: string }>();
@@ -49,8 +52,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
     success: legal ? 'Approved — agreement is now Active' : 'Verified — agreement is now Active',
     onSuccess: () => router.push(`/agreements/${id}`),
   });
-  const askDocs = useAction((items: { documentId: string; remark: string }[], n: string) => api.agreements.requestDocChanges(id, items, n), {
-    success: 'Sent back to the BD Executive to get corrected documents from the CP',
+  const askDocs = useAction((items: { key: string; remark: string }[], n: string) => api.agreements.requestCpChanges(id, items, n), {
+    success: 'Sent back to the BD Executive to correct the CP details',
     onSuccess: () => router.push('/tasks'),
   });
   const reject = useAction((c: string) => (legal ? api.agreements.decideGate1(id, 'reject', remarksOf(c)) : api.agreements.decideGate2(id, 'reject', checks, c)), { success: 'Returned to the BD Executive', onSuccess: () => router.push('/tasks') });
@@ -59,22 +62,39 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const recheck = legal && d ? correctedDocsToRecheck(d.agreement) : null;
   const fields = useMemo(() => {
     if (!d) return [];
-    // Re-review after corrected documents: just the documents the BD re-uploaded.
-    if (recheck) return allFields(d).filter((f) => f.doc && recheck.some((it) => it.documentType === f.doc));
+    // Re-review: just the CP details Legal flagged, which the BD has since corrected.
+    if (recheck) return allFields(d).filter((f) => recheck.some((it) => it.key === f.key));
     return allFields(d);
   }, [d, recheck]);
 
   function allFields(d: NonNullable<typeof detail.data>) {
     const a = d.agreement;
     const sp = a.stampPaper;
-    const rows: { key: string; label: string; value: ReactNode; doc?: DocumentType }[] = [
-      // Paper copies are signed by hand, outside the app: Legal's review no longer has a page-by-page signature
-      // check (Admin's Gate 2 check of legacy scans keeps it). E-signed copies still confirm their signatures.
-      ...(a.esign?.status === 'completed'
-        ? [{ key: 'pages_signed', label: 'E-signatures complete (see the signature certificate page)', value: a.esign.signers.map((s) => `${s.name}: ${s.signature?.kind === 'dsc' ? 'DSC' : s.signature?.kind}`).join(' · ') }]
-        : legal
-          ? []
-          : [{ key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' }]),
+    const t = d.cp.type;
+    const f = d.cp.typeFields;
+    const value: Partial<Record<string, ReactNode>> = {
+      cp_name: d.cp.legalName,
+      contact: [d.cp.contactPerson, d.cp.mobile && `+91 ${d.cp.mobile}`, d.cp.email].filter(Boolean).join(' · ') || '—',
+      pan: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} />,
+      owner_pan: f.ownerPan ?? '—',
+      aadhaar_masked: maskAadhaar(d.cp.aadhaarLast4),
+      cancelled_cheque: <MaskedValue masked={`${d.cp.bank.accountMasked} · ${d.cp.bank.ifsc}`} label="account number" reveal={async () => `${await api.cps.reveal(d.cp.id, 'account')} · ${d.cp.bank.ifsc}`} />,
+      gst_certificate: d.cp.gstin ?? '—',
+      msme_certificate: f.msmeNumber ?? '—',
+      office_address_proof: d.cp.businessAddress || '—',
+      shop_establishment: f.shopLicenceNumber ?? '—',
+      business_registration: f.businessRegistration ?? '—',
+      partnership_deed: `${f.partners ?? '—'} · ${formatDate(f.deedDate)}`,
+      incorporation_certificate: `${f.cin ?? '—'} · ${formatDate(f.incorporationDate)}`,
+    };
+    // The CP's details, each against its KYC document (optional documents only if uploaded).
+    const cpRows: Row[] = cpCheckKeys(d.cp, d.cpDocuments.map((x) => x.type)).map((key) => ({ key, label: cpCheckLabel(key, t), value: value[key] ?? '—', doc: cpCheck(key)!.doc }));
+    // Legal reviews only the CP's details. Admin's Gate 2 check of a legacy scan also covers the agreement itself.
+    if (legal) return cpRows;
+    const agreementRows: Row[] = [
+      a.esign?.status === 'completed'
+        ? { key: 'pages_signed', label: 'E-signatures complete (see the signature certificate page)', value: a.esign.signers.map((s) => `${s.name}: ${s.signature?.kind === 'dsc' ? 'DSC' : s.signature?.kind}`).join(' · ') }
+        : { key: 'pages_signed', label: 'Every page signed by both parties', value: 'Check each page' },
       { key: 'cp_name', label: 'CP name in signature block', value: d.cp.legalName },
       { key: 'signatory', label: 'Institution signatory', value: `${a.signatoryName}, ${a.signatoryDesignation}` },
       { key: 'stamp_number', label: a.esign?.status === 'completed' ? 'E-stamp certificate number' : 'Stamp paper number', value: sp?.number ?? '—' },
@@ -82,29 +102,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
       { key: 'stamp_date', label: a.esign?.status === 'completed' ? 'E-stamp issue date' : 'Stamp purchase date', value: formatDate(sp?.purchaseDate) },
       { key: 'dates', label: 'Commencement and expiry', value: `${formatDate(a.startDate)} – ${formatDate(a.endDate)}` },
     ];
-    // One row per KYC document the checklist asks for from this CP category (optional ones only if uploaded).
-    const t = d.cp.type;
-    const f = d.cp.typeFields;
-    const role = PERSON_ROLE[t];
-    const docRow: Partial<Record<DocumentType, { label: string; value: ReactNode }>> = {
-      pan: { label: `${PAN_OF[t]} matches the PAN card`, value: <MaskedValue masked={d.cp.panMasked} label="PAN" reveal={() => api.cps.reveal(d.cp.id, 'pan')} /> },
-      owner_pan: { label: `PAN of the ${role} matches the PAN card`, value: f.ownerPan ?? '—' },
-      aadhaar_masked: { label: `Aadhaar of the ${role} is masked; last 4 match`, value: maskAadhaar(d.cp.aadhaarLast4) },
-      cancelled_cheque: { label: 'Bank details match the cheque / bank letter', value: <MaskedValue masked={`${d.cp.bank.accountMasked} · ${d.cp.bank.ifsc}`} label="account number" reveal={async () => `${await api.cps.reveal(d.cp.id, 'account')} · ${d.cp.bank.ifsc}`} /> },
-      gst_certificate: { label: 'GSTIN matches the GST certificate', value: d.cp.gstin ?? '—' },
-      msme_certificate: { label: 'MSME (Udyam) certificate matches the firm', value: f.msmeNumber ?? '—' },
-      office_address_proof: { label: 'Office address proof matches the office address', value: d.cp.businessAddress || '—' },
-      shop_establishment: { label: 'Shop & Establishment / trade licence matches', value: f.shopLicenceNumber ?? '—' },
-      business_registration: { label: 'Business registration of the firm matches', value: f.businessRegistration ?? '—' },
-      partnership_deed: { label: 'Partnership deed: partners and deed date match', value: `${f.partners ?? '—'} · ${formatDate(f.deedDate)}` },
-      incorporation_certificate: { label: 'Certificate of incorporation: CIN and date match', value: `${f.cin ?? '—'} · ${formatDate(f.incorporationDate)}` },
-    };
-    for (const k of kycDocsFor(t, d.cp.gstRegistered)) {
-      if (k.when === 'optional' && !d.cpDocuments.some((x) => x.type === k.type)) continue;
-      const r = docRow[k.type];
-      if (r) rows.push({ key: k.type, label: r.label, value: r.value, doc: k.type });
-    }
-    return rows;
+    return [...agreementRows, ...cpRows.filter((r) => r.doc)];
   }
 
   if ((detail.loading && !d) || (doc.loading && !doc.data)) return <PageSkeleton />;
@@ -126,11 +124,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const agreementDoc = agreementDocs.find((x) => x.id === agreementTab) ?? agreementDocs[0];
   const cpDocs = recheck ? docs : newest(d!.cpDocuments);
   const cpDoc = cpDocs.find((x) => x.id === docTab) ?? cpDocs[0];
-  /** The document a checklist row is checked against: stamp details on the stamp paper, the rest of the agreement on the signed copy. */
-  const docFor = (f: (typeof fields)[number]) => {
-    const type: DocumentType = f.doc ?? (f.key.startsWith('stamp_') ? 'stamp_paper_scan' : 'signed_copy');
-    return f.doc ? cpDocs.find((x) => x.type === type) : agreementDocs.find((x) => x.type === type);
-  };
+  /** The CP document a checklist row is checked against, if it has one. */
+  const docFor = (f: (typeof fields)[number]) => (f.doc ? cpDocs.find((x) => x.type === f.doc) : undefined);
   /** From a checklist row: open its document in the agreement or CP documents pane. */
   const showDoc = (x: DocumentRecord) => {
     const cp = cpDocs.includes(x);
@@ -152,11 +147,14 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const done = fields.filter((f) => checks[f.key]?.status === 'verified').length;
   const mismatched = fields.filter((f) => checks[f.key]?.status === 'mismatch');
   const mismatches = mismatched.length;
-  // Legal: document mismatches can go back to the CP; anything else in the agreement means Reject.
-  const docMismatches = mismatched.filter((f) => f.doc && d!.cpDocuments.some((x) => x.type === f.doc));
-  // Enabled as soon as any CP document is marked Mismatch; remarks are collected in the dialog.
-  const canAskDocs = legal && docMismatches.length > 0;
-  const otherMismatches = mismatched.filter((f) => !docMismatches.includes(f));
+  // Legal: any mismatched CP detail goes back to the BD; remarks are collected in the dialog.
+  const canSendBack = legal && mismatches > 0;
+  /** On a re-review: what the BD did about a flagged item. */
+  const fixOf = (key: string) => {
+    const it = recheck?.find((x) => x.key === key);
+    if (!it) return null;
+    return [it.detailsUpdatedAt && 'details corrected', it.replacementId && 'new document uploaded'].filter(Boolean).join(' and ');
+  };
 
 
   return (
@@ -224,16 +222,16 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
         <div className="min-w-0 space-y-4">
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
           {recheck && (
-            <Alert tone="success" title={`Corrected document${recheck.length === 1 ? '' : 's'} only`}>
-              The BD Executive uploaded {recheck.length === 1 ? 'a corrected copy of this document' : `corrected copies of these ${recheck.length} documents`} and sent {recheck.length === 1 ? 'it' : 'them'} back on {formatDateTime(d!.agreement.docRequest!.closedAt)}
-              {d!.agreement.docRequest!.bdNote ? ` with the note “${d!.agreement.docRequest!.bdNote}”` : ''}. The signed agreement and the other documents were covered in your earlier review, so only check what changed.
+            <Alert tone="success" title={`What you flagged only (${recheck.length})`}>
+              The BD Executive corrected {recheck.length === 1 ? 'the CP detail you flagged' : `the ${recheck.length} CP details you flagged`} and sent {recheck.length === 1 ? 'it' : 'them'} back on {formatDateTime(d!.agreement.docRequest!.closedAt)}
+              {d!.agreement.docRequest!.bdNote ? ` with the note “${d!.agreement.docRequest!.bdNote}”` : ''}. Everything else was covered in your earlier review, so only check what changed.
             </Alert>
           )}
           <Alert tone="info">
             {recheck
-              ? 'Mark each corrected document. Approve needs each one Verified and makes the agreement Active; if one is still wrong, request document changes again.'
+              ? 'Mark each corrected item. Approve needs each one Verified and makes the agreement Active; if one is still wrong, send it back again.'
               : legal
-              ? 'Mark each item against the documents. Approve needs every item Verified and makes the agreement Active. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the BD Executive uploads a corrected copy; if the signed agreement itself is wrong, reject it.'
+              ? 'Check each CP detail against its document. Approve needs every item Verified and makes the agreement Active. If a detail doesn’t match, mark it Mismatch, say what’s wrong and send it back: the BD Executive corrects the detail or uploads a corrected document.'
               : 'Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments.'}{' '}
             {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.
           </Alert>
@@ -247,7 +245,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
                       <div className="min-w-0">
                         <p className="text-xs text-muted">
                           {f.label}
-                          {legal && f.doc && c?.status === 'mismatch' && <span className="ml-1.5 font-medium text-danger-700">· BD will upload a corrected copy</span>}
+                          {legal && c?.status === 'mismatch' && <span className="ml-1.5 font-medium text-danger-700">· goes back to the BD</span>}
+                          {fixOf(f.key) && <span className="ml-1.5 font-medium text-success-700">· BD: {fixOf(f.key)}</span>}
                           {legal && docFor(f) && (
                             <button type="button" className="hit-area ml-2 font-medium text-primary-700 hover:underline" onClick={() => showDoc(docFor(f)!)} aria-label={`View ${kycLabel(d!.cp.type, docFor(f)!.type)} for ${f.label}`}>
                               View
@@ -294,20 +293,17 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               <Button
                 variant="secondary"
                 icon={<FileWarning className="size-4" />}
-                disabled={!canAskDocs}
-                title={!canAskDocs ? 'Mark Mismatch on one of the CP’s documents first' : undefined}
+                disabled={!canSendBack}
+                title={!canSendBack ? 'Mark a CP detail Mismatch first' : undefined}
                 onClick={() => setAskingDocs(true)}
               >
-                Request document changes{docMismatches.length ? ` (${docMismatches.length})` : ''}
+                Send back to BD{mismatches ? ` (${mismatches})` : ''}
               </Button>
             )}
             <Button variant="success" icon={legal ? <ThumbsUp className="size-4" /> : <ShieldCheck className="size-4" />} disabled={done !== fields.length} loading={approve.loading} onClick={() => void approve.run()}>
               Approve — make Active
             </Button>
           </ActionBar>
-          {legal && mismatches > 0 && docMismatches.length === 0 && (
-            <p className="text-sm text-muted">Something other than a CP document doesn’t match, so the agreement needs to be rejected and signed again.</p>
-          )}
         </div>
       </div>
       <CommentDialog
@@ -322,8 +318,8 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
         <Modal
           open={askingDocs}
           onClose={() => setAskingDocs(false)}
-          title="Request document changes"
-          description="The BD Executive gets corrected copies of these documents from the CP, uploads them and sends the agreement back to you. The signed agreement does not need signing again."
+          title="Send CP details back to the BD"
+          description="The BD Executive corrects these details, or uploads corrected documents from the CP, and sends the agreement back to you. The signed agreement does not need signing again."
           footer={
             <>
               <Button variant="secondary" onClick={() => setAskingDocs(false)}>
@@ -332,9 +328,9 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
               <Button
                 loading={askDocs.loading}
                 icon={<FileWarning className="size-4" />}
-                disabled={docMismatches.some((f) => !checks[f.key]?.remark?.trim())}
+                disabled={mismatched.some((f) => !checks[f.key]?.remark?.trim())}
                 onClick={async () => {
-                  const items = docMismatches.map((f) => ({ documentId: d!.cpDocuments.find((x) => x.type === f.doc)!.id, remark: checks[f.key]!.remark!.trim() }));
+                  const items = mismatched.map((f) => ({ key: f.key, remark: checks[f.key]!.remark!.trim() }));
                   if ((await askDocs.run(items, note)).ok) setAskingDocs(false);
                 }}
               >
@@ -344,24 +340,19 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           }
         >
           <ul className="space-y-3">
-            {docMismatches.map((f) => (
+            {mismatched.map((f) => (
               <li key={f.key} className="rounded-lg border border-line p-3">
-                <Field label={`${kycLabel(d!.cp.type, f.doc!)} — what needs to change`} required>
+                <Field label={`${f.label} — what doesn’t match`} required>
                   <Textarea
                     rows={2}
                     value={checks[f.key]?.remark ?? ''}
-                    placeholder="e.g. The scan is blurred — upload a clear copy of the original."
+                    placeholder={f.doc ? 'e.g. The GSTIN entered differs from the certificate, or the scan is blurred.' : 'e.g. The mobile number is wrong.'}
                     onChange={(e) => set(f.key, { remark: e.target.value })}
                   />
                 </Field>
               </li>
             ))}
           </ul>
-          {otherMismatches.length > 0 && (
-            <Alert tone="warning" className="mt-4" title="Other items also don’t match">
-              {otherMismatches.map((f) => f.label).join(' · ')}. Corrected CP documents won’t fix these; if the signed agreement itself is wrong, reject it instead.
-            </Alert>
-          )}
           <Field label="Note for the BD Executive" optional className="mt-4">
             <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
           </Field>

@@ -469,6 +469,18 @@
         "route": "/agreements/AGR-ASU-2026-0009/legal-review"
       },
       "updatedAt": 1792570124609
+    },
+    "legal-reviews-cp-details": {
+      "declaredAt": 1793339047587,
+      "id": "legal-reviews-cp-details",
+      "state": "declared",
+      "statement": "Legal's review checklist lists only the CP's details (legal name, contact, and each KYC detail against its document); any one marked Mismatch goes back to the BD Executive with a remark. The BD fixes each flagged item by correcting the CP details on the agreement page or uploading a corrected document, sends it back, and Legal re-checks only the flagged items.",
+      "status": "proposed",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0004/legal-review"
+      },
+      "updatedAt": 1793339198698
     }
   },
   "subject": "agreements",

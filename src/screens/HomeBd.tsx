@@ -236,7 +236,7 @@ function summaryLine(tasks: number, overdue: number, waiting: number): string {
 const GROUPS: { key: string; label: string; hint: string; icon: ReactNode; types: TaskType[] }[] = [
   { key: 'fix', label: 'Fix and resubmit', hint: 'Returned by Legal or Admin', icon: <Wrench />, types: ['fix_rejected'] },
   { key: 'sign', label: 'Get signed and upload', hint: 'Print, sign on stamp paper, then upload', icon: <FileSignature />, types: ['signing_upload', 'legacy_scan_upload'] },
-  { key: 'docs', label: 'CP documents', hint: 'Get them from the CP, upload, send back to Legal', icon: <FileWarning />, types: ['cp_doc_request'] },
+  { key: 'docs', label: 'CP details sent back', hint: 'Correct what Legal flagged, send back to Legal', icon: <FileWarning />, types: ['cp_doc_request'] },
   { key: 'renew', label: 'Renewal decisions', hint: 'Renew or not, 30 days before expiry', icon: <RefreshCcw />, types: ['renewal_decision'] },
 ];
 

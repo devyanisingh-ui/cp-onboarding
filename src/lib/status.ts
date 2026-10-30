@@ -6,7 +6,7 @@ export const STATUS_META: Record<DisplayStatus, { label: string; tone: StatusTon
   draft: { label: 'Draft', tone: 'grey' },
   rejected: { label: 'Rejected', tone: 'red' },
   pending_approval: { label: 'Pending Legal approval', tone: 'amber' },
-  docs_requested: { label: 'Documents requested', tone: 'orange' },
+  docs_requested: { label: 'CP details sent back', tone: 'orange' },
   approved_for_signing: { label: 'Ready for signing', tone: 'blue' },
   out_for_signature: { label: 'Out for e-signature', tone: 'purple' },
   signed_copy_uploaded: { label: 'Signed copy uploaded', tone: 'purple' },
@@ -60,7 +60,7 @@ export const STEPPER: { status: AgreementStatus; label: string }[] = [
 ];
 
 /**
- * The corrected CP documents Legal still has to re-check: set once the BD resubmits them, until
+ * The CP details Legal flagged and still has to re-check: set once the BD resubmits them, until
  * Legal decides. Legal's earlier review covered everything else, so only these are checked again.
  */
 export function correctedDocsToRecheck(a: Pick<Agreement, 'status' | 'docRequest'>): DocRequestItem[] | null {

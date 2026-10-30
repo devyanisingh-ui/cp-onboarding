@@ -15,13 +15,16 @@ const listeners = new Set<() => void>();
 let outdated = false;
 
 /**
- * Corrected documents used to go to the CP through an upload link; now the BD uploads them. A
- * request saved mid-way (link sent, or CP uploaded) becomes the BD's to finish, keeping any upload.
+ * Corrected documents used to go to the CP through an upload link; now the BD fixes them. A request
+ * saved mid-way (link sent, or CP uploaded) becomes the BD's to finish, keeping any upload. Items
+ * saved before Legal could flag any CP detail were documents: their key is the document type.
  */
 function migrateDocRequests(db: Database) {
   for (const a of db.agreements) {
     const r = a.docRequest as (DocRequest & { token?: string; status: string }) | undefined;
-    if (!r || r.status === 'with_bd' || r.status === 'closed') continue;
+    if (!r) continue;
+    for (const it of r.items) it.key ??= it.documentType!;
+    if (r.status === 'with_bd' || r.status === 'closed') continue;
     r.status = 'with_bd';
     delete r.token;
   }

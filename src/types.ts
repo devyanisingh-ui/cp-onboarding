@@ -283,18 +283,24 @@ export interface Rejection {
   comment: string;
 }
 
-/** One document Legal flagged, with its remark and the corrected copy once the BD uploads it. */
+/**
+ * One CP detail Legal flagged (a key from lib/cpChecks), with its remark. The BD fixes it by
+ * correcting the CP details (detailsUpdatedAt) or uploading a corrected document (replacementId).
+ */
 export interface DocRequestItem {
-  documentId: string;
-  documentType: DocumentType;
+  key: string;
   remark: string;
+  /** The document the detail is checked against, when there is one. */
+  documentId?: string;
+  documentType?: DocumentType;
   replacementId?: string;
+  detailsUpdatedAt?: ISODateTime;
 }
 
 /**
- * Legal → BD → Legal loop for corrected documents.
- * with_bd: the BD gets the corrected documents from the CP and uploads them · closed: the BD sent
- * the agreement back to Legal.
+ * Legal → BD → Legal loop for mismatched CP details.
+ * with_bd: the BD corrects the details or uploads corrected documents · closed: the BD sent the
+ * agreement back to Legal.
  */
 export interface DocRequest {
   id: string;
@@ -303,7 +309,7 @@ export interface DocRequest {
   items: DocRequestItem[];
   requestedById: string;
   requestedAt: ISODateTime;
-  /** The BD's note to Legal when sending the corrected documents back. */
+  /** The BD's note to Legal when sending the corrected details back. */
   bdNote?: string;
   closedAt?: ISODateTime;
   closedById?: string;
@@ -385,7 +391,7 @@ export interface Agreement {
   reviewFlag?: { reason: string; at: ISODateTime };
   /** Current (or last) digital-signature request; the paper upload path leaves it unset. */
   esign?: ESignRequest;
-  /** Legal asked for corrected CP documents; the BD uploads them and sends the agreement back. */
+  /** Legal flagged CP details; the BD corrects them and sends the agreement back. */
   docRequest?: DocRequest;
   closedAt?: ISODateTime;
 }

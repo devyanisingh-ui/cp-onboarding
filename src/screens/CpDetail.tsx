@@ -2,8 +2,6 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertTriangle, FileText, Lock, Pencil, Plus, ShieldCheck } from 'lucide-react';
 import type { DocumentRecord } from '@/types';
 import { api, CP_STATUS_META, type CpDTO } from '@/services/mockApi';
@@ -13,13 +11,12 @@ import { useDocumentTitle } from '@/hooks/misc';
 import { CP_TYPE_LABELS } from '@/lib/format';
 import { formatDate, formatDateTime } from '@/lib/dates';
 import { maskAadhaar } from '@/lib/mask';
-import { cpFormSchema, type CpFormValues } from '@/lib/schemas';
 import { typeFieldDefs } from '@/lib/agreementTemplate';
 import { STATUS_META } from '@/lib/status';
 import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, EmptyState, ErrorState, Field, Modal, PageSkeleton, RadioGroup, StatusBadge, Tabs, Textarea } from '@/components/ui';
 import { DocumentList, MaskedValue, PageHeader, Timeline, WarningBanner, docLabel } from '@/components/common';
 import { AgreementTable } from '@/components/lists';
-import { CpFields } from '@/components/CpFields';
+import { EditCpModal } from '@/components/EditCpModal';
 import { ContactVerificationCard } from '@/components/contactVerification';
 import { CpLeadsTab } from '@/components/cpLeads';
 
@@ -236,52 +233,6 @@ function CpDetails({ cp, names }: { cp: CpDTO; names: Record<string, string> }) 
         </CardBody>
       </Card>
     </div>
-  );
-}
-
-function EditCpModal({ cp, onClose }: { cp: CpDTO; onClose: () => void }) {
-  const form = useForm<CpFormValues>({
-    resolver: zodResolver(cpFormSchema({ requireAccount: false, existing: true })),
-    defaultValues: {
-      type: cp.type,
-      legalName: cp.legalName,
-      pan: cp.panMasked,
-      contactPerson: cp.contactPerson,
-      mobile: cp.mobile,
-      email: cp.email,
-      residenceAddress: cp.residenceAddress,
-      businessAddress: cp.businessAddress,
-      gstRegistered: cp.gstRegistered,
-      gstin: cp.gstin ?? '',
-      bank: { holderName: cp.bank.holderName, accountNumber: '', ifsc: cp.bank.ifsc, bankName: cp.bank.bankName, branch: cp.bank.branch },
-      aadhaarLast4: cp.aadhaarLast4,
-      typeFields: { ...cp.typeFields },
-      consentGiven: !!cp.consent,
-    },
-  });
-  const save = useAction((v: CpFormValues) => api.cps.update(cp.id, v), { success: 'CP details saved', onSuccess: onClose });
-  return (
-    <Modal
-      open
-      onClose={onClose}
-      size="lg"
-      title="Edit CP details"
-      description="Name or bank changes send the CP’s KYC back to Admin for re-verification."
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button loading={save.loading} onClick={form.handleSubmit((v) => void save.run(v))}>
-            Save changes
-          </Button>
-        </>
-      }
-    >
-      <form onSubmit={(e) => e.preventDefault()} noValidate>
-        <CpFields form={form} existing serverErrors={save.fieldErrors} accountMaskedHint={cp.bank.accountMasked} />
-      </form>
-    </Modal>
   );
 }
 

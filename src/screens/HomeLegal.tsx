@@ -11,7 +11,7 @@ import { ageLabel, DashRow, MiniStat, Pill, StatGrid, TILE, UrgencyChip, Workflo
 
 /**
  * Home for Legal: the workflow from Legal's side (deviations before signing, signed agreements to
- * review, documents sent back), the review queue first, then the rest of Legal's work.
+ * review, CP details sent back), the review queue first, then the rest of Legal's work.
  */
 export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; greeting: string; firstName: string }) {
   const lg = data.legal!;
@@ -36,11 +36,11 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
 
       <WorkflowStrip
         title="Legal’s part of the workflow"
-        description="Highlighted steps are waiting for you. Documents sent back are with the BD or CP."
+        description="Highlighted steps are waiting for you. CP details sent back are with the BD."
         steps={[
           { key: 'deviations', label: 'Deviations to decide', who: 'Your move · before signing', yours: true, count: lg.stages.deviations, to: '#deviations', icon: <Scale /> },
           { key: 'review', label: 'Signed, to review', who: 'Your move', yours: true, count: lg.stages.review, to: '/agreements?status=pending_approval', icon: <FileSignature /> },
-          { key: 'docs', label: 'Documents sent back', who: 'With BD', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning /> },
+          { key: 'docs', label: 'CP details sent back', who: 'With BD', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning /> },
           { key: 'active', label: 'Active', who: 'Live', yours: false, count: lg.stages.active, to: '/agreements?status=active', icon: <CheckCircle2 />, done: true },
         ]}
       />
@@ -80,7 +80,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
                     badges={
                       <>
                         {q.agreement.nonStandard ? <Badge tone="orange">Non-standard · {q.deviations} deviation{q.deviations === 1 ? '' : 's'} to check</Badge> : <Badge tone="grey">Standard terms</Badge>}
-                        {q.resubmitted && <Badge tone="blue">Corrected documents re-submitted</Badge>}
+                        {q.resubmitted && <Badge tone="blue">Corrected CP details re-submitted</Badge>}
                       </>
                     }
                     pill={<Pill tone={q.overdue ? 'red' : q.dueDate && daysUntil(q.dueDate) <= 1 ? 'amber' : 'grey'}>{dueLabel(q.dueDate)}</Pill>}
@@ -100,7 +100,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
           <StatGrid className="flex-1">
             <MiniStat label="Approved (now Active)" value={lg.last30.approved} icon={<BadgeCheck />} tone="text-green-600" />
             <MiniStat label="Returned to BD" value={lg.last30.returned} icon={<RotateCcw />} tone="text-red-500" />
-            <MiniStat label="Documents requested" value={lg.last30.docsRequested} icon={<FileWarning />} tone="text-blue-500" />
+            <MiniStat label="Sent back to BD" value={lg.last30.docsRequested} icon={<FileWarning />} tone="text-blue-500" />
             <MiniStat label="Deviations decided" value={lg.last30.deviationsDecided} icon={<Scale />} tone="text-orange-500" />
           </StatGrid>
           <Link href="/agreements?nonStandard=1" className="flex items-center gap-1.5 border-t border-line/70 px-5 py-2.5 text-xs text-muted hover:text-primary-700">
@@ -176,7 +176,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
         </div>
 
         <Card className="flex flex-col max-xl:order-4">
-          <CardHeader title="Documents sent back" description="You asked for corrected CP documents; follow up if they sit too long" icon={<Undo2 />} action={<ButtonLink to="/agreements?status=docs_requested" variant="link" size="sm">View all</ButtonLink>} />
+          <CardHeader title="CP details sent back" description="You flagged CP details that don’t match; follow up if they sit too long" icon={<Undo2 />} action={<ButtonLink to="/agreements?status=docs_requested" variant="link" size="sm">View all</ButtonLink>} />
           {lg.docs.length ? (
             <ul className="divide-y divide-line">
               {lg.docs.map((x) => (
@@ -196,7 +196,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
             </ul>
           ) : (
             <div className="flex flex-1 flex-col justify-center">
-              <EmptyState compact icon={<FileCheck2 />} title="Nothing sent back" description="Agreements you return for corrected CP documents are tracked here until they come back." />
+              <EmptyState compact icon={<FileCheck2 />} title="Nothing sent back" description="Agreements you send back for CP details to be corrected are tracked here until they come back." />
             </div>
           )}
         </Card>
@@ -206,7 +206,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
 }
 
 const DOC_STAGE: Record<LegalDocsItem['stage'], { label: string; tone: 'amber' | 'blue' | 'purple'; what: string }> = {
-  with_bd: { label: 'With BD', tone: 'amber', what: 'BD to get the corrected documents from the CP and upload them' },
+  with_bd: { label: 'With BD', tone: 'amber', what: 'BD to correct the details or upload corrected documents' },
 };
 
 function dueLabel(due?: string): string {

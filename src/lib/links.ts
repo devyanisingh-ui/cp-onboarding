@@ -45,5 +45,5 @@ export const TASK_TYPE_LABELS: Record<Task['type'], string> = {
   warning_override: 'Warning override',
   legacy_scan_upload: 'Legacy scan upload',
   rate_review: 'Rate review',
-  cp_doc_request: 'Upload corrected documents',
+  cp_doc_request: 'Correct CP details',
 };
