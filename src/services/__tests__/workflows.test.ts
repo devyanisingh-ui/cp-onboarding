@@ -174,7 +174,7 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
   });
 
-  it('Legal asks for corrected documents; the CP re-uploads them from a link; BD checks and resubmits', async () => {
+  it('Legal asks for corrected documents; the BD uploads them and sends the agreement back', async () => {
     const { agreementId, cpId } = await createReadyDraft();
     await finaliseAndSignOnPaper(agreementId);
     const pan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === 'pan')!;
@@ -190,96 +190,39 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(pan.verificationStatus).toBe('mismatch');
     expect(pan.remarks).toBe('PAN copy is blurred');
     expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open' && t.assigneeId === 'u-neha')).toBe(true);
+    // Legal cannot upload the corrected copy; nothing is emailed to the CP.
+    expect((await api.agreements.get(agreementId)).actions.uploadCorrectedDocs).toBe(false);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan.pdf')).rejects.toThrow();
+    const emailsBefore = getDb().emails.length;
 
     await as(KAVYA);
-    expect((await api.agreements.get(agreementId)).actions.verifyGate2).toBe(false);
-    const { link } = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
-    const token = link.split('/').pop()!;
-    expect(getDb().emails.some((m) => m.to === 'ravi@sunrise.in' && m.link === link)).toBe(true);
-
-    // The CP, with no account, opens the link.
-    const session = await api.cpDocs.session(token);
-    expect(session.items).toEqual([expect.objectContaining({ documentType: 'pan', remark: 'PAN copy is blurred' })]);
-    expect(session.open).toBe(true);
-    await expect(api.cpDocs.submit(token)).rejects.toThrow(/Upload every requested document/);
-    await api.cpDocs.upload(token, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan-clear.pdf');
-    await api.cpDocs.submit(token, 'Clear scan attached');
+    const detail = await api.agreements.get(agreementId);
+    expect(detail.actions.uploadCorrectedDocs).toBe(true);
+    expect(detail.actions.verifyGate2).toBe(false);
+    await expect(api.agreements.resubmitCorrectedDocs(agreementId)).rejects.toThrow(/Upload every document Legal asked for/);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'gst_certificate', new Blob(['y'], { type: 'application/pdf' }), 'gst.pdf')).rejects.toThrow(/did not ask/);
+    // A second upload replaces the first; only the latest goes to Legal.
+    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['x'], { type: 'application/pdf' }), 'pan-first.pdf');
+    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan-clear.pdf');
+    const first = getDb().documents.find((x) => x.fileName === 'pan-first.pdf')!;
+    expect(first.verificationStatus).toBe('mismatch');
+    await api.agreements.resubmitCorrectedDocs(agreementId, 'CP sent a clear scan');
     a = getDb().agreements.find((x) => x.id === agreementId)!;
-    expect(a.docRequest?.status).toBe('cp_submitted');
-    expect((await api.cpDocs.session(token)).open).toBe(false);
-    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_review' && t.status === 'open')).toBe(true);
-
-    await api.agreements.acceptCpDocs(agreementId);
-    a = getDb().agreements.find((x) => x.id === agreementId)!;
-    expect(a.docRequest?.status).toBe('closed');
+    expect(a.docRequest).toMatchObject({ status: 'closed', closedById: 'u-neha', bdNote: 'CP sent a clear scan' });
     expect(a.status).toBe('pending_approval');
+    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open')).toBe(false);
+    expect(getDb().emails.slice(emailsBefore).some((m) => m.link?.includes('cp-documents') || /re-upload/i.test(m.subject))).toBe(false);
     // Legal re-checks only the corrected PAN, not every document again.
     expect(correctedDocsToRecheck(a)?.map((it) => it.documentType)).toEqual(['pan']);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', new Blob(['z'], { type: 'application/pdf' }), 'late.pdf')).rejects.toThrow(/no open document request/);
 
     await as(PRIYA);
     await api.agreements.decideGate1(agreementId, 'approve');
     expect(correctedDocsToRecheck(getDb().agreements.find((x) => x.id === agreementId)!)).toBeNull();
     const newPan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.fileName === 'pan-clear.pdf')!;
     expect(newPan.verificationStatus).toBe('verified');
+    expect(first.verificationStatus).toBe('mismatch');
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
-  });
-
-  it('emails the CP their upload link for the corrected documents, through the real-delivery relay', async () => {
-    const { agreementId, cpId } = await createReadyDraft();
-    await finaliseAndSignOnPaper(agreementId);
-    const docOf = (type: string) => getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === type)!;
-    await as(PRIYA);
-    await api.agreements.requestDocChanges(agreementId, [{ documentId: docOf('pan').id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
-
-    // Real delivery on (as with NEXT_PUBLIC_EMAIL_DELIVERY=resend in .env); capture what the app posts to the relay.
-    vi.stubEnv('NEXT_PUBLIC_EMAIL_DELIVERY', 'resend');
-    const relayed: unknown[] = [];
-    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => (relayed.push(JSON.parse(init.body as string)), new Response(JSON.stringify({ id: 'em_1' })))));
-    try {
-      await as(KAVYA);
-      const before = getDb().emails.length;
-      const { link } = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
-
-      // Exactly one email, to the CP, carrying their personal link and what to fix.
-      const sent = getDb().emails.slice(before);
-      expect(sent).toHaveLength(1);
-      const [m] = sent;
-      expect(m).toMatchObject({ to: 'ravi@sunrise.in', link, kind: 'task' });
-      expect(m!.subject).toContain(agreementId);
-      expect(m!.body).toContain('PAN copy is blurred');
-      expect(m!.body).toMatch(/Do not forward it/);
-
-      // Handed to the relay, which accepts it and would send it through Resend with an absolute link.
-      expect(relayed).toEqual([{ to: 'ravi@sunrise.in', subject: m!.subject, body: m!.body, link, kind: 'task' }]);
-      const resend = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({ id: 'em_2' })));
-      const res = await handleSendEmail(
-        new Request('http://x/api/send-email', { method: 'POST', body: JSON.stringify(relayed[0]) }),
-        { RESEND_API_KEY: 're_test', EMAIL_FROM: 'CP <n@example.com>', APP_URL: 'https://cp.apeejay.example' },
-        resend as unknown as typeof fetch,
-      );
-      expect(res.status).toBe(200);
-      const toResend = JSON.parse(resend.mock.calls[0]![1]!.body as string);
-      expect(toResend.to).toEqual(['ravi@sunrise.in']);
-      expect(toResend.text).toContain(`https://cp.apeejay.example${link}`);
-      await vi.waitFor(() => expect(m!.delivery).toEqual({ status: 'sent', providerId: 'em_1' }));
-
-      // The link opens the CP's upload page for just the flagged document.
-      const session = await api.cpDocs.session(link.split('/').pop()!);
-      expect(session.items.map((it) => it.documentType)).toEqual(['pan']);
-
-      // Resending emails a fresh link; the old one stops working.
-      const again = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
-      expect(again.link).not.toBe(link);
-      expect(getDb().emails.slice(before).map((x) => x.link)).toEqual([link, again.link]);
-      await expect(api.cpDocs.session(link.split('/').pop()!)).rejects.toThrow();
-
-      // A bad address sends nothing.
-      await expect(api.agreements.sendDocRequestLink(agreementId, 'not-an-email')).rejects.toThrow(/valid email/);
-      expect(getDb().emails.length).toBe(before + 2);
-    } finally {
-      vi.unstubAllEnvs();
-      vi.unstubAllGlobals();
-    }
   });
 
   it('sends a signed non-standard agreement to Legal, whose approval makes it Active', async () => {

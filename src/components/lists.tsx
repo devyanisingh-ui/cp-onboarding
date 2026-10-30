@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { AlarmClock, AlertTriangle, Ban, ChevronRight, FilePen, FileSearch, FileSignature, FileUp, FileWarning, Flag, Gavel, RefreshCcw, Scale, ScrollText, ShieldAlert, ShieldCheck, TableProperties } from 'lucide-react';
+import { AlarmClock, AlertTriangle, Ban, ChevronRight, FilePen, FileSignature, FileUp, FileWarning, Flag, Gavel, RefreshCcw, Scale, ScrollText, ShieldAlert, ShieldCheck, TableProperties } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { TaskType } from '@/types';
 import type { AgreementSummary, TaskItem } from '@/services/mockApi';
@@ -128,7 +128,6 @@ export const TASK_TYPE_META: Record<TaskType, { icon: ReactNode; tone: string }>
   legacy_scan_upload: { icon: <FileUp />, tone: 'bg-blue-50 text-blue-700 ring-blue-200' },
   rate_review: { icon: <TableProperties />, tone: 'bg-slate-100 text-slate-700 ring-slate-300' },
   cp_doc_request: { icon: <FileWarning />, tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  cp_doc_review: { icon: <FileSearch />, tone: 'bg-sky-50 text-sky-700 ring-sky-200' },
 };
 
 /** How soon a task is due, as a coloured pill. */

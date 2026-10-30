@@ -27,7 +27,6 @@ export function taskLink(t: Pick<Task, 'type' | 'agreementId' | 'refId'>): strin
     case 'warning_override':
     case 'rate_review':
     case 'cp_doc_request':
-    case 'cp_doc_review':
       return `/agreements/${a}`;
   }
 }
@@ -46,6 +45,5 @@ export const TASK_TYPE_LABELS: Record<Task['type'], string> = {
   warning_override: 'Warning override',
   legacy_scan_upload: 'Legacy scan upload',
   rate_review: 'Rate review',
-  cp_doc_request: 'Get corrected documents from CP',
-  cp_doc_review: 'Check CP’s corrected documents',
+  cp_doc_request: 'Upload corrected documents',
 };

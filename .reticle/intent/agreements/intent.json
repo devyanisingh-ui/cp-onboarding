@@ -1,5 +1,17 @@
 {
   "intents": {
+    "bd-uploads-corrected-docs": {
+      "declaredAt": 1793338137524,
+      "id": "bd-uploads-corrected-docs",
+      "state": "declared",
+      "statement": "When Legal flags CP documents, the BD Executive (not the CP via a link) uploads a corrected copy of each flagged document on the agreement page and sends it back to Legal; Send to Legal stays disabled until every flagged document has a corrected copy, and Legal then re-checks only those documents.",
+      "status": "proposed",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0004/legal-review"
+      },
+      "updatedAt": 1793338255517
+    },
     "deviation-request-once": {
       "declaredAt": 1793011236714,
       "id": "deviation-request-once",

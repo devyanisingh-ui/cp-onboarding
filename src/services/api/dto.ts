@@ -86,10 +86,8 @@ export interface AgreementActions {
   approveGate1: boolean;
   /** Legal: send flagged documents back for the CP to correct. */
   requestDocChanges: boolean;
-  /** BD: send / resend the CP their document upload link. */
-  sendDocLink: boolean;
-  /** BD: check the CP's corrected documents and resubmit to Legal. */
-  reviewCpDocs: boolean;
+  /** BD: upload the corrected documents Legal asked for and send the agreement back to Legal. */
+  uploadCorrectedDocs: boolean;
   uploadSigned: boolean;
   /** Send the approved agreement for digital signature (DSC or drawn/typed via an email link). */
   sendForSignature: boolean;

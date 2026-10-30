@@ -283,7 +283,7 @@ export interface Rejection {
   comment: string;
 }
 
-/** One document Legal flagged, with its remark and the CP's replacement once uploaded. */
+/** One document Legal flagged, with its remark and the corrected copy once the BD uploads it. */
 export interface DocRequestItem {
   documentId: string;
   documentType: DocumentType;
@@ -292,22 +292,19 @@ export interface DocRequestItem {
 }
 
 /**
- * Legal → BD → CP → BD → Legal loop for corrected documents.
- * with_bd: BD has to send the CP a link · sent_to_cp: waiting for the CP · cp_submitted: BD to
- * check the new uploads · closed: BD verified them and resubmitted to Legal.
+ * Legal → BD → Legal loop for corrected documents.
+ * with_bd: the BD gets the corrected documents from the CP and uploads them · closed: the BD sent
+ * the agreement back to Legal.
  */
 export interface DocRequest {
   id: string;
-  status: 'with_bd' | 'sent_to_cp' | 'cp_submitted' | 'closed';
+  status: 'with_bd' | 'closed';
   note?: string;
   items: DocRequestItem[];
   requestedById: string;
   requestedAt: ISODateTime;
-  token?: string;
-  cpEmail?: string;
-  sentAt?: ISODateTime;
-  cpNote?: string;
-  cpSubmittedAt?: ISODateTime;
+  /** The BD's note to Legal when sending the corrected documents back. */
+  bdNote?: string;
   closedAt?: ISODateTime;
   closedById?: string;
   /** Set when Legal decides on the resubmitted agreement; until then Legal re-checks only these documents. */
@@ -388,7 +385,7 @@ export interface Agreement {
   reviewFlag?: { reason: string; at: ISODateTime };
   /** Current (or last) digital-signature request; the paper upload path leaves it unset. */
   esign?: ESignRequest;
-  /** Legal asked for corrected CP documents; the CP re-uploads them from a link. */
+  /** Legal asked for corrected CP documents; the BD uploads them and sends the agreement back. */
   docRequest?: DocRequest;
   closedAt?: ISODateTime;
 }
@@ -549,8 +546,7 @@ export type TaskType =
   | 'warning_override'
   | 'legacy_scan_upload'
   | 'rate_review'
-  | 'cp_doc_request'
-  | 'cp_doc_review';
+  | 'cp_doc_request';
 
 export interface Task {
   id: string;

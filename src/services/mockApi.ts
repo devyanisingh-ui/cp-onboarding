@@ -50,8 +50,8 @@ export const api = {
     submit: agreements.submitForApproval,
     decideGate1: agreements.decideGate1,
     requestDocChanges: docRequests.requestDocChanges,
-    sendDocRequestLink: docRequests.sendDocRequestLink,
-    acceptCpDocs: docRequests.acceptCpDocs,
+    uploadCorrectedDoc: docRequests.uploadCorrectedDoc,
+    resubmitCorrectedDocs: docRequests.resubmitCorrectedDocs,
     requestDeviation: agreements.requestDeviation,
     decideDeviation: agreements.decideDeviation,
     decideDeviations: agreements.decideDeviations,
@@ -145,12 +145,6 @@ export const api = {
     sendCode: contactVerification.sendMobileCode,
     verifyCode: contactVerification.verifyMobileCode,
   },
-  /** Public CP links for re-uploading documents Legal flagged (the link token is the credential). */
-  cpDocs: {
-    session: docRequests.getCpDocSession,
-    upload: docRequests.uploadCpDoc,
-    submit: docRequests.submitCpDocs,
-  },
 };
 
 export type Api = typeof api;
@@ -166,4 +160,3 @@ export type { LegacyRow, RowValidation } from './api/legacy';
 export type { RenderedDocument } from './api/agreements';
 export type { SigningSession, SignatureInput, SignerInput } from './api/esign';
 export { SIGN_METHOD_LABELS } from './api/esign';
-export type { CpDocSession } from './api/docRequests';

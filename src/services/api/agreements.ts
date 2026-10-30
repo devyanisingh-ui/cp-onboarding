@@ -131,8 +131,7 @@ function baseActions(user: User, a: Agreement): AgreementActions {
       (route?.approverId === user.id || route?.escalateToId === user.id || inScope(user, a.institutionId)),
     requestDocChanges: false, // set below: same rule as approveGate1
     // Legal's document request parks the signed agreement with the BD (status signed_copy_uploaded).
-    sendDocLink: a.status === 'signed_copy_uploaded' && a.source === 'app' && !!a.docRequest && a.docRequest.status !== 'closed' && isOwnerSide && can(user, 'kyc.upload'),
-    reviewCpDocs: a.status === 'signed_copy_uploaded' && a.source === 'app' && a.docRequest?.status === 'cp_submitted' && isOwnerSide,
+    uploadCorrectedDocs: a.status === 'signed_copy_uploaded' && a.source === 'app' && a.docRequest?.status === 'with_bd' && isOwnerSide && can(user, 'kyc.upload'),
     uploadSigned:
       (a.status === 'approved_for_signing' || (a.source === 'legacy' && a.status === 'signed_copy_uploaded' && !hasSignedCopy(a.id))) &&
       a.esign?.status !== 'in_progress' &&
@@ -454,7 +453,7 @@ export async function submitForApproval(id: string): Promise<{ sentToLegal: bool
 
 /**
  * Signed agreement → Legal review. Called when both parties have e-signed, when a paper-signed
- * copy is uploaded, and when the BD resubmits after the CP corrected documents.
+ * copy is uploaded, and when the BD resubmits with the corrected documents Legal asked for.
  */
 export function sendToLegal(a: Agreement, by: User | 'system') {
   const d = getDb();
@@ -464,7 +463,7 @@ export function sendToLegal(a: Agreement, by: User | 'system') {
   a.status = 'pending_approval';
   a.lastRejection = undefined;
   touch(a);
-  closeTasks({ agreementId: a.id, types: ['signing_upload', 'cp_doc_request', 'cp_doc_review'] }, by);
+  closeTasks({ agreementId: a.id, types: ['signing_upload', 'cp_doc_request'] }, by);
   createTask({ type: 'gate1_approval', title: `Legal approval: ${cpName(a)}`, assigneeId: legalId, slaDays: d.settings.sla.gate1Days, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
   // The CP verifies their email and mobile while Legal reviews; it does not hold the review up.
   startForAgreement(a, by);

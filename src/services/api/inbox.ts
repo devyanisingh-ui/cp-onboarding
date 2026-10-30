@@ -86,7 +86,7 @@ export interface LegalDeviationItem {
 export interface LegalDocsItem {
   agreement: AgreementSummary;
   /** Where the document request is now. */
-  stage: 'with_bd' | 'sent_to_cp' | 'cp_submitted';
+  stage: 'with_bd';
   items: number;
   since: string;
   days: number;
@@ -234,7 +234,6 @@ function bdDashboard(own: ReturnType<typeof getDb>['agreements']): BdDashboard {
   for (const a of own) {
     if (a.status === 'pending_approval') wait(a, 'legal', 'Legal is reviewing the signed agreement', a.updatedAt);
     else if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') wait(a, 'signers', 'Out for e-signature', a.esign.sentAt ?? a.updatedAt);
-    else if (a.docRequest?.status === 'sent_to_cp') wait(a, 'cp', 'CP to upload corrected documents', a.docRequest.sentAt);
     else if (a.status === 'draft' && d.deviations.some((x) => x.agreementId === a.id && x.status === 'pending')) {
       const first = d.deviations.filter((x) => x.agreementId === a.id && x.status === 'pending').map((x) => x.requestedAt).sort()[0];
       wait(a, 'deviation', 'Legal is reviewing a deviation request', first);

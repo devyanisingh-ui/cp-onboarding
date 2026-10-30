@@ -7,6 +7,12 @@
       "subject": "admin"
     },
     {
+      "id": "bd-uploads-corrected-docs",
+      "statement": "When Legal flags CP documents, the BD Executive (not the CP via a link)…",
+      "status": "proposed",
+      "subject": "agreements"
+    },
+    {
       "id": "deviation-request-once",
       "statement": "A deviation request's shared reason and supporting document show once,…",
       "status": "proposed",

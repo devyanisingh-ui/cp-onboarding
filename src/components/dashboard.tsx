@@ -197,8 +197,7 @@ const TASK_ACTION: Record<TaskType, string> = {
   warning_override: 'Decide',
   legacy_scan_upload: 'Upload',
   rate_review: 'Review',
-  cp_doc_request: 'Send link',
-  cp_doc_review: 'Check',
+  cp_doc_request: 'Upload',
 };
 
 /** A task as a dashboard row: its type's icon, what it is, when it's due and what to do. */

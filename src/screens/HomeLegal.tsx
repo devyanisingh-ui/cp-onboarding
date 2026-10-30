@@ -40,7 +40,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
         steps={[
           { key: 'deviations', label: 'Deviations to decide', who: 'Your move · before signing', yours: true, count: lg.stages.deviations, to: '#deviations', icon: <Scale /> },
           { key: 'review', label: 'Signed, to review', who: 'Your move', yours: true, count: lg.stages.review, to: '/agreements?status=pending_approval', icon: <FileSignature /> },
-          { key: 'docs', label: 'Documents sent back', who: 'With BD / CP', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning /> },
+          { key: 'docs', label: 'Documents sent back', who: 'With BD', yours: false, count: lg.stages.docs, to: '/agreements?status=docs_requested', icon: <FileWarning /> },
           { key: 'active', label: 'Active', who: 'Live', yours: false, count: lg.stages.active, to: '/agreements?status=active', icon: <CheckCircle2 />, done: true },
         ]}
       />
@@ -206,9 +206,7 @@ export function HomeLegal({ data, greeting, firstName }: { data: Dashboard; gree
 }
 
 const DOC_STAGE: Record<LegalDocsItem['stage'], { label: string; tone: 'amber' | 'blue' | 'purple'; what: string }> = {
-  with_bd: { label: 'With BD', tone: 'amber', what: 'BD to send the CP an upload link' },
-  sent_to_cp: { label: 'With CP', tone: 'blue', what: 'CP to upload corrected documents' },
-  cp_submitted: { label: 'BD checking', tone: 'purple', what: 'CP uploaded; BD to check and send back' },
+  with_bd: { label: 'With BD', tone: 'amber', what: 'BD to get the corrected documents from the CP and upload them' },
 };
 
 function dueLabel(due?: string): string {

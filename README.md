@@ -67,8 +67,8 @@ By default emails only go to the simulated outbox (Admin → System). To send th
 3. Restart `npm run dev`.
 
 Every email the app writes to its outbox is then sent through Resend: new tasks, reminders,
-escalations, notices (approvals, returns, activations…), the Legal/Admin daily digest, and signing /
-document-upload links to CPs. Each outbox entry shows whether Resend accepted it.
+escalations, notices (approvals, returns, activations…), the Legal/Admin daily digest, and signing links
+and contact-verification links to CPs. Each outbox entry shows whether Resend accepted it.
 
 The API key lives only on the server: the app POSTs to `/api/send-email`, the Next.js route handler
 [`app/api/send-email/route.ts`](app/api/send-email/route.ts) around
@@ -127,8 +127,8 @@ means writing its connector (its API, credentials and field mapping) — nothing
 Every agreement goes **BD → signing → Legal → Admin**. The BD Executive fills in the agreement and
 KYC, then gets it signed: by e-signature, or on paper and uploaded. The signed agreement goes to
 Legal for review. If Legal finds a problem with a CP document, they send it back with a remark; the
-BD Executive sends the CP a personal upload link, the CP re-uploads the flagged documents, and the BD
-Executive checks them and sends the agreement back to Legal (no re-signing needed). Legal then
+BD Executive gets the corrected documents from the CP, uploads them on the agreement and sends it
+back to Legal, who re-checks only those documents (no re-signing needed). Legal then
 approves it, and Admin's final approval makes it Active. If Legal or Admin rejects it, it goes back
 to Draft and must be signed again. All people, partners and agreements are fictional. Data is stored in
 your browser; **Admin → System → Reset demo data** restores the seed.
@@ -140,7 +140,7 @@ agreement wizard, draft preview, deviation panel, agreement detail, signed copy 
 verification, renewal, termination, reports, admin console and audit log. Also:
 
 - Lifecycle with Legal review (Gate 1), Admin final approval and Admin verification of legacy
-  scans (Gate 2), a CP document-correction loop via upload link, mandatory comments on rejection, SLA due dates, reminders, escalations,
+  scans (Gate 2), a CP document-correction loop (the BD uploads the corrected documents), mandatory comments on rejection, SLA due dates, reminders, escalations,
   renewal tasks at 60 days and auto-expiry (a scheduler runs in the browser)
 - Role permissions and institution scope enforced in the mock API on every call
 - Masked PAN, GSTIN and bank account with logged "Reveal"; nothing sensitive in notifications

@@ -59,7 +59,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
   const recheck = legal && d ? correctedDocsToRecheck(d.agreement) : null;
   const fields = useMemo(() => {
     if (!d) return [];
-    // Re-review after corrected documents: just the documents the CP re-uploaded.
+    // Re-review after corrected documents: just the documents the BD re-uploaded.
     if (recheck) return allFields(d).filter((f) => f.doc && recheck.some((it) => it.documentType === f.doc));
     return allFields(d);
   }, [d, recheck]);
@@ -225,14 +225,15 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           <div className={cn('space-y-4', mobileView !== 'checks' && 'max-lg:hidden')}>
           {recheck && (
             <Alert tone="success" title={`Corrected document${recheck.length === 1 ? '' : 's'} only`}>
-              The CP re-uploaded {recheck.length === 1 ? 'this document' : `these ${recheck.length} documents`} and the BD Executive sent them back on {formatDateTime(d!.agreement.docRequest!.closedAt)}. The signed agreement and the other documents were covered in your earlier review, so only check what changed.
+              The BD Executive uploaded {recheck.length === 1 ? 'a corrected copy of this document' : `corrected copies of these ${recheck.length} documents`} and sent {recheck.length === 1 ? 'it' : 'them'} back on {formatDateTime(d!.agreement.docRequest!.closedAt)}
+              {d!.agreement.docRequest!.bdNote ? ` with the note “${d!.agreement.docRequest!.bdNote}”` : ''}. The signed agreement and the other documents were covered in your earlier review, so only check what changed.
             </Alert>
           )}
           <Alert tone="info">
             {recheck
               ? 'Mark each corrected document. Approve needs each one Verified and makes the agreement Active; if one is still wrong, request document changes again.'
               : legal
-              ? 'Mark each item against the documents. Approve needs every item Verified and makes the agreement Active. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the CP re-uploads it; if the signed agreement itself is wrong, reject it.'
+              ? 'Mark each item against the documents. Approve needs every item Verified and makes the agreement Active. If a CP document (PAN, Aadhaar, bank, GST, MSME, deed, incorporation certificate…) doesn’t match, request document changes and the BD Executive uploads a corrected copy; if the signed agreement itself is wrong, reject it.'
               : 'Mark each item. Approve needs every item Verified; any Mismatch means you reject with comments.'}{' '}
             {done}/{fields.length} verified{mismatches ? `, ${mismatches} mismatch` : ''}.
           </Alert>
@@ -246,7 +247,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
                       <div className="min-w-0">
                         <p className="text-xs text-muted">
                           {f.label}
-                          {legal && f.doc && c?.status === 'mismatch' && <span className="ml-1.5 font-medium text-danger-700">· CP will re-upload</span>}
+                          {legal && f.doc && c?.status === 'mismatch' && <span className="ml-1.5 font-medium text-danger-700">· BD will upload a corrected copy</span>}
                           {legal && docFor(f) && (
                             <button type="button" className="hit-area ml-2 font-medium text-primary-700 hover:underline" onClick={() => showDoc(docFor(f)!)} aria-label={`View ${kycLabel(d!.cp.type, docFor(f)!.type)} for ${f.label}`}>
                               View
@@ -322,7 +323,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           open={askingDocs}
           onClose={() => setAskingDocs(false)}
           title="Request document changes"
-          description="The BD Executive sends the CP a link to re-upload these documents, checks the new files and sends the agreement back to you. The signed agreement does not need signing again."
+          description="The BD Executive gets corrected copies of these documents from the CP, uploads them and sends the agreement back to you. The signed agreement does not need signing again."
           footer={
             <>
               <Button variant="secondary" onClick={() => setAskingDocs(false)}>
