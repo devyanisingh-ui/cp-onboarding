@@ -536,6 +536,11 @@ export interface DocumentRecord {
   verificationMethod?: 'manual' | 'api';
   remarks?: string;
   retentionUntil?: ISODate;
+  /**
+   * Demo data only, for testing Legal's review: how a seeded document's generated specimen differs
+   * from the CP's record (a value that doesn't match what was entered, or an illegible scan).
+   */
+  demo?: { blurred?: boolean; shows?: { aadhaarLast4?: string; msmeNumber?: string; cin?: string; gstin?: string } };
 }
 
 export type TaskType =

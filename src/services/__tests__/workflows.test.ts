@@ -248,6 +248,32 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
   });
 
+  it('seeds the Legal review test cases: to review, sent back to the BD, and back with Legal', async () => {
+    const docOf = (cpId: string, type: string) => getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === type)!;
+    // To review: the Aadhaar card shows other last 4 digits than were entered; the PAN card is unreadable.
+    await as(PRIYA);
+    expect((await api.agreements.get('AGR-ASU-2026-0009')).actions.approveGate1).toBe(true);
+    expect(docOf('CP-0012', 'aadhaar_masked').demo?.shows?.aadhaarLast4).not.toBe(getDb().cps.find((c) => c.id === 'CP-0012')!.aadhaarLast4);
+    expect(docOf('CP-0012', 'pan').demo?.blurred).toBe(true);
+    // Back with Legal: only the two corrected items to re-check.
+    const lakshya = await api.agreements.get('AGR-ASU-2026-0019');
+    expect(lakshya.actions.approveGate1).toBe(true);
+    expect(correctedDocsToRecheck(lakshya.agreement)?.map((it) => it.key)).toEqual(['gst_certificate', 'pan']);
+
+    // Sent back to the BD: three items to fix, then it can go back to Legal.
+    await as(KAVYA);
+    const gyan = await api.agreements.get('AGR-ASU-2026-0018');
+    expect(gyan.actions.fixCpDetails).toBe(true);
+    expect(gyan.summary.displayStatus).toBe('docs_requested');
+    expect(gyan.agreement.docRequest?.items.map((it) => it.key)).toEqual(['owner_pan', 'msme_certificate', 'contact']);
+    const cp = await api.cps.getForEdit('CP-0013');
+    const values = { ...newCp, type: cp.type, legalName: cp.legalName, contactPerson: cp.contactPerson, email: cp.email, residenceAddress: cp.residenceAddress, businessAddress: cp.businessAddress, gstRegistered: false, gstin: '', aadhaarLast4: cp.aadhaarLast4, bank: { ...cp.bank, accountNumber: '' }, pan: cp.panMasked };
+    expect(await api.agreements.correctFlaggedDetails('AGR-ASU-2026-0018', { ...values, mobile: '9811055999', typeFields: { ...cp.typeFields, msmeNumber: 'UDYAM-UP-28-0045132' } })).toEqual({ fixed: 2 });
+    await api.agreements.uploadCorrectedDoc('AGR-ASU-2026-0018', 'owner_pan', new Blob(['x'], { type: 'application/pdf' }), 'owner-pan-clear.pdf');
+    await api.agreements.resubmitCorrectedDocs('AGR-ASU-2026-0018');
+    expect(getDb().agreements.find((x) => x.id === 'AGR-ASU-2026-0018')!.status).toBe('pending_approval');
+  });
+
   it('sends a signed non-standard agreement to Legal, whose approval makes it Active', async () => {
     const { agreementId } = await createNonStandardDraft();
     await finaliseAndSignOnPaper(agreementId);

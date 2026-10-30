@@ -67,6 +67,12 @@
       "subject": "agreements"
     },
     {
+      "id": "legal-review-test-data",
+      "statement": "The demo data has one agreement at each stage of Legal's CP-details rev…",
+      "status": "proposed",
+      "subject": "agreements"
+    },
+    {
       "id": "legal-reviews-cp-details",
       "statement": "Legal's review checklist lists only the CP's details (legal name, conta…",
       "status": "proposed",

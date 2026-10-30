@@ -193,6 +193,28 @@ const SETS: [string, MockDocData, [MockDocType, string][]][] = [
   ]],
 ];
 
+/** Seeded CPs in the Legal review test cases (docs/testing-legal-review.md): their corrected copies. */
+const IRFAN: MockDocData = {
+  cpName: 'Mohammed Irfan',
+  personName: 'Mohammed Irfan',
+  fatherName: 'Shri Abdul Rashid',
+  dob: '21 March 1978',
+  panMasked: 'CQRPI••••H',
+  aadhaarLast4: '8890',
+  address: 'House 9, Old Faridabad, Haryana 121002',
+};
+const GYAN_PATH: MockDocData = {
+  cpName: 'Gyan Path Career Point',
+  personName: 'Neeraj Gupta',
+  panMasked: 'AAJFG••••K',
+  address: 'C-41, Sector 50, Noida, Uttar Pradesh 201301',
+  extra: { cpTypeLabel: 'Proprietorship Firm', ownerPanMasked: 'BQGPG••••M', msmeNumber: 'UDYAM-UP-28-0045132', businessAddress: 'Shop 12, Sector 18 Market, Noida, Uttar Pradesh 201301' },
+};
+SETS.push(
+  ['8-legal-review-tests', IRFAN, [['pan', 'irfan-pan-card-clear']]],
+  ['8-legal-review-tests', GYAN_PATH, [['owner_pan', 'gyan-path-owner-pan-card-clear'], ['msme_certificate', 'gyan-path-udyam-certificate']]],
+);
+
 const root = new URL('../demo-documents/svg/', import.meta.url);
 let n = 0;
 for (const [folder, data, files] of SETS) {

@@ -470,6 +470,18 @@
       },
       "updatedAt": 1792570124609
     },
+    "legal-review-test-data": {
+      "declaredAt": 1793341187969,
+      "id": "legal-review-test-data",
+      "state": "declared",
+      "statement": "The demo data has one agreement at each stage of Legal's CP-details review: AGR-ASU-2026-0009 waiting for Legal with an Aadhaar card whose last 4 digits differ from the record and a blurred PAN card; AGR-ASU-2026-0018 sent back to the BD with three flagged items; AGR-ASU-2026-0019 back with Legal showing only the two items the BD corrected.",
+      "status": "proposed",
+      "subject": "agreements",
+      "surface": {
+        "route": "/agreements/AGR-ASU-2026-0009/legal-review"
+      },
+      "updatedAt": 1793341213294
+    },
     "legal-reviews-cp-details": {
       "declaredAt": 1793339047587,
       "id": "legal-reviews-cp-details",

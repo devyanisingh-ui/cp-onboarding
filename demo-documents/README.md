@@ -17,6 +17,7 @@ on the documents; no government emblems, bank logos or security features are rep
 | `5-private-limited/` | EduReach Advisors Private Limited, director Kavita Rao |
 | `6-agreement-stage/` | Management approval for a deviation, signed agreement, stamp paper, termination notice (for Sunrise Education Services) |
 | `7-template/` | A Word agreement to import as a template |
+| `8-legal-review-tests/` | Corrected copies for the seeded Legal review test cases (see `docs/testing-legal-review.md`) |
 | `svg/` | The same documents as SVG (the PNG and PDF files were rendered from these) |
 
 **Bank account details.** Every CP folder has two choices for the *Bank account details* upload:
