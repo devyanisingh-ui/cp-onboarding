@@ -415,12 +415,12 @@ function SigningChoice({ agreementId, signatory, cpName }: { agreementId: string
 /** Legal → BD → Legal: the CP details Legal flagged. The BD corrects them or uploads corrected documents, then sends it back. */
 function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreementId: string; cp: CpDTO; req: DocRequest; docs: DocumentRecord[]; names: Record<string, string>; canFix: boolean }) {
   const [note, setNote] = useState('');
-  const [editing, setEditing] = useState(false);
+  // The flagged item whose details the BD is correcting.
+  const [editing, setEditing] = useState<DocRequestItem | null>(null);
   const send = useAction(() => api.agreements.resubmitCorrectedDocs(agreementId, note), { success: 'Corrected details sent to Legal' });
   const byId = (docId?: string) => docs.find((x) => x.id === docId);
   const fixed = (it: DocRequestItem) => !!(it.detailsUpdatedAt || it.replacementId);
   const missing = req.items.filter((it) => !fixed(it)).length;
-  const editable = req.items.filter((it) => cpCheck(it.key)?.fields.length);
   return (
     <Card>
       <CardHeader
@@ -429,19 +429,12 @@ function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreem
           missing ? `${req.items.length - missing} of ${req.items.length} fixed — correct the details or upload corrected documents, then send it back to Legal` : 'All fixed — send the agreement back to Legal'
         }`}
         icon={<FileWarning />}
-        action={
-          canFix && editable.length > 0 ? (
-            <Button variant="secondary" size="sm" icon={<Pencil className="size-4" />} onClick={() => setEditing(true)}>
-              Correct CP details
-            </Button>
-          ) : undefined
-        }
       />
       <CardBody className="space-y-4">
         {req.note && <p className="text-sm text-ink-soft">“{req.note}”</p>}
         <ul className="space-y-3">
           {req.items.map((it) => (
-            <FlaggedItem key={it.key} agreementId={agreementId} label={cpCheckLabel(it.key, cp.type)} docName={it.documentType && kycLabel(cp.type, it.documentType)} item={it} previous={byId(it.documentId)} replacement={byId(it.replacementId)} canFix={canFix} />
+            <FlaggedItem key={it.key} agreementId={agreementId} label={cpCheckLabel(it.key, cp.type)} docName={it.documentType && kycLabel(cp.type, it.documentType)} item={it} previous={byId(it.documentId)} replacement={byId(it.replacementId)} canFix={canFix} onCorrect={() => setEditing(it)} />
           ))}
         </ul>
         {canFix && (
@@ -461,21 +454,15 @@ function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreem
       {editing && (
         <EditCpModal
           cp={cp}
-          title="Correct CP details"
+          title={`Correct: ${cpCheckLabel(editing.key, cp.type)}`}
           intro={
-            <Alert tone="warning" className="mb-4" title="Legal flagged">
-              <ul className="list-disc space-y-0.5 pl-4">
-                {editable.map((it) => (
-                  <li key={it.key}>
-                    <span className="font-medium">{cpCheckLabel(it.key, cp.type)}:</span> {it.remark}
-                  </li>
-                ))}
-              </ul>
+            <Alert tone="warning" className="mb-4" title="Legal’s remark">
+              {editing.remark}
             </Alert>
           }
           save={(v) => api.agreements.correctFlaggedDetails(agreementId, v)}
           success={(r) => (r.fixed ? `CP details saved — ${r.fixed} flagged item${r.fixed === 1 ? '' : 's'} corrected` : 'CP details saved. None of the flagged details changed.')}
-          onClose={() => setEditing(false)}
+          onClose={() => setEditing(null)}
         />
       )}
     </Card>
@@ -483,7 +470,26 @@ function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreem
 }
 
 /** One flagged CP detail: Legal's remark, what the BD has done, and an upload for its corrected document. */
-function FlaggedItem({ agreementId, label, docName, item, previous, replacement, canFix }: { agreementId: string; label: string; docName?: string; item: DocRequestItem; previous?: DocumentRecord; replacement?: DocumentRecord; canFix: boolean }) {
+function FlaggedItem({
+  agreementId,
+  label,
+  docName,
+  item,
+  previous,
+  replacement,
+  canFix,
+  onCorrect,
+}: {
+  agreementId: string;
+  label: string;
+  docName?: string;
+  item: DocRequestItem;
+  previous?: DocumentRecord;
+  replacement?: DocumentRecord;
+  canFix: boolean;
+  /** Opens the CP details form to correct this item. */
+  onCorrect: () => void;
+}) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string>();
@@ -502,6 +508,7 @@ function FlaggedItem({ agreementId, label, docName, item, previous, replacement,
       setBusy(false);
     }
   };
+  const correctLabel = item.detailsUpdatedAt ? 'Correct again' : 'Correct details';
   const done = [item.detailsUpdatedAt && 'Details corrected', replacement && `Corrected document: ${replacement.fileName}`].filter(Boolean);
   return (
     <li className="rounded-lg border border-line p-4">
@@ -527,11 +534,16 @@ function FlaggedItem({ agreementId, label, docName, item, previous, replacement,
         <div className="mt-3 space-y-2">
           <p className="text-xs text-muted">
             {editable && docType
-              ? 'Fix it with Correct CP details if the entered value is wrong, or upload a corrected document if the document is.'
+              ? 'If the entered value is wrong, correct the details; if the document is wrong, upload a corrected copy.'
               : editable
-                ? 'Fix it with Correct CP details.'
-                : 'This detail can’t be edited; upload a corrected document.'}
+                ? 'Correct the details the CP gave.'
+                : 'This detail can’t be edited; upload a corrected copy.'}
           </p>
+          {editable && (
+            <Button variant="secondary" size="sm" icon={<Pencil className="size-4" />} onClick={onCorrect} aria-label={`${correctLabel}: ${label}`}>
+              {correctLabel}
+            </Button>
+          )}
           {docType && (
             <FileDrop
               label={`${replacement ? 'Replace the corrected copy' : 'Upload a corrected copy'}: ${docName}`}

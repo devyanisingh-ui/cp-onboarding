@@ -50,7 +50,7 @@ Upload files for the BD's corrections are in `demo-documents/8-legal-review-test
 
 5. Open the agreement (My Tasks → *Correct CP details: Mohammed Irfan*). The card **Legal sent CP
    details back** lists both items with Legal's remarks, *0 of 2 fixed*.
-6. **Aadhaar**: the entered value was wrong. Click **Correct CP details**, change *Aadhaar of the individual — last
+6. **Aadhaar**: the entered value was wrong. Click **Correct details** in the Aadhaar item, change *Aadhaar of the individual — last
    4 digits* to `8890` and **Save changes**. Expected: *1 flagged item corrected*; the Aadhaar item
    shows **Details corrected**.
 7. **PAN**: PAN can't be edited (it identifies the CP), so upload a corrected copy:
@@ -70,8 +70,8 @@ Upload files for the BD's corrections are in `demo-documents/8-legal-review-test
 | Item | Legal's remark | How to fix it |
 | --- | --- | --- |
 | PAN card of the firm owner | Too blurred to read | Upload `gyan-path-owner-pan-card-clear.png` |
-| Udyam (MSME) certificate | Number entered `…0045123` differs from the certificate `…0045132` | **Correct CP details** → *MSME (Udyam) registration number* `UDYAM-UP-28-0045132` |
-| Contact person, mobile and email | The mobile number doesn't reach the CP | **Correct CP details** → change *Mobile* to any 10-digit number |
+| Udyam (MSME) certificate | Number entered `…0045123` differs from the certificate `…0045132` | **Correct details** in that item → *MSME (Udyam) registration number* `UDYAM-UP-28-0045132` |
+| Contact person, mobile and email | The mobile number doesn't reach the CP | **Correct details** in that item → change *Mobile* to any 10-digit number |
 
 Things to try:
 
