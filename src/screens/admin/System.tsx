@@ -84,7 +84,8 @@ export function System() {
                   </div>
                   {m.delivery?.status === 'failed' && <p className="mt-0.5 text-xs text-danger-700">{m.delivery.error}</p>}
                   <p className="mt-0.5 text-xs text-muted">
-                    To {m.to} · {formatDateTime(m.sentAt)}
+                    To {m.to}
+                    {m.cc && ` · Cc ${m.cc.join(', ')}`} · {formatDateTime(m.sentAt)}
                   </p>
                   {open === m.id && <pre className="mt-2 whitespace-pre-wrap rounded-md bg-canvas p-3 font-sans text-xs text-ink-soft">{m.body}</pre>}
                 </button>

@@ -17,7 +17,7 @@ export function relay(m: EmailMessage): void {
   fetch(relayUrl(), {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ to: m.to, subject: m.subject, body: m.body, link: m.link, kind: m.kind }),
+    body: JSON.stringify({ to: m.to, cc: m.cc, subject: m.subject, body: m.body, link: m.link, kind: m.kind }),
   })
     .then(async (res) => {
       const data = (await res.json().catch(() => ({}))) as { id?: string; error?: string };

@@ -319,7 +319,7 @@ export function Verification({ mode = 'gate2' }: { mode?: 'gate2' | 'legal' }) {
           open={askingDocs}
           onClose={() => setAskingDocs(false)}
           title="Send CP details back to the BD"
-          description="The BD Executive corrects these details, or uploads corrected documents from the CP, and sends the agreement back to you. The signed agreement does not need signing again."
+          description={`The CP (${d!.cp.email}) is emailed these issues, with the BD Executive in copy, and told the BD will get in touch about the corrected documents. No upload link is sent. The BD corrects the details or uploads the corrected documents and sends the agreement back to you; it does not need signing again.`}
           footer={
             <>
               <Button variant="secondary" onClick={() => setAskingDocs(false)}>

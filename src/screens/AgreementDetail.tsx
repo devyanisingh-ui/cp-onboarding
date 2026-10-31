@@ -432,6 +432,15 @@ function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreem
       />
       <CardBody className="space-y-4">
         {req.note && <p className="text-sm text-ink-soft">“{req.note}”</p>}
+        {req.emailedTo && (
+          <p className="flex items-start gap-2 text-sm text-muted">
+            <Mail className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              The CP was emailed these issues at {req.emailedTo.cp}
+              {req.emailedTo.bd ? `, with the BD Executive (${req.emailedTo.bd}) in copy` : ''}, and told the BD Executive will get in touch about the corrected documents.
+            </span>
+          </p>
+        )}
         <ul className="space-y-3">
           {req.items.map((it) => (
             <FlaggedItem key={it.key} agreementId={agreementId} label={cpCheckLabel(it.key, cp.type)} docName={it.documentType && kycLabel(cp.type, it.documentType)} item={it} previous={byId(it.documentId)} replacement={byId(it.replacementId)} canFix={canFix} onCorrect={() => setEditing(it)} />

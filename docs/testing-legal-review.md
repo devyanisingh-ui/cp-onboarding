@@ -46,6 +46,12 @@ Upload files for the BD's corrections are in `demo-documents/8-legal-review-test
 **Expected:** you land on My Tasks; the agreement shows **CP details sent back** and moves to
 *CP details sent back* on Legal's home page.
 
+**The email to the CP:** sign in as Admin (`arjun.mehta`) → **Admin → System → Email outbox**. The
+newest email, *Your details for Channel Partner Agreement AGR-ASU-2026-0009 need correcting*, goes
+**to the CP** (`irfan.m@gmail.com`) **with the BD in copy** (`kavya.iyer@apeejay.edu`). It lists
+each issue with Legal's remark, says the BD will get in touch about the corrected documents, and
+has **no link** (the CP doesn't upload anything).
+
 **As the BD** (switch to Kavya)
 
 5. Open the agreement (My Tasks → *Correct CP details: Mohammed Irfan*). The card **Legal sent CP

@@ -206,6 +206,17 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(a.status).toBe('signed_copy_uploaded');
     expect((await api.agreements.get(agreementId)).summary.displayStatus).toBe('docs_requested');
     expect(a.docRequest?.items.map((it) => [it.key, it.documentType])).toEqual([['pan', 'pan'], ['msme_certificate', 'msme_certificate'], ['contact', undefined]]);
+    // The CP is emailed the issues, with the BD in copy, and no link to upload anything.
+    const kavya = getDb().users.find((u) => u.id === 'u-neha')!;
+    const mail = getDb().emails.filter((m) => m.to === newCp.email).at(-1)!;
+    expect(mail).toMatchObject({ cc: [kavya.email], link: undefined, kind: 'event' });
+    expect(mail.subject).toContain(agreementId);
+    expect(mail.body).toContain('• PAN card of the sole proprietor: PAN copy is blurred');
+    expect(mail.body).toContain('• Contact person, mobile and email: Mobile number is wrong');
+    expect(mail.body).toContain('Mobile number is wrong');
+    expect(mail.body).toContain('Please fix before I approve');
+    expect(mail.body).toContain(`${kavya.name} (${kavya.email}) will get in touch with you about the corrected details and documents`);
+    expect(a.docRequest?.emailedTo).toEqual({ cp: newCp.email, bd: kavya.email });
     // The flagged document stays as it is until a corrected copy replaces it.
     expect(pan.verificationStatus).toBe('pending');
     expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open' && t.assigneeId === 'u-neha')).toBe(true);

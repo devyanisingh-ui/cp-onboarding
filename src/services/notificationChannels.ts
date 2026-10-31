@@ -9,7 +9,8 @@ import { relay } from './emailRelay';
 export interface OutboundMessage {
   title: string;
   body: string;
-  link: string;
+  /** An in-app path for the email's button. Omit for an email with nothing to open. */
+  link?: string;
   kind: 'task' | 'reminder' | 'escalation' | 'event' | 'digest' | 'signature' | 'verification';
 }
 
@@ -30,8 +31,8 @@ const emailChannel: NotificationChannel = {
 };
 
 /** Writes to the outbox and, when enabled, sends for real through the Resend relay. */
-function sendEmail(to: string, msg: OutboundMessage) {
-  const m: EmailMessage = { id: nextId('email', 'M-'), to, subject: msg.title, body: msg.body, link: msg.link, kind: msg.kind, sentAt: new Date().toISOString() };
+function sendEmail(to: string, msg: OutboundMessage, cc?: string[]) {
+  const m: EmailMessage = { id: nextId('email', 'M-'), to, cc: cc?.length ? cc : undefined, subject: msg.title, body: msg.body, link: msg.link, kind: msg.kind, sentAt: new Date().toISOString() };
   getDb().emails.push(m);
   relay(m);
 }
@@ -55,6 +56,6 @@ export function deliver(user: User, msg: OutboundMessage) {
  * Email to someone without an app account (e-signature signers). Goes to the same simulated
  * outbox; WhatsApp and other channels never carry signing links.
  */
-export function sendExternalEmail(to: string, msg: OutboundMessage) {
-  sendEmail(to, msg);
+export function sendExternalEmail(to: string, msg: OutboundMessage, cc?: string[]) {
+  sendEmail(to, msg, cc);
 }

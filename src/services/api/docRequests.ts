@@ -2,7 +2,8 @@
  * Mismatched CP details: Legal → BD → Legal.
  *
  * Legal reviews the CP's details against the KYC documents (lib/cpChecks), marks each Verified or
- * Mismatch, and sends the mismatches back with a remark on each. The signed agreement waits with
+ * Mismatch, and sends the mismatches back with a remark on each. The CP is emailed the issues, with
+ * the BD Executive in copy (no upload link: the BD collects the corrected documents). The signed agreement waits with
  * the BD Executive (status signed_copy_uploaded), who fixes every flagged item: by correcting the
  * CP details, or by uploading a corrected copy of the document (got from the CP outside the app).
  * Then the agreement goes back to Legal, who re-checks just those items. The agreement itself is
@@ -11,9 +12,11 @@
 import type { Agreement, CpMaster, DocRequest, DocRequestItem } from '@/types';
 import type { CpFormValues } from '@/lib/schemas';
 import { can } from '@/lib/permissions';
+import { kycLabel } from '@/lib/kyc';
 import { cpCheck, cpCheckChanged, cpCheckKeys, cpCheckLabel } from '@/lib/cpChecks';
 import { conflict, forbidden, invalid, notFound } from '../errors';
 import { nextId } from '../db';
+import { sendExternalEmail } from '../notificationChannels';
 import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, getDb, inScope, notify, now } from './core';
 import { storeDocument } from './documents';
 import { sendToLegal } from './agreements';
@@ -66,14 +69,47 @@ export async function requestCpChanges(agreementId: string, items: { key: string
   const req: DocRequest = { id: nextId('docreq', 'DR-'), status: 'with_bd', note: note?.trim() || undefined, items: flagged, requestedById: user.id, requestedAt: now() };
   const summary = flagged.map((it) => `${label(it.key, a)}: ${it.remark}`).join('; ');
   a.docRequest = req;
+  emailCp(a, req);
   a.status = 'signed_copy_uploaded';
   a.lastRejection = { gate: 1, byId: user.id, at: now(), comment: req.note ? `${req.note} — ${summary}` : `CP details to correct — ${summary}` };
   a.updatedAt = now();
   closeTasks({ agreementId: a.id, types: ['gate1_approval'] }, user);
   createTask({ type: 'cp_doc_request', title: `Correct CP details: ${cp.legalName}`, assigneeId: a.ownerId, slaDays: 3, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
-  notify([a.ownerId], { title: 'Legal sent CP details back', body: `${cp.legalName} · ${a.id}: ${summary}. Correct the details or upload corrected documents, then send the agreement back to Legal.`, link: `/agreements/${a.id}` });
+  notify([a.ownerId], { title: 'Legal sent CP details back', body: `${cp.legalName} · ${a.id}: ${summary}. The CP was emailed these issues, with you in copy. Get in touch with them, correct the details or upload corrected documents, then send the agreement back to Legal.`, link: `/agreements/${a.id}` });
   audit(user, 'reject', 'agreement', a.id, `Legal sent CP details back — ${summary}`, before, { status: a.status });
   commit();
+}
+
+/**
+ * Tells the CP what doesn't match, with their BD Executive in copy. No link: the BD gets in touch
+ * about the corrected documents.
+ */
+function emailCp(a: Agreement, req: DocRequest) {
+  const d = getDb();
+  const cp = cpOf(a);
+  const bd = d.users.find((u) => u.id === a.ownerId);
+  const inst = d.institutions.find((i) => i.id === a.institutionId);
+  // Named as the CP knows them: the document, or the detail they gave.
+  const name = (it: DocRequestItem) => (it.documentType ? kycLabel(cp.type, it.documentType) : it.key === 'cp_name' ? 'Legal name' : 'Contact person, mobile and email');
+  const issues = req.items.map((it) => `• ${name(it)}: ${it.remark}`).join('\n');
+  const contact = bd ? `${bd.name} (${bd.email})` : 'your Apeejay contact';
+  sendExternalEmail(
+    cp.email,
+    {
+      title: `Your details for Channel Partner Agreement ${a.id} need correcting`,
+      body: [
+        `Dear ${cp.contactPerson || cp.legalName},`,
+        `${inst?.legalName ?? 'Apeejay'}'s Legal team reviewed the details and documents you gave for Channel Partner Agreement ${a.id}. The following don't match and need correcting:`,
+        issues,
+        ...(req.note ? [`Note from the Legal team: ${req.note}`] : []),
+        `${contact} will get in touch with you about the corrected details and documents. Please wait to hear from them; you don't need to do anything in the meantime. Your signed agreement stays valid and doesn't need signing again.`,
+        `Regards,\nLegal team, ${inst?.legalName ?? 'Apeejay Education'}`,
+      ].join('\n\n'),
+      kind: 'event',
+    },
+    bd ? [bd.email] : undefined,
+  );
+  req.emailedTo = { cp: cp.email, bd: bd?.email };
 }
 
 // ---------------- BD Executive ----------------

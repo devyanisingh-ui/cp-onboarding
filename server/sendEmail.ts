@@ -22,6 +22,8 @@ export interface RelayEnv {
 
 export interface RelayRequest {
   to: string;
+  /** Copied in (at most MAX_CC). */
+  cc?: string[];
   subject: string;
   body: string;
   link?: string;
@@ -35,6 +37,7 @@ export type RelayKind = (typeof RELAY_KINDS)[number];
 const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/;
 const MAX_SUBJECT = 200;
 const MAX_BODY = 5000;
+const MAX_CC = 5;
 
 const KIND_ACTION: Record<RelayKind, string> = {
   task: 'Open your task',
@@ -57,13 +60,14 @@ function escapeHtml(s: string): string {
 /** Returns the request if it is one the app could have sent, otherwise why not. */
 export function parseRelayRequest(input: unknown): RelayRequest | string {
   if (!input || typeof input !== 'object') return 'Body must be a JSON object.';
-  const { to, subject, body, link, kind } = input as Record<string, unknown>;
+  const { to, cc, subject, body, link, kind } = input as Record<string, unknown>;
   if (typeof to !== 'string' || !EMAIL.test(to)) return 'Invalid recipient.';
+  if (cc !== undefined && (!Array.isArray(cc) || cc.length > MAX_CC || cc.some((c) => typeof c !== 'string' || !EMAIL.test(c)))) return 'Invalid copy (cc) recipients.';
   if (typeof subject !== 'string' || !subject.trim() || subject.length > MAX_SUBJECT) return 'Invalid subject.';
   if (typeof body !== 'string' || body.length > MAX_BODY) return 'Invalid body.';
   if (typeof kind !== 'string' || !(RELAY_KINDS as readonly string[]).includes(kind)) return 'This kind of email is not sent.';
   if (link !== undefined && link !== '' && (typeof link !== 'string' || !/^\/(?!\/)[^\s\\]*$/.test(link))) return 'Links must be paths inside the app.';
-  return { to, subject: subject.replace(/[\r\n]+/g, ' '), body, link: link || undefined, kind: kind as RelayKind };
+  return { to, cc: (cc as string[] | undefined)?.length ? (cc as string[]) : undefined, subject: subject.replace(/[\r\n]+/g, ' '), body, link: link || undefined, kind: kind as RelayKind };
 }
 
 export function renderEmail(msg: RelayRequest, appUrl: string): { text: string; html: string } {
@@ -123,7 +127,9 @@ export async function handleSendEmail(req: Request, env: RelayEnv, fetchImpl: ty
       body: JSON.stringify({
         from: env.EMAIL_FROM,
         to: [redirect || msg.to],
-        subject: redirect ? `[to ${msg.to}] ${msg.subject}` : msg.subject,
+        // Redirected (testing): nobody else is copied in; the subject says who would have been.
+        ...(msg.cc && !redirect ? { cc: msg.cc } : {}),
+        subject: redirect ? `[to ${msg.to}${msg.cc ? `, cc ${msg.cc.join(', ')}` : ''}] ${msg.subject}` : msg.subject,
         text,
         html,
         tags: [{ name: 'kind', value: msg.kind }],

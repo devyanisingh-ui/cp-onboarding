@@ -309,6 +309,8 @@ export interface DocRequest {
   items: DocRequestItem[];
   requestedById: string;
   requestedAt: ISODateTime;
+  /** Who was emailed the issues: the CP, with the BD Executive in copy. */
+  emailedTo?: { cp: string; bd?: string };
   /** The BD's note to Legal when sending the corrected details back. */
   bdNote?: string;
   closedAt?: ISODateTime;
@@ -591,6 +593,8 @@ export interface AppNotification {
 export interface EmailMessage {
   id: string;
   to: string;
+  /** Copied in, e.g. the BD Executive on an email to their CP. */
+  cc?: string[];
   subject: string;
   body: string;
   link?: string;
