@@ -1,13 +1,15 @@
 import type { Role, User } from '@/types';
 import { DEMO_PASSWORD } from '@/data/seed';
-import { usernameOf } from '@/lib/users';
 import { ApiError, invalid } from '../errors';
 import { resetDb } from '../db';
 import { clearBlobs, deleteBlob } from '../blobStore';
 import { assertCan, audit, commit, ctx, delay, getDb, getSessionUserId, setSessionUserId } from './core';
 import { runScheduledJobs } from './scheduler';
 
-export { usernameOf };
+/** Username is the part of the work email before the "@" (e.g. kavya.iyer). */
+export function usernameOf(user: Pick<User, 'email'>): string {
+  return user.email.split('@')[0].toLowerCase();
+}
 
 /**
  * Mock of username + password sign-in. The prototype has no backend, so every active user shares

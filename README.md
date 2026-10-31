@@ -29,35 +29,6 @@ header lets you view the app as each persona.
 
 To try it on a phone on the same Wi-Fi: open the Network address `npm run dev` prints.
 
-## Database (MySQL, in progress)
-
-The move from the in-browser mock to MySQL (via Prisma) is being built feature by feature under
-`server/`; the app keeps using the mock until every feature is done. To work on it:
-
-```bash
-npm run db:up        # MySQL 8.4 in Docker (compose.yaml), with a separate test database
-npm run db:migrate   # apply migrations to the local database
-npx prisma db seed   # demo institutions, users (password Apeejay@123), rate cards, templates
-npm run test:db      # server tests against MySQL
-```
-
-Step-by-step testing guide (Docker Desktop on Windows): [docs/testing-with-docker.md](docs/testing-with-docker.md).
-
-`server/platform/` is the shared foundation (connection, transactions, readable IDs, audit trail,
-tasks, notifications, email outbox, RPC at `/api/rpc/<feature>.<function>`). Each feature gets its
-own folder in `server/features/` with its Prisma models, server functions and tests.
-
-Done so far: **auth** (`server/features/auth/`): argon2id passwords, session cookies stored as
-hashes in MySQL (signed out after 30 minutes idle or 12 hours), lockout for 15 minutes after 5 wrong
-passwords, and one-time emailed links to set a password (Admin invitation, 24 h; "forgot
-password", 1 h).
-
-**config** (`server/features/config/`): institutions and campuses, users with their roles and
-institutions, approval routing, SLAs, master lists, allowed domains, and the versioned rate cards
-and templates (Admin drafts, Legal approves, Admin publishes; status changes are checked in the
-database so two people cannot move the same version at once). Importing a Word document as a
-template comes with the documents feature.
-
 ## Email notifications (Resend)
 
 By default emails only go to the simulated outbox (Admin → System). To send them for real:

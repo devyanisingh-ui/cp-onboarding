@@ -5,7 +5,6 @@ import { can, type Capability } from '@/lib/permissions';
 import { addWorkingDays, today } from '@/lib/dates';
 import { taskLink } from '@/lib/links';
 import { deliver } from '../notificationChannels';
-import { containsSensitive, deviceFrom, diff } from '@/lib/records';
 
 // ---------- Session (stands in for the OIDC session cookie) ----------
 
@@ -75,7 +74,11 @@ export function now(): string {
 // ---------- Audit (immutable, append-only) ----------
 
 export function device(): string {
-  return typeof navigator === 'undefined' ? 'Unknown' : deviceFrom(navigator.userAgent);
+  if (typeof navigator === 'undefined') return 'Unknown';
+  const ua = navigator.userAgent;
+  const browser = /Edg\//.test(ua) ? 'Edge' : /Chrome\//.test(ua) ? 'Chrome' : /Firefox\//.test(ua) ? 'Firefox' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'macOS' : 'Linux';
+  return `${browser} · ${os}`;
 }
 
 export function audit(
@@ -104,7 +107,29 @@ export function audit(
   getDb().audit.push(ev);
 }
 
+/** Returns only the keys that changed, for before/after audit values. */
+export function diff<T extends object>(before: T, after: Partial<T>, redact: string[] = []) {
+  const b: Record<string, unknown> = {};
+  const a: Record<string, unknown> = {};
+  for (const k of Object.keys(after) as (keyof T & string)[]) {
+    const bv = before[k];
+    const av = after[k];
+    if (JSON.stringify(bv) !== JSON.stringify(av)) {
+      b[k] = redact.includes(k) ? '[redacted]' : bv;
+      a[k] = redact.includes(k) ? '[redacted]' : av;
+    }
+  }
+  return { before: b, after: a, changed: Object.keys(a) };
+}
+
 // ---------- Notifications ----------
+
+/** PRD §9 content rule: only CP name, agreement ID, action and link. Enforced here. */
+const SENSITIVE = [/\b[A-Z]{5}[0-9]{4}[A-Z]\b/, /\b\d{9,18}\b/, /\b\d{4}\s\d{4}\s\d{4}\b/, /₹|INR\s?\d/];
+
+export function containsSensitive(text: string): boolean {
+  return SENSITIVE.some((re) => re.test(text));
+}
 
 export function notify(
   userIds: (string | undefined)[],
@@ -196,4 +221,4 @@ export function routeFor(institutionId: string, nonStandard: boolean) {
   );
 }
 
-export { commit, containsSensitive, diff, getDb };
+export { commit, getDb };
