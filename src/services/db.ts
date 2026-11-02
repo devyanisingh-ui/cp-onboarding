@@ -1,4 +1,4 @@
-import type { Database } from '@/types';
+import type { Database, DocRequest, Task } from '@/types';
 import { buildSeed, SCHEMA_VERSION } from '@/data/seed';
 
 /**
@@ -14,12 +14,35 @@ const listeners = new Set<() => void>();
  */
 let outdated = false;
 
+/**
+ * Corrected documents used to go to the CP through an upload link; now the BD fixes them. A request
+ * saved mid-way (link sent, or CP uploaded) becomes the BD's to finish, keeping any upload. Items
+ * saved before Legal could flag any CP detail were documents: their key is the document type.
+ */
+function migrateDocRequests(db: Database) {
+  for (const a of db.agreements) {
+    const r = a.docRequest as (DocRequest & { token?: string; status: string }) | undefined;
+    if (!r) continue;
+    for (const it of r.items) it.key ??= it.documentType!;
+    if (r.status === 'with_bd' || r.status === 'closed') continue;
+    r.status = 'with_bd';
+    delete r.token;
+  }
+  for (const t of db.tasks as (Omit<Task, 'type'> & { type: string })[]) if (t.type === 'cp_doc_review') t.type = 'cp_doc_request';
+}
+
 function load(): Database {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Database;
-      if (parsed.schemaVersion === SCHEMA_VERSION) return parsed;
+      if (parsed.schemaVersion === SCHEMA_VERSION) {
+        // Collections added since this data was saved start empty (no reset, nothing lost).
+        parsed.sms ??= [];
+        parsed.leads ??= [];
+        migrateDocRequests(parsed);
+        return parsed;
+      }
       if (parsed.schemaVersion > SCHEMA_VERSION) {
         outdated = true;
         return buildSeed();

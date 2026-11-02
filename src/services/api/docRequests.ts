@@ -1,33 +1,39 @@
 /**
- * Corrected CP documents: Legal → BD → CP → BD → Legal.
+ * Mismatched CP details: Legal → BD → Legal.
  *
- * While reviewing an agreement, Legal flags the documents that are wrong and adds a remark to each.
- * The signed agreement waits with the BD Executive (status signed_copy_uploaded), who sends the CP
- * a personal upload link. The CP (no app account; the link token is their credential) re-uploads
- * just the flagged documents and sends them back. The BD Executive checks them and the agreement
- * goes back to Legal. The agreement itself is not changed, so it does not need signing again.
+ * Legal reviews the CP's details against the KYC documents (lib/cpChecks), marks each Verified or
+ * Mismatch, and sends the mismatches back with a remark on each. The CP is emailed the issues, with
+ * the BD Executive in copy (no upload link: the BD collects the corrected documents). The signed agreement waits with
+ * the BD Executive (status signed_copy_uploaded), who fixes every flagged item: by correcting the
+ * CP details, or by uploading a corrected copy of the document (got from the CP outside the app).
+ * Then the agreement goes back to Legal, who re-checks just those items. The agreement itself is
+ * not changed, so it does not need signing again.
  */
-import type { Agreement, DocRequest, DocumentType } from '@/types';
+import type { Agreement, CpMaster, DocRequest, DocRequestItem } from '@/types';
+import type { CpFormValues } from '@/lib/schemas';
 import { can } from '@/lib/permissions';
 import { kycLabel } from '@/lib/kyc';
+import { cpCheck, cpCheckChanged, cpCheckKeys, cpCheckLabel } from '@/lib/cpChecks';
 import { conflict, forbidden, invalid, notFound } from '../errors';
 import { nextId } from '../db';
 import { sendExternalEmail } from '../notificationChannels';
-import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, firstUserWithRole, getDb, inScope, notify, now } from './core';
+import { assertCan, audit, closeTasks, commit, createTask, ctx, delay, getDb, inScope, notify, now } from './core';
 import { storeDocument } from './documents';
 import { sendToLegal } from './agreements';
-
-/** The document's name in the KYC checklist for this CP's category. */
-const label = (t: DocumentType, a: Agreement) => kycLabel(cpOf(a).type, t);
-
-function token(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-}
+import { upsertCp } from './cps';
 
 function cpOf(a: Agreement) {
   return getDb().cps.find((c) => c.id === a.cpId)!;
+}
+
+/** The check's name in this CP's checklist. */
+const label = (key: string, a: Agreement) => cpCheckLabel(key, cpOf(a).type);
+
+/** The CP's current copy of a document type: newest first, superseded copies left out. */
+function currentDoc(a: Agreement, type: string) {
+  return getDb()
+    .documents.filter((x) => x.ownerType === 'cp' && x.ownerId === a.cpId && x.type === type && x.verificationStatus !== 'mismatch')
+    .sort((x, y) => y.uploadedAt.localeCompare(x.uploadedAt))[0];
 }
 
 function loadAgreement(id: string) {
@@ -37,165 +43,148 @@ function loadAgreement(id: string) {
   return { user, a };
 }
 
+/** Whether the BD has fixed a flagged item: corrected details or a corrected document. */
+export const itemFixed = (it: DocRequestItem) => !!(it.detailsUpdatedAt || it.replacementId);
+
 // ---------------- Legal ----------------
 
-/** Legal sends the agreement back with a remark on each document the CP must correct. */
-export async function requestDocChanges(agreementId: string, items: { documentId: string; remark: string }[], note?: string): Promise<void> {
+/** Legal sends the agreement back to the BD with a remark on each CP detail that doesn't match. */
+export async function requestCpChanges(agreementId: string, items: { key: string; remark: string }[], note?: string): Promise<void> {
   await delay('write');
   const { user, a } = loadAgreement(agreementId);
-  assertCan(user, 'gate1.approve', 'Only Legal can ask for corrected documents.');
+  assertCan(user, 'gate1.approve', 'Only Legal can send CP details back.');
   if (a.status !== 'pending_approval') throw conflict('This agreement is not waiting for Legal review.');
   if (a.ownerId === user.id) throw forbidden('You cannot review an agreement you created.');
-  if (!items.length) throw invalid('Choose at least one document to correct.');
-  const d = getDb();
-  const docs = items.map((it) => {
-    const doc = d.documents.find((x) => x.id === it.documentId && x.ownerType === 'cp' && x.ownerId === a.cpId);
-    if (!doc) throw notFound('Document');
-    if (!it.remark.trim()) throw invalid(`Add a remark for the ${label(doc.type, a)}.`);
-    return { doc, remark: it.remark.trim() };
+  if (!items.length) throw invalid('Mark at least one CP detail as Mismatch.');
+  const cp = cpOf(a);
+  const allowed = cpCheckKeys(cp, getDb().documents.filter((x) => x.ownerType === 'cp' && x.ownerId === cp.id).map((x) => x.type));
+  const flagged: DocRequestItem[] = items.map((it) => {
+    if (!allowed.includes(it.key as never)) throw invalid('That is not one of this CP’s details.');
+    if (!it.remark.trim()) throw invalid(`Say what doesn’t match: ${label(it.key, a)}.`);
+    const type = cpCheck(it.key)!.doc;
+    const doc = type ? currentDoc(a, type) : undefined;
+    return { key: it.key, remark: it.remark.trim(), documentId: doc?.id, documentType: type };
   });
   const before = { status: a.status };
-  docs.forEach(({ doc, remark }) => Object.assign(doc, { verificationStatus: 'mismatch', verifiedById: user.id, verifiedOn: now(), verificationMethod: 'manual', remarks: remark }));
-  const req: DocRequest = {
-    id: nextId('docreq', 'DR-'),
-    status: 'with_bd',
-    note: note?.trim() || undefined,
-    items: docs.map(({ doc, remark }) => ({ documentId: doc.id, documentType: doc.type, remark })),
-    requestedById: user.id,
-    requestedAt: now(),
-  };
-  const summary = docs.map(({ doc, remark }) => `${label(doc.type, a)}: ${remark}`).join('; ');
+  const req: DocRequest = { id: nextId('docreq', 'DR-'), status: 'with_bd', note: note?.trim() || undefined, items: flagged, requestedById: user.id, requestedAt: now() };
+  const summary = flagged.map((it) => `${label(it.key, a)}: ${it.remark}`).join('; ');
   a.docRequest = req;
+  emailCp(a, req);
   a.status = 'signed_copy_uploaded';
-  a.lastRejection = { gate: 1, byId: user.id, at: now(), comment: req.note ? `${req.note} — ${summary}` : `Documents to correct — ${summary}` };
+  a.lastRejection = { gate: 1, byId: user.id, at: now(), comment: req.note ? `${req.note} — ${summary}` : `CP details to correct — ${summary}` };
   a.updatedAt = now();
   closeTasks({ agreementId: a.id, types: ['gate1_approval'] }, user);
-  createTask({ type: 'cp_doc_request', title: `Get corrected documents from CP: ${cpOf(a).legalName}`, assigneeId: a.ownerId, slaDays: 3, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
-  notify([a.ownerId], { title: 'Legal asked for corrected documents', body: `${cpOf(a).legalName} · ${a.id}: ${summary}. Send the CP their upload link.`, link: `/agreements/${a.id}` });
-  audit(user, 'reject', 'agreement', a.id, `Legal asked for corrected documents — ${summary}`, before, { status: a.status });
+  createTask({ type: 'cp_doc_request', title: `Correct CP details: ${cp.legalName}`, assigneeId: a.ownerId, slaDays: 3, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
+  notify([a.ownerId], { title: 'Legal sent CP details back', body: `${cp.legalName} · ${a.id}: ${summary}. The CP was emailed these issues, with you in copy. Get in touch with them, correct the details or upload corrected documents, then send the agreement back to Legal.`, link: `/agreements/${a.id}` });
+  audit(user, 'reject', 'agreement', a.id, `Legal sent CP details back — ${summary}`, before, { status: a.status });
   commit();
+}
+
+/**
+ * Tells the CP what doesn't match, with their BD Executive in copy. No link: the BD gets in touch
+ * about the corrected documents.
+ */
+function emailCp(a: Agreement, req: DocRequest) {
+  const d = getDb();
+  const cp = cpOf(a);
+  const bd = d.users.find((u) => u.id === a.ownerId);
+  const inst = d.institutions.find((i) => i.id === a.institutionId);
+  // Named as the CP knows them: the document, or the detail they gave.
+  const name = (it: DocRequestItem) => (it.documentType ? kycLabel(cp.type, it.documentType) : it.key === 'cp_name' ? 'Legal name' : 'Contact person, mobile and email');
+  const issues = req.items.map((it) => `• ${name(it)}: ${it.remark}`).join('\n');
+  const contact = bd ? `${bd.name} (${bd.email})` : 'your Apeejay contact';
+  sendExternalEmail(
+    cp.email,
+    {
+      title: `Your details for Channel Partner Agreement ${a.id} need correcting`,
+      body: [
+        `Dear ${cp.contactPerson || cp.legalName},`,
+        `${inst?.legalName ?? 'Apeejay'}'s Legal team reviewed the details and documents you gave for Channel Partner Agreement ${a.id}. The following don't match and need correcting:`,
+        issues,
+        ...(req.note ? [`Note from the Legal team: ${req.note}`] : []),
+        `${contact} will get in touch with you about the corrected details and documents. Please wait to hear from them; you don't need to do anything in the meantime. Your signed agreement stays valid and doesn't need signing again.`,
+        `Regards,\nLegal team, ${inst?.legalName ?? 'Apeejay Education'}`,
+      ].join('\n\n'),
+      kind: 'event',
+    },
+    bd ? [bd.email] : undefined,
+  );
+  req.emailedTo = { cp: cp.email, bd: bd?.email };
 }
 
 // ---------------- BD Executive ----------------
 
-/** Sends (or resends) the CP a personal link to re-upload the flagged documents. Returns the link. */
-export async function sendDocRequestLink(agreementId: string, email: string): Promise<{ link: string }> {
-  await delay('write');
-  const { user, a } = loadAgreement(agreementId);
-  assertCan(user, 'kyc.upload');
+function openRequest(a: Agreement) {
   const req = a.docRequest;
-  if (a.status !== 'signed_copy_uploaded' || !req || req.status === 'closed') throw conflict('There is no open document request on this agreement.');
-  const to = email.trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) throw invalid('Enter a valid email address.', { email: 'Enter a valid email' });
-  const cp = cpOf(a);
-  // A new link each time; the old one stops working. Resending after the CP submitted asks again.
-  req.token = token();
-  req.cpEmail = to;
-  req.sentAt = now();
-  if (req.status === 'cp_submitted') {
-    req.items.forEach((it) => (it.replacementId = undefined));
-    req.cpSubmittedAt = undefined;
-    closeTasks({ agreementId: a.id, types: ['cp_doc_review'] }, user);
-    createTask({ type: 'cp_doc_request', title: `Get corrected documents from CP: ${cp.legalName}`, assigneeId: a.ownerId, slaDays: 3, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
-  }
-  req.status = 'sent_to_cp';
-  const link = `/cp-documents/${req.token}`;
-  sendExternalEmail(to, {
-    title: `Please re-upload documents for your Channel Partner Agreement ${a.id}`,
-    body: `Dear ${cp.contactPerson || cp.legalName},\n\nApeejay's Legal team reviewed your documents for agreement ${a.id} and needs the following corrected:\n\n${req.items.map((it) => `• ${label(it.documentType, a)}: ${it.remark}`).join('\n')}\n\nUse the link to upload the corrected documents. This link is personal to you. Do not forward it.`,
-    link,
-    kind: 'task',
-  });
-  audit(user, 'send', 'agreement', a.id, `Sent the CP a document upload link (${to})`);
-  commit();
-  return { link };
+  if (a.status !== 'signed_copy_uploaded' || !req || req.status === 'closed') throw conflict('There is no open request from Legal on this agreement.');
+  return req;
 }
 
-/** BD checked the CP's corrected documents: closes the request and resubmits to Legal. */
-export async function acceptCpDocs(agreementId: string): Promise<void> {
+function assertBd(user: ReturnType<typeof ctx>) {
+  assertCan(user, 'kyc.upload');
+  if (!can(user, 'agreement.edit') || !can(user, 'cp.edit')) throw forbidden();
+}
+
+/**
+ * BD corrects the CP's details. Saved like any CP edit; each flagged item whose details changed is
+ * marked fixed. Returns how many flagged items this fixed.
+ */
+export async function correctFlaggedDetails(agreementId: string, values: CpFormValues): Promise<{ fixed: number }> {
+  await delay('write');
+  const { user, a } = loadAgreement(agreementId);
+  assertBd(user);
+  const req = openRequest(a);
+  const before: CpMaster = structuredClone(cpOf(a));
+  const after = upsertCp(values, a.cpId);
+  let fixed = 0;
+  for (const it of req.items) {
+    if (!cpCheckChanged(it.key, before, after)) continue;
+    it.detailsUpdatedAt = now();
+    fixed++;
+    audit(user, 'update', 'agreement', a.id, `Corrected ${label(it.key, a)} after Legal’s remark`);
+  }
+  commit();
+  return { fixed };
+}
+
+/** BD uploads the corrected copy of a flagged item's document. Uploading again replaces it. */
+export async function uploadCorrectedDoc(agreementId: string, key: string, file: Blob, fileName: string): Promise<void> {
+  await delay('write');
+  const { user, a } = loadAgreement(agreementId);
+  assertBd(user);
+  const req = openRequest(a);
+  const item = req.items.find((it) => it.key === key);
+  if (!item) throw invalid('Legal did not flag this detail.');
+  if (!item.documentType) throw invalid(`${label(key, a)} has no document; correct the details instead.`);
+  // An earlier upload that never reached Legal is superseded, so Legal sees only the latest copy.
+  const earlier = getDb().documents.find((x) => x.id === item.replacementId);
+  if (earlier) Object.assign(earlier, { verificationStatus: 'mismatch', verifiedById: user.id, verifiedOn: now(), verificationMethod: 'manual', remarks: 'Superseded by a newer upload' });
+  const { document } = await storeDocument(user, 'cp', a.cpId, item.documentType, file, fileName);
+  item.replacementId = document.id;
+  audit(user, 'upload', 'document', document.id, `Uploaded the corrected ${label(key, a)} (${fileName}) for ${a.id}`);
+  commit();
+}
+
+/** BD sends the agreement back to Legal once every flagged item is fixed. */
+export async function resubmitCorrectedDocs(agreementId: string, note?: string): Promise<void> {
   await delay('write');
   const { user, a } = loadAgreement(agreementId);
   if (!can(user, 'agreement.edit')) throw forbidden();
-  const req = a.docRequest;
-  if (a.status !== 'signed_copy_uploaded' || req?.status !== 'cp_submitted') throw conflict('The CP has not sent corrected documents yet.');
+  const req = openRequest(a);
+  const missing = req.items.filter((it) => !itemFixed(it));
+  if (missing.length) throw invalid(`Fix everything Legal flagged first: ${missing.map((it) => label(it.key, a)).join(', ')}.`);
+  const d = getDb();
   const before = { status: a.status };
+  // The flagged copy of each replaced document is superseded by the corrected one.
+  for (const it of req.items) {
+    const old = it.replacementId && d.documents.find((x) => x.id === it.documentId);
+    if (old) Object.assign(old, { verificationStatus: 'mismatch', verifiedById: req.requestedById, verifiedOn: req.requestedAt, verificationMethod: 'manual', remarks: it.remark });
+  }
   req.status = 'closed';
   req.closedAt = now();
   req.closedById = user.id;
+  req.bdNote = note?.trim() || undefined;
   sendToLegal(a, user);
-  audit(user, 'submit', 'agreement', a.id, 'Checked the CP’s corrected documents; sent back to Legal', before, { status: a.status });
-  commit();
-}
-
-// ---------------- CP (public link) ----------------
-
-function findByToken(t: string) {
-  const a = getDb().agreements.find((x) => x.docRequest?.token && x.docRequest.token === t);
-  if (!a || !a.docRequest) throw notFound('Upload link');
-  return { a, req: a.docRequest };
-}
-
-function cpActor(a: Agreement) {
-  return { id: 'cp:upload', name: `${cpOf(a).legalName} (CP, upload link)` };
-}
-
-export interface CpDocSession {
-  agreementId: string;
-  cpName: string;
-  institutionName: string;
-  status: DocRequest['status'];
-  note?: string;
-  items: { documentType: DocumentType; label: string; remark: string; previousFileName: string; uploadedFileName?: string }[];
-  /** True while the CP can still upload and send. */
-  open: boolean;
-}
-
-export async function getCpDocSession(t: string): Promise<CpDocSession> {
-  await delay();
-  const { a, req } = findByToken(t);
-  const d = getDb();
-  return {
-    agreementId: a.id,
-    cpName: cpOf(a).legalName,
-    institutionName: d.institutions.find((i) => i.id === a.institutionId)!.legalName,
-    status: req.status,
-    note: req.note,
-    items: req.items.map((it) => ({
-      documentType: it.documentType,
-      label: label(it.documentType, a),
-      remark: it.remark,
-      previousFileName: d.documents.find((x) => x.id === it.documentId)?.fileName ?? '',
-      uploadedFileName: it.replacementId ? d.documents.find((x) => x.id === it.replacementId)?.fileName : undefined,
-    })),
-    open: req.status === 'sent_to_cp',
-  };
-}
-
-export async function uploadCpDoc(t: string, documentType: DocumentType, file: Blob, fileName: string): Promise<void> {
-  await delay('write');
-  const { a, req } = findByToken(t);
-  if (req.status !== 'sent_to_cp') throw conflict('This upload link is no longer active.');
-  const item = req.items.find((it) => it.documentType === documentType);
-  if (!item) throw invalid('This document was not requested.');
-  const owner = getDb().users.find((u) => u.id === a.ownerId) ?? firstUserWithRole('admin')!;
-  const { document } = await storeDocument(owner, 'cp', a.cpId, documentType, file, fileName);
-  item.replacementId = document.id;
-  audit(cpActor(a), 'upload', 'document', document.id, `CP re-uploaded ${label(documentType, a)} (${fileName}) from their link`);
-  commit();
-}
-
-export async function submitCpDocs(t: string, note?: string): Promise<void> {
-  await delay('write');
-  const { a, req } = findByToken(t);
-  if (req.status !== 'sent_to_cp') throw conflict('This upload link is no longer active.');
-  const missing = req.items.filter((it) => !it.replacementId);
-  if (missing.length) throw invalid(`Upload every requested document first: ${missing.map((it) => label(it.documentType, a)).join(', ')}.`);
-  req.status = 'cp_submitted';
-  req.cpSubmittedAt = now();
-  req.cpNote = note?.trim() || undefined;
-  closeTasks({ agreementId: a.id, types: ['cp_doc_request'] }, 'system');
-  createTask({ type: 'cp_doc_review', title: `Check CP’s corrected documents: ${cpOf(a).legalName}`, assigneeId: a.ownerId, slaDays: 2, agreementId: a.id, cpId: a.cpId, institutionId: a.institutionId });
-  notify([a.ownerId], { title: 'CP sent corrected documents', body: `${cpOf(a).legalName} uploaded the documents for ${a.id}. Check them and send the agreement to Legal.`, link: `/agreements/${a.id}` });
-  audit(cpActor(a), 'submit', 'agreement', a.id, `CP sent corrected documents${req.cpNote ? `: ${req.cpNote}` : ''}`);
+  audit(user, 'submit', 'agreement', a.id, `Corrected the CP details Legal flagged; sent back to Legal${req.bdNote ? `: ${req.bdNote}` : ''}`, before, { status: a.status });
   commit();
 }

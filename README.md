@@ -38,8 +38,8 @@ By default emails only go to the simulated outbox (Admin → System). To send th
 3. Restart `npm run dev`.
 
 Every email the app writes to its outbox is then sent through Resend: new tasks, reminders,
-escalations, notices (approvals, returns, activations…), the Legal/Admin daily digest, and signing /
-document-upload links to CPs. Each outbox entry shows whether Resend accepted it.
+escalations, notices (approvals, returns, activations…), the Legal/Admin daily digest, and signing links
+and contact-verification links to CPs. Each outbox entry shows whether Resend accepted it.
 
 The API key lives only on the server: the app POSTs to `/api/send-email`, the Next.js route handler
 [`app/api/send-email/route.ts`](app/api/send-email/route.ts) around
@@ -52,6 +52,41 @@ name still works.
 Because all data lives in each browser, reminders and escalations fire from whichever browser runs
 the scheduler, and a fresh browser sends the reminders for the seeded overdue tasks once.
 
+## CP contact verification
+
+The CP confirms that the email and mobile on their record reach them. It starts by itself when an
+agreement goes to Legal and runs **alongside** Legal's review: it never holds the agreement up, and
+Legal sees its status on the review screen. A BD Executive can also send or resend it from the
+agreement or CP page (*Contact verification* card).
+
+1. The CP gets an email with a personal link (`/verify/<token>`, valid 7 days).
+2. On that page they press **This is my email** (email verified), then **Send me a code** and type
+   the 6-digit code sent to their mobile (mobile verified). Codes last 10 minutes, a new one can be
+   sent every 30 seconds (at most 5 an hour), and 5 wrong tries end a code.
+3. The BD Executive (and Legal, if reviewing) are notified; the card shows both as **Verified**.
+   Changing the CP's email or mobile later makes that one unverified again.
+
+No SMS provider is connected yet: codes go to the **SMS outbox** in Admin → System (like emails
+go to the email outbox when Resend is not set up). Only a hash of each code is stored. To send
+real texts, connect an SMS provider (in India this needs DLT registration of the sender ID and
+template).
+
+## Leads and revenue per CP
+
+The CP page has a **Leads & revenue** tab: per institution, the leads the CP referred, how many
+applied and were admitted, conversion, and **revenue** (fees of admitted students), plus the lead
+list. Figures come from the CRM: a sync pulls leads every hour (and on **Sync now** in Admin →
+System), matches each to a CP by its CRM partner code (default: the CP ID) and to an institution by
+short code, and stores **no personal data** — only the CRM's lead ID, programme, admission cycle,
+status, dates and fee. Users see the institutions in their scope.
+
+Only **Admin** changes anything: correct a lead (status, fee, with a reason; kept across syncs
+until removed, audit-logged) or set a CP's CRM partner code.
+
+The CRM is not connected yet: a **demo CRM** (`src/services/crm/demoCrm.ts`) supplies sample leads
+through the same connector interface (`src/services/crm/connector.ts`). Connecting the real CRM
+means writing its connector (its API, credentials and field mapping) — nothing else changes.
+
 ## Demo personas
 
 | Role | Account | What they do |
@@ -62,9 +97,10 @@ the scheduler, and a fresh browser sends the reminders for the seeded overdue ta
 
 Every agreement goes **BD → signing → Legal → Admin**. The BD Executive fills in the agreement and
 KYC, then gets it signed: by e-signature, or on paper and uploaded. The signed agreement goes to
-Legal for review. If Legal finds a problem with a CP document, they send it back with a remark; the
-BD Executive sends the CP a personal upload link, the CP re-uploads the flagged documents, and the BD
-Executive checks them and sends the agreement back to Legal (no re-signing needed). Legal then
+Legal for review: Legal checks the CP's details (name, contact, and each KYC detail against its
+document) and marks each Verified or Mismatch. Mismatches go back to the BD Executive with a remark on
+each; the BD corrects the CP details or uploads a corrected document from the CP, and sends it back
+to Legal, who re-checks only what it flagged (no re-signing needed). Legal then
 approves it, and Admin's final approval makes it Active. If Legal or Admin rejects it, it goes back
 to Draft and must be signed again. All people, partners and agreements are fictional. Data is stored in
 your browser; **Admin → System → Reset demo data** restores the seed.
@@ -76,7 +112,7 @@ agreement wizard, draft preview, deviation panel, agreement detail, signed copy 
 verification, renewal, termination, reports, admin console and audit log. Also:
 
 - Lifecycle with Legal review (Gate 1), Admin final approval and Admin verification of legacy
-  scans (Gate 2), a CP document-correction loop via upload link, mandatory comments on rejection, SLA due dates, reminders, escalations,
+  scans (Gate 2), a CP-details correction loop (Legal flags mismatches, the BD corrects them), mandatory comments on rejection, SLA due dates, reminders, escalations,
   renewal tasks at 60 days and auto-expiry (a scheduler runs in the browser)
 - Role permissions and institution scope enforced in the mock API on every call
 - Masked PAN, GSTIN and bank account with logged "Reveal"; nothing sensitive in notifications

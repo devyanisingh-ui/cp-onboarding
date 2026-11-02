@@ -128,6 +128,8 @@ function specimenData(doc: DocumentRecord): MockDocData | null {
   const t = cp.typeFields;
   const person = (t.proprietorName || t.ownerName || t.authorisedSignatory?.split(',')[0] || t.authorisedPartner || (cp.type === 'individual' ? cp.legalName : '') || cp.contactPerson).trim();
   const inst = a ? d.institutions.find((i) => i.id === a.institutionId) : undefined;
+  // Demo data: a seeded document that shows something other than what was entered.
+  const shows = doc.demo?.shows ?? {};
   return {
     cpName: cp.legalName,
     personName: person,
@@ -135,19 +137,19 @@ function specimenData(doc: DocumentRecord): MockDocData | null {
     fatherName: t.fatherName || undefined,
     dob: t.dob ? formatDate(t.dob) : undefined,
     panMasked: maskPan(cp.pan),
-    aadhaarLast4: cp.aadhaarLast4,
+    aadhaarLast4: shows.aadhaarLast4 ?? cp.aadhaarLast4,
     address: cp.residenceAddress || cp.businessAddress,
     bank: { holderName: cp.bank.holderName, accountMasked: maskAccount(cp.bank.accountNumber), ifsc: cp.bank.ifsc, bankName: cp.bank.bankName, branch: cp.bank.branch },
-    gstin: cp.gstin ? maskGstin(cp.gstin) : undefined,
+    gstin: (shows.gstin ?? cp.gstin) ? maskGstin(shows.gstin ?? cp.gstin) : undefined,
     extra: {
       cpTypeLabel: CP_TYPE_LABELS[cp.type],
       ownerPanMasked: t.ownerPan ? maskPan(t.ownerPan) : undefined,
-      msmeNumber: t.msmeNumber,
+      msmeNumber: shows.msmeNumber ?? t.msmeNumber,
       shopLicenceNumber: t.shopLicenceNumber,
       businessRegistration: t.businessRegistration,
       partners: t.partners,
       deedDate: t.deedDate ? formatDate(t.deedDate) : undefined,
-      cin: t.cin,
+      cin: shows.cin ?? t.cin,
       incorporationDate: t.incorporationDate ? formatDate(t.incorporationDate) : undefined,
       registeredOffice: t.registeredOffice,
       businessAddress: cp.businessAddress || undefined,
@@ -175,7 +177,10 @@ function specimenUrl(doc: DocumentRecord): string | null {
   if (!(MOCK_DOC_TYPES as string[]).includes(doc.type) || typeof URL.createObjectURL !== 'function') return null;
   const data = specimenData(doc);
   if (!data) return null;
-  return URL.createObjectURL(new Blob([mockDocumentSvg(doc.type as MockDocType, data)], { type: 'image/svg+xml' }));
+  let svg = mockDocumentSvg(doc.type as MockDocType, data);
+  // Demo data: an illegible scan, for Legal to send back.
+  if (doc.demo?.blurred) svg = svg.replace(/(<svg[^>]*>)/, '$1<defs><filter id="demo-blur"><feGaussianBlur stdDeviation="3.2"/></filter></defs><g filter="url(#demo-blur)">').replace(/<\/svg>\s*$/, '</g></svg>');
+  return URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
 }
 
 /**

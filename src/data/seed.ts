@@ -16,7 +16,7 @@ import type {
 import { addWorkingDays, shiftDays, today } from '@/lib/dates';
 import { requiredKyc } from '@/lib/kyc';
 
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 /** Prototype only: every seeded user signs in with their username and this shared password. */
 export const DEMO_PASSWORD = 'Apeejay@123';
@@ -195,6 +195,7 @@ export function buildSeed(): Database {
     cp({ id: 'CP-0011', type: 'individual', legalName: 'Kavita Joshi', pan: 'BHNPJ6677G', contactPerson: 'Kavita Joshi', mobile: '9820098200', email: 'kavita.joshi@outlook.com', residenceAddress: 'Flat 1203, Sea Breeze, Sector 20, Kharghar, Navi Mumbai 410210', businessAddress: '', gstRegistered: false, bank: bank('Kavita Joshi', '5566778899', 'HDFC0000999', 'HDFC Bank', 'Kharghar'), aadhaarLast4: '6677', typeFields: { fatherName: 'Shri Prakash Joshi', dob: '1986-11-02' }, by: 'u-neha', at: -700 }),
     cp({ id: 'CP-0012', type: 'individual', legalName: 'Mohammed Irfan', pan: 'CQRPI8899H', contactPerson: 'Mohammed Irfan', mobile: '9958099580', email: 'irfan.m@gmail.com', residenceAddress: 'House 9, Old Faridabad, Haryana 121002', businessAddress: '', gstRegistered: false, bank: bank('Mohammed Irfan', '1122334455', 'IDIB000F012', 'Indian Bank', 'Old Faridabad'), aadhaarLast4: '8899', typeFields: { fatherName: 'Shri Abdul Rashid', dob: '1978-03-21' }, at: -800 }),
     cp({ id: 'CP-0013', type: 'proprietorship', legalName: 'Gyan Path Career Point', pan: 'AAJFG4321K', contactPerson: 'Neeraj Gupta', mobile: '9811055443', email: 'neeraj@gyanpath.in', residenceAddress: 'C-41, Sector 50, Noida, Uttar Pradesh 201301', businessAddress: 'Shop 12, Sector 18 Market, Noida, Uttar Pradesh 201301', gstRegistered: false, bank: bank('Gyan Path Career Point', '40512398765', 'PUNB0456700', 'Punjab National Bank', 'Sector 18, Noida'), aadhaarLast4: '5521', typeFields: { ownerName: 'Neeraj Gupta', ownerPan: 'BQGPG5566M', msmeNumber: 'UDYAM-UP-28-0045123', businessRegistration: 'Trade licence TL/NOIDA/2021/0456' }, at: -25 }),
+    cp({ id: 'CP-0014', type: 'sole_prop', legalName: 'Lakshya Career Guidance', pan: 'ALKPS3344N', contactPerson: 'Sunita Sharma', mobile: '9813044556', email: 'sunita@lakshyacareers.in', residenceAddress: 'H.No. 77, Sector 7, Panipat, Haryana 132103', businessAddress: 'SCO 9, Model Town Market, Panipat, Haryana 132103', gstRegistered: true, gstin: '06ALKPS3344N1Z3', bank: bank('Lakshya Career Guidance', '60512344556', 'BARB0PANIPA', 'Bank of Baroda', 'Model Town, Panipat'), aadhaarLast4: '3344', typeFields: { proprietorName: 'Sunita Sharma', msmeNumber: 'UDYAM-HR-09-0077881' }, at: -22 }),
   ];
   // Fields added with the 2026 KYC checklist, for the CPs above.
   const checklistFields: Record<string, CpMaster['typeFields']> = {
@@ -257,6 +258,9 @@ export function buildSeed(): Database {
     ag({ id: 'AGR-AKS-2026-0015', i: 'aks', cpId: 'CP-0011', status: 'notice_period', created: -250, executionDate: d(-221), startDate: d(-220), endDate: d(145), activatedAt: ts(-218), stampPaper: stamp(15, 'Maharashtra', -222),
       termination: { type: 'convenience', reason: 'Partner relocating out of Navi Mumbai', noticeDate: d(-18), effectiveDate: d(12), noticeDocumentId: 'DOC-T-0015', startedById: 'u-neha', startedAt: ts(-18), confirmation: 'confirmed', confirmedById: 'u-arjun', confirmedAt: ts(-17) } }),
     ag({ id: 'AGR-AKS-2026-0017', i: 'aks', cpId: 'CP-0008', status: 'draft', created: -1, executionDate: d(20), startDate: d(21) }),
+    // Legal review test cases (see docs/testing-legal-review.md): sent back to the BD, and resubmitted.
+    ag({ id: 'AGR-ASU-2026-0018', cpId: 'CP-0013', status: 'signed_copy_uploaded', created: -16, executionDate: d(-9), startDate: d(-8), endDate: d(356), submittedAt: ts(-14), stampPaper: stamp(18, 'Haryana', -10), signedOn: d(-9) }),
+    ag({ id: 'AGR-ASU-2026-0019', cpId: 'CP-0014', status: 'pending_approval', created: -20, executionDate: d(-12), startDate: d(-11), endDate: d(353), submittedAt: ts(-18), stampPaper: stamp(19, 'Haryana', -13), signedOn: d(-12) }),
   ];
 
   // ---------------- Deviations ----------------
@@ -274,7 +278,7 @@ export function buildSeed(): Database {
     docs.push({ id: extra.id ?? `DOC-${String(docN++).padStart(4, '0')}`, ownerType, ownerId, type, fileName, mimeType: fileName.endsWith('.pdf') ? 'application/pdf' : 'image/jpeg', size: 180_000 + ((docN * 7919) % 400_000), uploadedById, uploadedAt: ts(at), verificationStatus: 'pending', retentionUntil: d(365 * 8 + 400), ...extra });
   };
   for (const c of cps) {
-    const verified = !['CP-0006', 'CP-0004', 'CP-0007'].includes(c.id);
+    const verified = !['CP-0006', 'CP-0004', 'CP-0007', 'CP-0013', 'CP-0014'].includes(c.id);
     const v = verified ? { verificationStatus: 'verified' as const, verifiedById: 'u-arjun', verifiedOn: c.createdAt, verificationMethod: 'manual' as const } : {};
     const days = Math.round((Date.parse(c.createdAt) - Date.parse(T)) / 86400000);
     // Every document the KYC checklist requires for this CP's category.
@@ -294,6 +298,50 @@ export function buildSeed(): Database {
   doc('agreement', 'AGR-AKS-2025-0011', 'termination_notice', 'Termination_notice_AKS_0011.pdf', 'u-neha', -60, { id: 'DOC-T-0011', retentionUntil: shiftDays(d(-30), 365 * 8) });
   doc('agreement', 'AGR-AKS-2026-0015', 'termination_notice', 'Termination_notice_AKS_0015.pdf', 'u-neha', -18, { id: 'DOC-T-0015', retentionUntil: shiftDays(d(12), 365 * 8) });
 
+  // ---------------- Legal review test cases (docs/testing-legal-review.md) ----------------
+  const cpDoc = (cpId: string, type: DocumentType) => docs.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === type)!;
+  // AGR-ASU-2026-0009, waiting for Legal: two real mismatches to find. The Aadhaar card's last 4
+  // digits differ from what was entered (a typo the BD corrects), and the PAN card is unreadable
+  // (the BD uploads a clear copy). Everything else matches.
+  cpDoc('CP-0012', 'aadhaar_masked').demo = { shows: { aadhaarLast4: '8890' } };
+  cpDoc('CP-0012', 'pan').demo = { blurred: true };
+  // AGR-ASU-2026-0018, sent back to the BD: three flagged items to fix.
+  const gyan = agreements.find((a) => a.id === 'AGR-ASU-2026-0018')!;
+  cpDoc('CP-0013', 'owner_pan').demo = { blurred: true };
+  cpDoc('CP-0013', 'msme_certificate').demo = { shows: { msmeNumber: 'UDYAM-UP-28-0045132' } };
+  gyan.docRequest = {
+    id: 'DR-0001',
+    status: 'with_bd',
+    note: 'Please sort these out before I approve.',
+    items: [
+      { key: 'owner_pan', remark: 'The PAN card of the firm owner is too blurred to read. Get a clear scan from the CP.', documentId: cpDoc('CP-0013', 'owner_pan').id, documentType: 'owner_pan' },
+      { key: 'msme_certificate', remark: 'Udyam number entered (UDYAM-UP-28-0045123) differs from the certificate (UDYAM-UP-28-0045132).', documentId: cpDoc('CP-0013', 'msme_certificate').id, documentType: 'msme_certificate' },
+      { key: 'contact', remark: 'The mobile number on record doesn’t reach Neeraj Gupta. Confirm the right number with the CP.' },
+    ],
+    requestedById: 'u-priya',
+    requestedAt: ts(-1, 11),
+  };
+  gyan.lastRejection = { gate: 1, byId: 'u-priya', at: ts(-1, 11), comment: 'CP details to correct — PAN card of the firm owner, Udyam number, mobile number' };
+  // AGR-ASU-2026-0019, back with Legal: the BD corrected the GSTIN and uploaded a clear PAN card;
+  // Legal re-checks only those two.
+  const lakshya = agreements.find((a) => a.id === 'AGR-ASU-2026-0019')!;
+  const oldPan = cpDoc('CP-0014', 'pan');
+  Object.assign(oldPan, { demo: { blurred: true }, verificationStatus: 'mismatch', verifiedById: 'u-priya', verifiedOn: ts(-3, 15), verificationMethod: 'manual', remarks: 'PAN copy is blurred' });
+  doc('cp', 'CP-0014', 'pan', 'pan_CP-0014_clear.pdf', 'u-neha', -1, { id: 'DOC-R-0019' });
+  lakshya.docRequest = {
+    id: 'DR-0002',
+    status: 'closed',
+    items: [
+      { key: 'gst_certificate', remark: 'GSTIN entered (06ALKPS3344N1Z8) differs from the GST certificate (06ALKPS3344N1Z3).', documentId: cpDoc('CP-0014', 'gst_certificate').id, documentType: 'gst_certificate', detailsUpdatedAt: ts(-1, 10) },
+      { key: 'pan', remark: 'PAN copy is blurred. Upload a clear scan.', documentId: oldPan.id, documentType: 'pan', replacementId: 'DOC-R-0019' },
+    ],
+    requestedById: 'u-priya',
+    requestedAt: ts(-3, 15),
+    closedAt: ts(-1, 11),
+    closedById: 'u-neha',
+    bdNote: 'Corrected the GSTIN and got a clear PAN scan from the CP.',
+  };
+
   // ---------------- Tasks ----------------
   const tasks: Task[] = [];
   let taskN = 1;
@@ -308,10 +356,15 @@ export function buildSeed(): Database {
   task('legacy_scan_upload', 'Upload legacy scan: Pathway Admissions Hub', 'u-neha', -3, addWorkingDays(d(-3), 10), { agreementId: 'AGR-ASU-2025-0016', cpId: 'CP-0002', institutionId: 'inst-asu' });
   task('renewal_decision', 'Renewal decision due: Pathway Admissions Hub', 'u-neha', -15, d(15), { agreementId: 'AGR-ASU-2025-0002', cpId: 'CP-0002', institutionId: 'inst-asu' });
   task('non_renewal_confirm', 'Confirm "Do not renew": Career Compass', 'u-arjun', -4, addWorkingDays(d(-4), 2), { agreementId: 'AGR-ASU-2025-0003', cpId: 'CP-0003', institutionId: 'inst-asu' });
+  task('cp_doc_request', 'Correct CP details: Gyan Path Career Point', 'u-neha', -1, addWorkingDays(d(-1), 3), { agreementId: 'AGR-ASU-2026-0018', cpId: 'CP-0013', institutionId: 'inst-asu' });
+  task('gate1_approval', 'Legal approval: Lakshya Career Guidance', 'u-priya', -1, addWorkingDays(d(-1), 2), { agreementId: 'AGR-ASU-2026-0019', cpId: 'CP-0014', institutionId: 'inst-asu' });
   task('rate_card_approval', 'Approve rate card: ASU v3', 'u-priya', -2, addWorkingDays(d(-2), 3), { refId: 'rc-asu-3', institutionId: 'inst-asu' });
   task('template_approval', 'Approve template: Partnership v2', 'u-priya', -1, addWorkingDays(d(-1), 3), { refId: 'tpl-pa-2', createdAt: ts(-1) });
   // Mark past ones as done for history.
   task('gate1_approval', 'Legal approval: Sharma & Gill Associates', 'u-priya', -8, addWorkingDays(d(-8), 2), { agreementId: 'AGR-ASU-2026-0007', status: 'done', completedAt: ts(-2), completedById: 'u-priya', institutionId: 'inst-asu' });
+  task('gate1_approval', 'Legal approval: Gyan Path Career Point', 'u-priya', -9, addWorkingDays(d(-9), 2), { agreementId: 'AGR-ASU-2026-0018', status: 'done', completedAt: ts(-1, 11), completedById: 'u-priya', institutionId: 'inst-asu' });
+  task('gate1_approval', 'Legal approval: Lakshya Career Guidance', 'u-priya', -12, addWorkingDays(d(-12), 2), { agreementId: 'AGR-ASU-2026-0019', status: 'done', completedAt: ts(-3, 15), completedById: 'u-priya', institutionId: 'inst-asu' });
+  task('cp_doc_request', 'Correct CP details: Lakshya Career Guidance', 'u-neha', -3, addWorkingDays(d(-3), 3), { agreementId: 'AGR-ASU-2026-0019', status: 'done', completedAt: ts(-1, 11), completedById: 'u-neha', institutionId: 'inst-asu' });
 
   // ---------------- Audit ----------------
   const audit: AuditEvent[] = [];
@@ -322,8 +375,8 @@ export function buildSeed(): Database {
   for (const a of agreements) {
     ev(a.ownerId, 'create', 'agreement', a.id, a.source === 'legacy' ? 'Imported legacy agreement' : 'Created draft agreement', a.createdAt, undefined, { status: 'draft' });
     if (a.submittedAt) ev(a.ownerId, 'submit', 'agreement', a.id, `Finalised for signing${a.nonStandard ? ' (Non-standard)' : ''}`, a.submittedAt, { status: 'draft' }, { status: 'approved_for_signing' });
-    if (a.signedOn && a.status === 'pending_approval') ev(a.ownerId, 'upload', 'agreement', a.id, 'Uploaded signed copy; sent to Legal for review', `${a.signedOn}T12:00:00.000Z`, { status: 'approved_for_signing' }, { status: 'pending_approval' });
-    if (a.lastRejection) ev(a.lastRejection.byId, 'reject', 'agreement', a.id, `Rejected by Legal: ${a.lastRejection.comment}`, a.lastRejection.at, { status: 'pending_approval' }, { status: 'draft' });
+    if (a.signedOn && (a.status === 'pending_approval' || a.docRequest)) ev(a.ownerId, 'upload', 'agreement', a.id, 'Uploaded signed copy; sent to Legal for review', `${a.signedOn}T12:00:00.000Z`, { status: 'approved_for_signing' }, { status: 'pending_approval' });
+    if (a.lastRejection && !a.docRequest) ev(a.lastRejection.byId, 'reject', 'agreement', a.id, `Rejected by Legal: ${a.lastRejection.comment}`, a.lastRejection.at, { status: 'pending_approval' }, { status: 'draft' });
     if (a.activatedAt)
       a.source === 'legacy'
         ? ev('u-arjun', 'approve', 'agreement', a.id, 'Gate 2 verified — agreement Active', a.activatedAt, { status: 'signed_copy_uploaded' }, { status: 'active' })
@@ -334,6 +387,11 @@ export function buildSeed(): Database {
     ev(dv.requestedById, 'request', 'deviation', dv.id, `Requested ${dv.type} deviation on ${dv.agreementId}: ${dv.label}`, dv.requestedAt, { value: dv.standardValue }, { value: dv.proposedValue });
     if (dv.decidedAt) ev(dv.decidedById!, 'approve', 'deviation', dv.id, `Approved deviation on ${dv.agreementId}`, dv.decidedAt, { value: dv.standardValue }, { value: dv.agreedValue });
   }
+  ev('u-priya', 'reject', 'agreement', 'AGR-ASU-2026-0018', 'Legal sent CP details back — PAN card of the firm owner (blurred); Udyam number differs from the certificate; mobile number doesn’t reach the CP', ts(-1, 11), { status: 'pending_approval' }, { status: 'signed_copy_uploaded' });
+  ev('u-priya', 'reject', 'agreement', 'AGR-ASU-2026-0019', 'Legal sent CP details back — GSTIN differs from the GST certificate; PAN copy is blurred', ts(-3, 15), { status: 'pending_approval' }, { status: 'signed_copy_uploaded' });
+  ev('u-neha', 'update', 'cp', 'CP-0014', 'Updated CP master (gstin)', ts(-1, 10), { gstin: '06ALKPS3344N1Z8' }, { gstin: '06ALKPS3344N1Z3' });
+  ev('u-neha', 'upload', 'document', 'DOC-R-0019', 'Uploaded the corrected PAN card (pan_CP-0014_clear.pdf) for AGR-ASU-2026-0019', ts(-1, 10));
+  ev('u-neha', 'submit', 'agreement', 'AGR-ASU-2026-0019', 'Corrected the CP details Legal flagged; sent back to Legal: Corrected the GSTIN and got a clear PAN scan from the CP.', ts(-1, 11), { status: 'signed_copy_uploaded' }, { status: 'pending_approval' });
   ev('u-arjun', 'create', 'rate_card', 'rc-asu-3', 'Created rate card ASU v3 and sent to Legal', ts(-2));
   ev('u-arjun', 'login', 'session', 'u-arjun', 'Signed in with Google', ts(-1, 9));
   ev('u-priya', 'reveal', 'cp', 'CP-0004', 'Revealed PAN', ts(-3, 11));
@@ -357,6 +415,8 @@ export function buildSeed(): Database {
       { id: 'N-0003', userId: 'u-neha', title: 'Renewal decision due', body: 'Pathway Admissions Hub · AGR-ASU-2025-0002 expires in 45 days.', link: '/agreements/AGR-ASU-2025-0002/renewal', createdAt: ts(-15), read: true },
       { id: 'N-0004', userId: 'u-priya', title: 'Deviation requested', body: 'NextStep Learning Pvt. Ltd · AGR-ASU-2026-0006 needs your review.', link: '/agreements/AGR-ASU-2026-0006/deviation', createdAt: ts(-2), read: false },
       { id: 'N-0005', userId: 'u-priya', title: 'Signed agreement for review', body: 'Mohammed Irfan · AGR-ASU-2026-0009 is signed and waiting for Legal review.', link: '/agreements/AGR-ASU-2026-0009/legal-review', createdAt: ts(-4), read: false },
+      { id: 'N-0007', userId: 'u-neha', title: 'Legal sent CP details back', body: 'Gyan Path Career Point · AGR-ASU-2026-0018: owner’s PAN card, Udyam number and mobile number. Correct them, then send the agreement back to Legal.', link: '/agreements/AGR-ASU-2026-0018', createdAt: ts(-1, 11), read: false },
+      { id: 'N-0008', userId: 'u-priya', title: 'Corrected CP details for review', body: 'Lakshya Career Guidance · AGR-ASU-2026-0019 is back with the GSTIN and PAN card you flagged.', link: '/agreements/AGR-ASU-2026-0019/legal-review', createdAt: ts(-1, 11), read: false },
       { id: 'N-0006', userId: 'u-arjun', title: 'Rate card awaiting Legal', body: 'ASU rate card v3 was sent to Legal for approval.', link: '/admin/rate-cards', createdAt: ts(-2), read: true },
     ],
     emails: [],
@@ -393,7 +453,7 @@ export function buildSeed(): Database {
       allowedDomains: ['apeejay.edu', 'apeejay.org'],
       simulateErrors: false,
     },
-    counters: { cp: cps.length, agreement: 17, doc: docN, task: taskN, audit: auditN, dev: 4, notif: 6, email: 0, batch: 1 },
+    counters: { cp: cps.length, agreement: 19, doc: docN, task: taskN, audit: auditN, dev: 4, notif: 8, email: 0, batch: 1, docreq: 2 },
   };
 }
 

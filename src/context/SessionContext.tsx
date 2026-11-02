@@ -3,6 +3,7 @@ import type { Institution, User } from '@/types';
 import { api } from '@/services/mockApi';
 import { getDb, subscribe } from '@/services/db';
 import { runScheduledJobs } from '@/services/api/scheduler';
+import { syncCrmIfDue } from '@/services/api/leads';
 import { onUnauthorized } from '@/hooks/useApi';
 import { useIdleTimer } from '@/hooks/misc';
 import { Button, Modal } from '@/components/ui';
@@ -43,8 +44,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Scheduler: on load and every minute (production: server-side cron).
   useEffect(() => {
-    runScheduledJobs();
-    const iv = setInterval(() => runScheduledJobs(), 60_000);
+    // The scheduled jobs, plus the CRM leads sync (at most hourly).
+    const jobs = () => {
+      runScheduledJobs();
+      void syncCrmIfDue();
+    };
+    jobs();
+    const iv = setInterval(jobs, 60_000);
     return () => clearInterval(iv);
   }, []);
 

@@ -87,7 +87,8 @@ export const cpFormSchema = (opts: { requireAccount: boolean; existing?: boolean
       if (opts.requireAccount || v.bank.accountNumber)
         req(['bank', 'accountNumber'], /^\d{9,18}$/.test(v.bank.accountNumber), 'Account number must be 9–18 digits');
       // Individuals are not GST registered on the checklist.
-      if (v.gstRegistered && v.type !== 'individual') {
+      // A masked GSTIN (••••) means "unchanged" for an existing CP; the server keeps the stored one.
+      if (v.gstRegistered && v.type !== 'individual' && !(opts.existing && (v.gstin ?? '').includes('•'))) {
         const g = (v.gstin ?? '').toUpperCase();
         req(['gstin'], GSTIN_RE.test(g), 'GSTIN must be 15 characters starting with a 2-digit state code');
         if (GSTIN_RE.test(g) && PAN_RE.test(v.pan)) req(['gstin'], g.slice(2, 12) === v.pan, 'GSTIN characters 3–12 must match the PAN');

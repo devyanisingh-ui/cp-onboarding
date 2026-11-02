@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="540" viewBox="0 0 860 540"><rect width="860" height="540" fill="#ffffff"/><rect x="12" y="12" width="836" height="516" rx="22" fill="#f0f9ff" stroke="#7dd3fc" stroke-width="2"/>
+<rect x="12" y="12" width="836" height="84" rx="22" fill="#0e7490"/><rect x="12" y="70" width="836" height="26" fill="#0e7490"/>
+<text x="44" y="64" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="800" fill="#fff" letter-spacing="1">PAN CARD</text>
+<text x="816" y="64" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#cffafe" text-anchor="end">Demo specimen</text>
+<rect x="44" y="132" width="150" height="186" rx="6" fill="#e2e8f0" stroke="#94a3b8"/>
+<circle cx="119" cy="202.68" r="30" fill="#94a3b8"/>
+<path d="M 68 303.12 Q 119 225 170 303.12 Z" fill="#94a3b8"/>
+<text x="230" y="140" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">NAME</text>
+<text x="230" y="166" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#0f172a">Rohit Gupta</text>
+<text x="230" y="214" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">HOLDER</text>
+<text x="230" y="236" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#0f172a">Gupta &amp; Mehta Education Consultants</text>
+<text x="230" y="288" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">DATE OF BIRTH</text>
+<text x="230" y="310" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#0f172a">1 April 2022</text>
+<text x="44" y="370" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">PERMANENT ACCOUNT NUMBER</text>
+<text x="44" y="408" font-family="'JetBrains Mono', Menlo, Consolas, monospace" font-size="34" font-weight="600" fill="#0f172a">CQGPG••••R</text>
+<path d="M 560 430 Q 571.0 455.1 582.0 440.4 Q 593.0 420.0 604.0 431.6 Q 615.0 416.6 626.0 422.4 Q 637.0 430.7 648.0 414.1 Q 659.0 422.4 670.0 413.3 Q 681.0 417.9 692.0 440.5 Q 703.0 450.7 714.0 422.3 Q 725.0 403.6 736.0 446.0 Q 747.0 432.3 758.0 414.4 Q 769.0 435.9 780.0 418.5" fill="none" stroke="#1e3a8a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M 582 444 C 648 456, 736 434, 784.4 440" fill="none" stroke="#1e3a8a" stroke-width="1.6" stroke-linecap="round"/>
+<line x1="550" y1="452" x2="800" y2="452" stroke="#94a3b8"/>
+<text x="675" y="472" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" text-anchor="middle">Signature</text><g opacity="0.13" pointer-events="none"><text x="430" y="270" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="112" font-weight="900" fill="#b91c1c" text-anchor="middle" dominant-baseline="middle" letter-spacing="14" transform="rotate(-22 430 270)">SPECIMEN</text></g><text x="430" y="512" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#b91c1c" text-anchor="middle" font-weight="600">Mock document for demo only — not a valid document</text></svg>

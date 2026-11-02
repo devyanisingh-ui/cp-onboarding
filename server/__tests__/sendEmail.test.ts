@@ -43,6 +43,24 @@ describe('email relay', () => {
     expect(sent.text).toContain('Open in CP Onboarding: https://app.example.com/agreements/AGR-1');
   });
 
+  it('copies in the cc recipients, and leaves them out when redirected for testing', async () => {
+    const withCc = { ...ok, to: 'cp@example.com', cc: ['bd@example.com'], link: undefined, kind: 'event' };
+    let fetchMock = resendMock();
+    await handleSendEmail(post(withCc), env, fetchMock as unknown as typeof fetch);
+    let sent = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(sent).toMatchObject({ to: ['cp@example.com'], cc: ['bd@example.com'] });
+    expect(sent.html).not.toContain('<a href');
+    fetchMock = resendMock();
+    await handleSendEmail(post(withCc), { ...env, EMAIL_REDIRECT_TO: 'qa@example.com' }, fetchMock as unknown as typeof fetch);
+    sent = JSON.parse(fetchMock.mock.calls[0][1]!.body as string);
+    expect(sent.to).toEqual(['qa@example.com']);
+    expect(sent.cc).toBeUndefined();
+    expect(sent.subject).toBe('[to cp@example.com, cc bd@example.com] New task: Legal approval');
+    expect(parseRelayRequest({ ...ok, cc: ['not-an-email'] })).toBe('Invalid copy (cc) recipients.');
+    expect(parseRelayRequest({ ...ok, cc: 'bd@example.com' })).toBe('Invalid copy (cc) recipients.');
+    expect(parseRelayRequest({ ...ok, cc: Array(6).fill('a@b.com') })).toBe('Invalid copy (cc) recipients.');
+  });
+
   it('reports on GET which settings are missing, never their values', async () => {
     const get = (e: Record<string, string>) => handleSendEmail(new Request('http://x/api/send-email'), e).then((r) => r.json());
     expect(await get({})).toEqual({ missing: ['RESEND_API_KEY', 'EMAIL_FROM', 'APP_URL'] });

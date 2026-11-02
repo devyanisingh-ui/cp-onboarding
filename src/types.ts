@@ -110,8 +110,88 @@ export interface CpMaster {
   warning?: WarningFlag;
   reverificationRequired?: boolean;
   consent?: { statement: string; recordedAt: ISODateTime; recordedById: string };
+  /** The CP's partner / source code in the CRM, used to match synced leads. Falls back to the CP ID. */
+  crmPartnerCode?: string;
+  /** The CP confirming their email (link) and mobile (one-time code); see services/api/contactVerification.ts. */
+  contactVerification?: ContactVerification;
   createdAt: ISODateTime;
   createdById: string;
+}
+
+/**
+ * Proof that the CP's email and mobile reach the CP. Each channel records the address it verified,
+ * so changing the CP's email or mobile later makes that channel unverified again.
+ */
+export interface ContactVerification {
+  /** The CP's personal link (/verify/<token>), emailed to them. A new one replaces the old. */
+  token?: string;
+  linkSentAt?: ISODateTime;
+  linkExpiresAt?: ISODateTime;
+  sentById?: string;
+  /** Who or what started it: an agreement going to Legal, or a BD Executive by hand. */
+  reason?: string;
+  emailVerified?: { value: string; at: ISODateTime };
+  mobileVerified?: { value: string; at: ISODateTime };
+  /** The current one-time code for the mobile (only its hash is kept). */
+  otp?: { codeHash: string; sentAt: ISODateTime; expiresAt: ISODateTime; attempts: number };
+  /** Codes sent in the last hour, for the sending limit. */
+  otpSends?: ISODateTime[];
+}
+
+export type ContactCheck = 'verified' | 'pending' | 'not_started';
+
+/** What screens see: the status of each channel, never the token or the code. */
+export interface ContactVerificationView {
+  email: ContactCheck;
+  mobile: ContactCheck;
+  emailVerifiedAt?: ISODateTime;
+  mobileVerifiedAt?: ISODateTime;
+  linkSentAt?: ISODateTime;
+  linkExpired: boolean;
+}
+
+// ---------- Leads and revenue (pulled from the CRM; see services/api/leads.ts) ----------
+
+export type LeadStatus = 'lead' | 'applied' | 'admitted' | 'dropped';
+
+/**
+ * A student lead a CP referred, as the CRM reports it. Deliberately no personal data: the student's
+ * identity stays in the CRM, this keeps its lead ID, the programme, the status, dates and the fee.
+ */
+export interface CpLead {
+  id: string;
+  /** The CRM's own ID for the lead (the key for every later sync). */
+  crmId: string;
+  cpId: string;
+  institutionId: string;
+  programme: string;
+  /** Admission cycle, e.g. 2026-27. */
+  academicYear: string;
+  status: LeadStatus;
+  createdOn: ISODate;
+  appliedOn?: ISODate;
+  admittedOn?: ISODate;
+  droppedOn?: ISODate;
+  /** Fees from an admitted student (first-year fees): the revenue this lead brought Apeejay. */
+  feeInr?: number;
+  syncedAt: ISODateTime;
+  /** Admin's correction. Kept on later syncs until Admin clears it; the CRM's own values stay visible. */
+  correction?: { status: LeadStatus; feeInr?: number; note: string; byId: string; at: ISODateTime };
+}
+
+export interface CrmSyncState {
+  connector: string;
+  lastSyncAt?: ISODateTime;
+  lastResult?: { fetched: number; created: number; updated: number; unmatched: number; error?: string };
+}
+
+/** A text message to a mobile. No SMS provider yet: the app keeps them in an outbox (Admin → System). */
+export interface SmsMessage {
+  id: string;
+  to: string;
+  body: string;
+  kind: 'otp';
+  sentAt: ISODateTime;
 }
 
 /** Stored lifecycle states. "Expiring" and "Rejected" are derived display states. */
@@ -203,31 +283,36 @@ export interface Rejection {
   comment: string;
 }
 
-/** One document Legal flagged, with its remark and the CP's replacement once uploaded. */
+/**
+ * One CP detail Legal flagged (a key from lib/cpChecks), with its remark. The BD fixes it by
+ * correcting the CP details (detailsUpdatedAt) or uploading a corrected document (replacementId).
+ */
 export interface DocRequestItem {
-  documentId: string;
-  documentType: DocumentType;
+  key: string;
   remark: string;
+  /** The document the detail is checked against, when there is one. */
+  documentId?: string;
+  documentType?: DocumentType;
   replacementId?: string;
+  detailsUpdatedAt?: ISODateTime;
 }
 
 /**
- * Legal → BD → CP → BD → Legal loop for corrected documents.
- * with_bd: BD has to send the CP a link · sent_to_cp: waiting for the CP · cp_submitted: BD to
- * check the new uploads · closed: BD verified them and resubmitted to Legal.
+ * Legal → BD → Legal loop for mismatched CP details.
+ * with_bd: the BD corrects the details or uploads corrected documents · closed: the BD sent the
+ * agreement back to Legal.
  */
 export interface DocRequest {
   id: string;
-  status: 'with_bd' | 'sent_to_cp' | 'cp_submitted' | 'closed';
+  status: 'with_bd' | 'closed';
   note?: string;
   items: DocRequestItem[];
   requestedById: string;
   requestedAt: ISODateTime;
-  token?: string;
-  cpEmail?: string;
-  sentAt?: ISODateTime;
-  cpNote?: string;
-  cpSubmittedAt?: ISODateTime;
+  /** Who was emailed the issues: the CP, with the BD Executive in copy. */
+  emailedTo?: { cp: string; bd?: string };
+  /** The BD's note to Legal when sending the corrected details back. */
+  bdNote?: string;
   closedAt?: ISODateTime;
   closedById?: string;
   /** Set when Legal decides on the resubmitted agreement; until then Legal re-checks only these documents. */
@@ -308,7 +393,7 @@ export interface Agreement {
   reviewFlag?: { reason: string; at: ISODateTime };
   /** Current (or last) digital-signature request; the paper upload path leaves it unset. */
   esign?: ESignRequest;
-  /** Legal asked for corrected CP documents; the CP re-uploads them from a link. */
+  /** Legal flagged CP details; the BD corrects them and sends the agreement back. */
   docRequest?: DocRequest;
   closedAt?: ISODateTime;
 }
@@ -453,6 +538,11 @@ export interface DocumentRecord {
   verificationMethod?: 'manual' | 'api';
   remarks?: string;
   retentionUntil?: ISODate;
+  /**
+   * Demo data only, for testing Legal's review: how a seeded document's generated specimen differs
+   * from the CP's record (a value that doesn't match what was entered, or an illegible scan).
+   */
+  demo?: { blurred?: boolean; shows?: { aadhaarLast4?: string; msmeNumber?: string; cin?: string; gstin?: string } };
 }
 
 export type TaskType =
@@ -469,8 +559,7 @@ export type TaskType =
   | 'warning_override'
   | 'legacy_scan_upload'
   | 'rate_review'
-  | 'cp_doc_request'
-  | 'cp_doc_review';
+  | 'cp_doc_request';
 
 export interface Task {
   id: string;
@@ -504,10 +593,12 @@ export interface AppNotification {
 export interface EmailMessage {
   id: string;
   to: string;
+  /** Copied in, e.g. the BD Executive on an email to their CP. */
+  cc?: string[];
   subject: string;
   body: string;
   link?: string;
-  kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event' | 'signature';
+  kind: 'task' | 'reminder' | 'escalation' | 'digest' | 'event' | 'signature' | 'verification';
   sentAt: ISODateTime;
   /** Real delivery through the Resend relay. Absent when the email only went to the simulated outbox. */
   delivery?: { status: 'sending' | 'sent' | 'failed'; providerId?: string; error?: string };
@@ -595,6 +686,11 @@ export interface Database {
   tasks: Task[];
   notifications: AppNotification[];
   emails: EmailMessage[];
+  /** Text messages (one-time codes). Absent in data saved before they existed. */
+  sms?: SmsMessage[];
+  /** Leads synced from the CRM. Absent in data saved before they existed. */
+  leads?: CpLead[];
+  crmSync?: CrmSyncState;
   audit: AuditEvent[];
   routing: RoutingRule[];
   masterLists: MasterLists;

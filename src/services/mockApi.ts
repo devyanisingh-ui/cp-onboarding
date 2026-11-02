@@ -13,6 +13,8 @@ import * as reports from './api/reports';
 import * as legacy from './api/legacy';
 import * as esign from './api/esign';
 import * as docRequests from './api/docRequests';
+import * as contactVerification from './api/contactVerification';
+import * as leads from './api/leads';
 
 export const api = {
   auth: {
@@ -30,6 +32,8 @@ export const api = {
     getForEdit: cps.getCpForEdit,
     update: cps.updateCp,
     reveal: cps.revealCpField,
+    /** Email the CP a link to verify their email and mobile (also starts by itself when an agreement goes to Legal). */
+    sendVerification: contactVerification.sendContactVerification,
   },
   agreements: {
     list: agreements.listAgreements,
@@ -45,9 +49,10 @@ export const api = {
     saveFields: agreements.saveAgreementFields,
     submit: agreements.submitForApproval,
     decideGate1: agreements.decideGate1,
-    requestDocChanges: docRequests.requestDocChanges,
-    sendDocRequestLink: docRequests.sendDocRequestLink,
-    acceptCpDocs: docRequests.acceptCpDocs,
+    requestCpChanges: docRequests.requestCpChanges,
+    correctFlaggedDetails: docRequests.correctFlaggedDetails,
+    uploadCorrectedDoc: docRequests.uploadCorrectedDoc,
+    resubmitCorrectedDocs: docRequests.resubmitCorrectedDocs,
     requestDeviation: agreements.requestDeviation,
     decideDeviation: agreements.decideDeviation,
     decideDeviations: agreements.decideDeviations,
@@ -78,6 +83,7 @@ export const api = {
     markRead: inbox.markNotificationsRead,
     audit: inbox.listAudit,
     emails: inbox.listEmails,
+    sms: inbox.listSms,
   },
   config: {
     lookups: config.lookups,
@@ -125,15 +131,27 @@ export const api = {
     sign: esign.signWithToken,
     decline: esign.declineWithToken,
   },
-  /** Public CP links for re-uploading documents Legal flagged (the link token is the credential). */
-  cpDocs: {
-    session: docRequests.getCpDocSession,
-    upload: docRequests.uploadCpDoc,
-    submit: docRequests.submitCpDocs,
+  /** Leads and revenue per CP, pulled from the CRM (Admin corrects). */
+  leads: {
+    forCp: leads.getCpLeads,
+    correct: leads.correctLead,
+    setPartnerCode: leads.setCrmPartnerCode,
+    syncNow: leads.syncCrmNow,
+    status: leads.crmStatus,
+  },
+  /** Public CP link for verifying their email and mobile (the link token is the credential). */
+  verifyContact: {
+    session: contactVerification.getVerifySession,
+    confirmEmail: contactVerification.confirmEmail,
+    sendCode: contactVerification.sendMobileCode,
+    verifyCode: contactVerification.verifyMobileCode,
   },
 };
 
 export type Api = typeof api;
+export type { ContactVerifySession } from './api/contactVerification';
+export type { CpLeadsView, LeadTotals } from './api/leads';
+export { LEAD_STATUS_LABELS } from './api/leads';
 export type { CpListItem, CpDTO, AgreementSummary, AgreementDetail, AgreementActions, CpStatus } from './api/dto';
 export { CP_STATUS_META } from './api/dto';
 export type { TaskItem, Dashboard } from './api/inbox';
@@ -143,4 +161,3 @@ export type { LegacyRow, RowValidation } from './api/legacy';
 export type { RenderedDocument } from './api/agreements';
 export type { SigningSession, SignatureInput, SignerInput } from './api/esign';
 export { SIGN_METHOD_LABELS } from './api/esign';
-export type { CpDocSession } from './api/docRequests';

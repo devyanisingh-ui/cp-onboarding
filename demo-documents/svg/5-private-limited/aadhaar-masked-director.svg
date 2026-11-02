@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="540" viewBox="0 0 860 540"><rect width="860" height="540" fill="#ffffff"/><rect x="12" y="12" width="836" height="516" rx="22" fill="#fffbeb" stroke="#fcd34d" stroke-width="2"/>
+<rect x="12" y="12" width="836" height="84" rx="22" fill="#b45309"/><rect x="12" y="70" width="836" height="26" fill="#b45309"/>
+<text x="44" y="64" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="28" font-weight="800" fill="#fff" letter-spacing="1">AADHAAR · MASKED COPY</text>
+<text x="816" y="64" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#fef3c7" text-anchor="end">Demo specimen</text>
+<rect x="44" y="132" width="150" height="186" rx="6" fill="#e2e8f0" stroke="#94a3b8"/>
+<circle cx="119" cy="202.68" r="30" fill="#94a3b8"/>
+<path d="M 68 303.12 Q 119 225 170 303.12 Z" fill="#94a3b8"/>
+<text x="230" y="140" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">NAME</text>
+<text x="230" y="166" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="22" font-weight="600" fill="#0f172a">Kavita Rao</text>
+<text x="230" y="214" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">DATE OF BIRTH</text>
+<text x="230" y="236" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" font-weight="600" fill="#0f172a">12 August 2021</text>
+<text x="230" y="288" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#64748b" letter-spacing="0.6">ADDRESS</text>
+<text x="230" y="312" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#0f172a">Villa 9, Palm Grove, Sector 57, Gurugram,</text><text x="230" y="334" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" fill="#0f172a">Haryana 122011</text>
+<rect x="44" y="410" width="772" height="70" rx="12" fill="#fff" stroke="#fcd34d"/>
+<text x="430" y="458" font-family="'JetBrains Mono', Menlo, Consolas, monospace" font-size="36" font-weight="700" fill="#0f172a" text-anchor="middle" letter-spacing="4">XXXX XXXX 9753</text><g opacity="0.13" pointer-events="none"><text x="430" y="270" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="112" font-weight="900" fill="#b91c1c" text-anchor="middle" dominant-baseline="middle" letter-spacing="14" transform="rotate(-22 430 270)">SPECIMEN</text></g><text x="430" y="512" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" fill="#b91c1c" text-anchor="middle" font-weight="600">Mock document for demo only — not a valid document</text></svg>

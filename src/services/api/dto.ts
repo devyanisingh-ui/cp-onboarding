@@ -2,6 +2,7 @@ import type {
   Agreement,
   AuditEvent,
   BankDetails,
+  ContactVerificationView,
   CpMaster,
   CpType,
   Deviation,
@@ -18,10 +19,13 @@ import { maskAccount, maskGstin, maskPan } from '@/lib/mask';
 import { displayStatus, IN_PROGRESS_STATUSES, LIVE_STATUSES } from '@/lib/status';
 import { getDb } from '../db';
 import { inScope, userName } from './core';
+import { contactView } from './contactVerification';
 
 /** CP as sent to the browser: PAN and account number are masked; "Reveal" is a separate logged call. */
-export type CpDTO = Omit<CpMaster, 'pan' | 'bank'> & {
+export type CpDTO = Omit<CpMaster, 'pan' | 'bank' | 'contactVerification'> & {
   panMasked: string;
+  /** Whether the CP has confirmed their email and mobile (never the link or the code). */
+  contact: ContactVerificationView;
   bank: Omit<BankDetails, 'accountNumber'> & { accountMasked: string };
   status: CpStatus;
 };
@@ -82,10 +86,8 @@ export interface AgreementActions {
   approveGate1: boolean;
   /** Legal: send flagged documents back for the CP to correct. */
   requestDocChanges: boolean;
-  /** BD: send / resend the CP their document upload link. */
-  sendDocLink: boolean;
-  /** BD: check the CP's corrected documents and resubmit to Legal. */
-  reviewCpDocs: boolean;
+  /** BD: correct the CP details Legal flagged (or upload corrected documents) and send it back to Legal. */
+  fixCpDetails: boolean;
   uploadSigned: boolean;
   /** Send the approved agreement for digital signature (DSC or drawn/typed via an email link). */
   sendForSignature: boolean;
@@ -128,7 +130,7 @@ export function cpStatus(cpId: string): CpStatus {
 }
 
 export function toCpDTO(cp: CpMaster): CpDTO {
-  const { pan, bank, ...rest } = cp;
+  const { pan, bank, contactVerification: _secret, ...rest } = cp;
   const { accountNumber, ...bankRest } = bank;
   return {
     ...structuredClone(rest),
@@ -137,6 +139,7 @@ export function toCpDTO(cp: CpMaster): CpDTO {
     panMasked: maskPan(pan),
     bank: { ...bankRest, accountMasked: maskAccount(accountNumber) },
     status: cpStatus(cp.id),
+    contact: contactView(cp),
   };
 }
 

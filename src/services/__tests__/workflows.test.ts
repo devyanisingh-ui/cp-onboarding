@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { api } from '../mockApi';
+import { api, type CpDTO } from '../mockApi';
 import { setLatency, containsSensitive } from '../api/core';
 import { getDb } from '../db';
 import { runScheduledJobs } from '../api/scheduler';
 import { shiftDays, today } from '@/lib/dates';
-import type { CpFormValues } from '@/lib/schemas';
+import { cpFormSchema, type CpFormValues } from '@/lib/schemas';
+import { maskGstin, maskPan } from '@/lib/mask';
 import { DEMO_PASSWORD } from '@/data/seed';
 import { requiredKyc } from '@/lib/kyc';
 import { correctedDocsToRecheck } from '@/lib/status';
@@ -157,6 +158,14 @@ describe('new CP onboarding (PRD 6.1)', () => {
     await expect(api.agreements.submit(agreementId)).rejects.toThrow(/Missing fields.*Missing KYC/);
   });
 
+  it('the CP edit form accepts the masked GSTIN it is filled with (unchanged), but a new CP needs a real one', () => {
+    const gst = { ...newCp, gstRegistered: true, gstin: '06ABCPS1234D1Z5' };
+    const edit = { ...gst, pan: maskPan(gst.pan), gstin: maskGstin(gst.gstin), bank: { ...gst.bank, accountNumber: '' } };
+    expect(cpFormSchema({ requireAccount: false, existing: true }).safeParse(edit).success).toBe(true);
+    expect(cpFormSchema({ requireAccount: true }).safeParse({ ...gst, gstin: maskGstin(gst.gstin) }).success).toBe(false);
+    expect(cpFormSchema({ requireAccount: true }).safeParse(gst).success).toBe(true);
+  });
+
   it('enforces one active agreement per CP per institution', async () => {
     await as(KAVYA);
     const existing = getDb().cps.find((c) => c.id === 'CP-0001')!;
@@ -174,47 +183,73 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
   });
 
-  it('Legal asks for corrected documents; the CP re-uploads them from a link; BD checks and resubmits', async () => {
+  it('Legal sends mismatched CP details back; the BD corrects details or uploads documents and resubmits', async () => {
     const { agreementId, cpId } = await createReadyDraft();
     await finaliseAndSignOnPaper(agreementId);
     const pan = getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === 'pan')!;
+    const pdf = (name: string) => [new Blob([name], { type: 'application/pdf' }), name] as const;
 
     await as(PRIYA);
-    await expect(api.agreements.requestDocChanges(agreementId, [{ documentId: pan.id, remark: ' ' }])).rejects.toThrow(/remark/);
-    await api.agreements.requestDocChanges(agreementId, [{ documentId: pan.id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
+    await expect(api.agreements.requestCpChanges(agreementId, [{ key: 'pan', remark: ' ' }])).rejects.toThrow(/doesn’t match/);
+    await expect(api.agreements.requestCpChanges(agreementId, [{ key: 'signatory', remark: 'Wrong' }])).rejects.toThrow(/not one of this CP’s details/);
+    await api.agreements.requestCpChanges(
+      agreementId,
+      [
+        { key: 'pan', remark: 'PAN copy is blurred' },
+        { key: 'msme_certificate', remark: 'Udyam number differs from the certificate' },
+        { key: 'contact', remark: 'Mobile number is wrong' },
+      ],
+      'Please fix before I approve',
+    );
     let a = getDb().agreements.find((x) => x.id === agreementId)!;
     // The signed agreement waits with the BD; it does not go back to Draft or need signing again.
     expect(a.status).toBe('signed_copy_uploaded');
     expect((await api.agreements.get(agreementId)).summary.displayStatus).toBe('docs_requested');
-    expect(a.docRequest?.status).toBe('with_bd');
-    expect(pan.verificationStatus).toBe('mismatch');
-    expect(pan.remarks).toBe('PAN copy is blurred');
+    expect(a.docRequest?.items.map((it) => [it.key, it.documentType])).toEqual([['pan', 'pan'], ['msme_certificate', 'msme_certificate'], ['contact', undefined]]);
+    // The CP is emailed the issues, with the BD in copy, and no link to upload anything.
+    const kavya = getDb().users.find((u) => u.id === 'u-neha')!;
+    const mail = getDb().emails.filter((m) => m.to === newCp.email).at(-1)!;
+    expect(mail).toMatchObject({ cc: [kavya.email], link: undefined, kind: 'event' });
+    expect(mail.subject).toContain(agreementId);
+    expect(mail.body).toContain('• PAN card of the sole proprietor: PAN copy is blurred');
+    expect(mail.body).toContain('• Contact person, mobile and email: Mobile number is wrong');
+    expect(mail.body).toContain('Mobile number is wrong');
+    expect(mail.body).toContain('Please fix before I approve');
+    expect(mail.body).toContain(`${kavya.name} (${kavya.email}) will get in touch with you about the corrected details and documents`);
+    expect(a.docRequest?.emailedTo).toEqual({ cp: newCp.email, bd: kavya.email });
+    // The flagged document stays as it is until a corrected copy replaces it.
+    expect(pan.verificationStatus).toBe('pending');
     expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open' && t.assigneeId === 'u-neha')).toBe(true);
+    // Legal cannot fix them.
+    expect((await api.agreements.get(agreementId)).actions.fixCpDetails).toBe(false);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('pan.pdf'))).rejects.toThrow();
 
     await as(KAVYA);
-    expect((await api.agreements.get(agreementId)).actions.verifyGate2).toBe(false);
-    const { link } = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
-    const token = link.split('/').pop()!;
-    expect(getDb().emails.some((m) => m.to === 'ravi@sunrise.in' && m.link === link)).toBe(true);
-
-    // The CP, with no account, opens the link.
-    const session = await api.cpDocs.session(token);
-    expect(session.items).toEqual([expect.objectContaining({ documentType: 'pan', remark: 'PAN copy is blurred' })]);
-    expect(session.open).toBe(true);
-    await expect(api.cpDocs.submit(token)).rejects.toThrow(/Upload every requested document/);
-    await api.cpDocs.upload(token, 'pan', new Blob(['y'], { type: 'application/pdf' }), 'pan-clear.pdf');
-    await api.cpDocs.submit(token, 'Clear scan attached');
+    const detail = await api.agreements.get(agreementId);
+    expect(detail.actions.fixCpDetails).toBe(true);
+    expect(detail.actions.verifyGate2).toBe(false);
+    await expect(api.agreements.resubmitCorrectedDocs(agreementId)).rejects.toThrow(/Fix everything Legal flagged first/);
+    // Correcting the Udyam number fixes that item only; the contact item still waits.
+    const values = { ...newCp, gstin: '', typeFields: { ...newCp.typeFields, msmeNumber: 'UDYAM-HR-05-0099999' }, bank: { ...newCp.bank, accountNumber: '' } };
+    expect(await api.agreements.correctFlaggedDetails(agreementId, values)).toEqual({ fixed: 1 });
+    expect(getDb().cps.find((c) => c.id === cpId)!.typeFields.msmeNumber).toBe('UDYAM-HR-05-0099999');
+    expect(await api.agreements.correctFlaggedDetails(agreementId, { ...values, mobile: '9812099999' })).toEqual({ fixed: 1 });
+    // PAN can't be edited: only a corrected PAN card fixes it. A second upload replaces the first.
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'contact', ...pdf('contact.pdf'))).rejects.toThrow(/no document/);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'gst_certificate', ...pdf('gst.pdf'))).rejects.toThrow(/did not flag/);
+    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('pan-first.pdf'));
+    await api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('pan-clear.pdf'));
+    const first = getDb().documents.find((x) => x.fileName === 'pan-first.pdf')!;
+    expect(first.verificationStatus).toBe('mismatch');
+    await api.agreements.resubmitCorrectedDocs(agreementId, 'Fixed all three');
     a = getDb().agreements.find((x) => x.id === agreementId)!;
-    expect(a.docRequest?.status).toBe('cp_submitted');
-    expect((await api.cpDocs.session(token)).open).toBe(false);
-    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_review' && t.status === 'open')).toBe(true);
-
-    await api.agreements.acceptCpDocs(agreementId);
-    a = getDb().agreements.find((x) => x.id === agreementId)!;
-    expect(a.docRequest?.status).toBe('closed');
+    expect(a.docRequest).toMatchObject({ status: 'closed', closedById: 'u-neha', bdNote: 'Fixed all three' });
     expect(a.status).toBe('pending_approval');
-    // Legal re-checks only the corrected PAN, not every document again.
-    expect(correctedDocsToRecheck(a)?.map((it) => it.documentType)).toEqual(['pan']);
+    expect(pan.verificationStatus).toBe('mismatch');
+    expect(getDb().tasks.some((t) => t.agreementId === agreementId && t.type === 'cp_doc_request' && t.status === 'open')).toBe(false);
+    // Legal re-checks only what it flagged, not everything again.
+    expect(correctedDocsToRecheck(a)?.map((it) => it.key)).toEqual(['pan', 'msme_certificate', 'contact']);
+    await expect(api.agreements.uploadCorrectedDoc(agreementId, 'pan', ...pdf('late.pdf'))).rejects.toThrow(/no open request/);
 
     await as(PRIYA);
     await api.agreements.decideGate1(agreementId, 'approve');
@@ -224,62 +259,30 @@ describe('new CP onboarding (PRD 6.1)', () => {
     expect(getDb().agreements.find((x) => x.id === agreementId)!.status).toBe('active');
   });
 
-  it('emails the CP their upload link for the corrected documents, through the real-delivery relay', async () => {
-    const { agreementId, cpId } = await createReadyDraft();
-    await finaliseAndSignOnPaper(agreementId);
-    const docOf = (type: string) => getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === type)!;
+  it('seeds the Legal review test cases: to review, sent back to the BD, and back with Legal', async () => {
+    const docOf = (cpId: string, type: string) => getDb().documents.find((x) => x.ownerType === 'cp' && x.ownerId === cpId && x.type === type)!;
+    // To review: the Aadhaar card shows other last 4 digits than were entered; the PAN card is unreadable.
     await as(PRIYA);
-    await api.agreements.requestDocChanges(agreementId, [{ documentId: docOf('pan').id, remark: 'PAN copy is blurred' }], 'Please get a clear scan');
+    expect((await api.agreements.get('AGR-ASU-2026-0009')).actions.approveGate1).toBe(true);
+    expect(docOf('CP-0012', 'aadhaar_masked').demo?.shows?.aadhaarLast4).not.toBe(getDb().cps.find((c) => c.id === 'CP-0012')!.aadhaarLast4);
+    expect(docOf('CP-0012', 'pan').demo?.blurred).toBe(true);
+    // Back with Legal: only the two corrected items to re-check.
+    const lakshya = await api.agreements.get('AGR-ASU-2026-0019');
+    expect(lakshya.actions.approveGate1).toBe(true);
+    expect(correctedDocsToRecheck(lakshya.agreement)?.map((it) => it.key)).toEqual(['gst_certificate', 'pan']);
 
-    // Real delivery on (as with NEXT_PUBLIC_EMAIL_DELIVERY=resend in .env); capture what the app posts to the relay.
-    vi.stubEnv('NEXT_PUBLIC_EMAIL_DELIVERY', 'resend');
-    const relayed: unknown[] = [];
-    vi.stubGlobal('fetch', vi.fn(async (_url: string, init: RequestInit) => (relayed.push(JSON.parse(init.body as string)), new Response(JSON.stringify({ id: 'em_1' })))));
-    try {
-      await as(KAVYA);
-      const before = getDb().emails.length;
-      const { link } = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
-
-      // Exactly one email, to the CP, carrying their personal link and what to fix.
-      const sent = getDb().emails.slice(before);
-      expect(sent).toHaveLength(1);
-      const [m] = sent;
-      expect(m).toMatchObject({ to: 'ravi@sunrise.in', link, kind: 'task' });
-      expect(m!.subject).toContain(agreementId);
-      expect(m!.body).toContain('PAN copy is blurred');
-      expect(m!.body).toMatch(/Do not forward it/);
-
-      // Handed to the relay, which accepts it and would send it through Resend with an absolute link.
-      expect(relayed).toEqual([{ to: 'ravi@sunrise.in', subject: m!.subject, body: m!.body, link, kind: 'task' }]);
-      const resend = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => new Response(JSON.stringify({ id: 'em_2' })));
-      const res = await handleSendEmail(
-        new Request('http://x/api/send-email', { method: 'POST', body: JSON.stringify(relayed[0]) }),
-        { RESEND_API_KEY: 're_test', EMAIL_FROM: 'CP <n@example.com>', APP_URL: 'https://cp.apeejay.example' },
-        resend as unknown as typeof fetch,
-      );
-      expect(res.status).toBe(200);
-      const toResend = JSON.parse(resend.mock.calls[0]![1]!.body as string);
-      expect(toResend.to).toEqual(['ravi@sunrise.in']);
-      expect(toResend.text).toContain(`https://cp.apeejay.example${link}`);
-      await vi.waitFor(() => expect(m!.delivery).toEqual({ status: 'sent', providerId: 'em_1' }));
-
-      // The link opens the CP's upload page for just the flagged document.
-      const session = await api.cpDocs.session(link.split('/').pop()!);
-      expect(session.items.map((it) => it.documentType)).toEqual(['pan']);
-
-      // Resending emails a fresh link; the old one stops working.
-      const again = await api.agreements.sendDocRequestLink(agreementId, 'ravi@sunrise.in');
-      expect(again.link).not.toBe(link);
-      expect(getDb().emails.slice(before).map((x) => x.link)).toEqual([link, again.link]);
-      await expect(api.cpDocs.session(link.split('/').pop()!)).rejects.toThrow();
-
-      // A bad address sends nothing.
-      await expect(api.agreements.sendDocRequestLink(agreementId, 'not-an-email')).rejects.toThrow(/valid email/);
-      expect(getDb().emails.length).toBe(before + 2);
-    } finally {
-      vi.unstubAllEnvs();
-      vi.unstubAllGlobals();
-    }
+    // Sent back to the BD: three items to fix, then it can go back to Legal.
+    await as(KAVYA);
+    const gyan = await api.agreements.get('AGR-ASU-2026-0018');
+    expect(gyan.actions.fixCpDetails).toBe(true);
+    expect(gyan.summary.displayStatus).toBe('docs_requested');
+    expect(gyan.agreement.docRequest?.items.map((it) => it.key)).toEqual(['owner_pan', 'msme_certificate', 'contact']);
+    const cp = await api.cps.getForEdit('CP-0013');
+    const values = { ...newCp, type: cp.type, legalName: cp.legalName, contactPerson: cp.contactPerson, email: cp.email, residenceAddress: cp.residenceAddress, businessAddress: cp.businessAddress, gstRegistered: false, gstin: '', aadhaarLast4: cp.aadhaarLast4, bank: { ...cp.bank, accountNumber: '' }, pan: cp.panMasked };
+    expect(await api.agreements.correctFlaggedDetails('AGR-ASU-2026-0018', { ...values, mobile: '9811055999', typeFields: { ...cp.typeFields, msmeNumber: 'UDYAM-UP-28-0045132' } })).toEqual({ fixed: 2 });
+    await api.agreements.uploadCorrectedDoc('AGR-ASU-2026-0018', 'owner_pan', new Blob(['x'], { type: 'application/pdf' }), 'owner-pan-clear.pdf');
+    await api.agreements.resubmitCorrectedDocs('AGR-ASU-2026-0018');
+    expect(getDb().agreements.find((x) => x.id === 'AGR-ASU-2026-0018')!.status).toBe('pending_approval');
   });
 
   it('sends a signed non-standard agreement to Legal, whose approval makes it Active', async () => {
@@ -724,5 +727,197 @@ describe('manual signing upload', () => {
     const a = getDb().agreements.find((x) => x.id === agreementId)!;
     expect(a.status).toBe('pending_approval');
     expect(a.signedOn).toBe(today());
+  });
+});
+
+describe('CP contact verification (email link + mobile code)', () => {
+  const codeFromSms = () => /^(\d{6}) /.exec(getDb().sms!.at(-1)!.body)![1]!;
+  const tokenFromEmail = () => getDb().emails.filter((e) => e.kind === 'verification').at(-1)!.link!.replace('/verify/', '');
+  const contactOf = async (cpId: string) => ((await api.cps.get(cpId)).cp as CpDTO).contact;
+
+  it('starts by itself when the agreement goes to Legal, without holding up Legal’s review', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    expect((await contactOf(cpId))).toMatchObject({ email: 'not_started', mobile: 'not_started' });
+    await finaliseAndSignOnPaper(agreementId);
+    const a = getDb().agreements.find((x) => x.id === agreementId)!;
+    expect(a.status).toBe('pending_approval');
+    const email = getDb().emails.filter((e) => e.kind === 'verification').at(-1)!;
+    expect(email).toMatchObject({ to: 'ravi@sunrise.in', subject: 'Please verify your contact details for Apeejay', link: expect.stringMatching(/^\/verify\/[0-9a-f]{32}$/) });
+    expect((await contactOf(cpId))).toMatchObject({ email: 'pending', mobile: 'pending', linkExpired: false });
+    // The token and code never reach the screens.
+    expect(JSON.stringify(await api.cps.get(cpId))).not.toContain(tokenFromEmail());
+
+    // Legal can approve while the CP has not verified yet: the two run side by side.
+    await as(PRIYA);
+    await api.agreements.decideGate1(agreementId, 'approve');
+    expect(a.status).toBe('active');
+  });
+
+  it('the CP confirms their email, then their mobile with a code; the BD and Legal are told', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const token = tokenFromEmail();
+    sessionStorage.clear(); // the CP has no account
+
+    const s = await api.verifyContact.session(token);
+    expect(s).toMatchObject({ cpName: 'Sunrise Education Services', emailMasked: 'ra••@sunrise.in', mobileMasked: '•••••••345', email: 'pending', mobile: 'pending', codeSent: false });
+    await api.verifyContact.confirmEmail(token);
+    expect((await api.verifyContact.session(token)).email).toBe('verified');
+
+    expect(await api.verifyContact.sendCode(token)).toEqual({ sentTo: '•••••••345' });
+    const sms = getDb().sms!.at(-1)!;
+    expect(sms).toMatchObject({ to: '9812012345', kind: 'otp' });
+    expect(sms.body).toMatch(/^\d{6} is your Apeejay CP verification code/);
+    // Only a hash of the code is stored.
+    expect(JSON.stringify(getDb().cps.find((c) => c.id === cpId)!.contactVerification)).not.toContain(codeFromSms());
+
+    await expect(api.verifyContact.verifyCode(token, '12345')).rejects.toThrow('Enter the 6-digit code from the text message.');
+    const wrong = codeFromSms() === '000000' ? '111111' : '000000';
+    await expect(api.verifyContact.verifyCode(token, wrong)).rejects.toThrow('That code is not right. 4 attempts left.');
+    await api.verifyContact.verifyCode(token, codeFromSms());
+
+    await as(KAVYA);
+    expect((await contactOf(cpId))).toMatchObject({ email: 'verified', mobile: 'verified', emailVerifiedAt: expect.any(String), mobileVerifiedAt: expect.any(String) });
+    const told = getDb().notifications.filter((n) => n.title === 'CP contact details verified').map((n) => n.userId);
+    expect(told).toEqual(expect.arrayContaining(['u-neha', 'u-priya']));
+    // Reopening the link shows that both are done (and confirming again changes nothing).
+    expect(await api.verifyContact.session(token)).toMatchObject({ email: 'verified', mobile: 'verified' });
+    await api.verifyContact.confirmEmail(token);
+    expect(getDb().notifications.filter((n) => n.title === 'CP contact details verified').map((n) => n.userId)).toEqual(told);
+  });
+
+  it('limits codes: wait before resending, 5 wrong tries, expiry', async () => {
+    const { agreementId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const token = tokenFromEmail();
+    await api.verifyContact.sendCode(token);
+    await expect(api.verifyContact.sendCode(token)).rejects.toThrow('Please wait 30 seconds before asking for another code.');
+    const wrong = codeFromSms() === '000000' ? '111111' : '000000';
+    for (let i = 0; i < 4; i++) await expect(api.verifyContact.verifyCode(token, wrong)).rejects.toThrow(/not right/);
+    await expect(api.verifyContact.verifyCode(token, wrong)).rejects.toThrow('Too many wrong codes. Ask for a new code.');
+    // Even the right code no longer works after 5 wrong tries.
+    await expect(api.verifyContact.verifyCode(token, codeFromSms())).rejects.toThrow('Too many wrong codes. Ask for a new code.');
+
+    const cp = getDb().cps.find((c) => c.contactVerification?.token === token)!;
+    cp.contactVerification!.otp = { ...cp.contactVerification!.otp!, attempts: 0, expiresAt: new Date(Date.now() - 1000).toISOString() };
+    await expect(api.verifyContact.verifyCode(token, codeFromSms())).rejects.toThrow('This code has expired. Ask for a new code.');
+    cp.contactVerification!.linkExpiresAt = new Date(Date.now() - 1000).toISOString();
+    await expect(api.verifyContact.confirmEmail(token)).rejects.toThrow('This link has expired. Ask your Apeejay contact to send a new one.');
+  });
+
+  it('the BD can resend; a new link replaces the old one; changing the mobile asks for it again', async () => {
+    const { agreementId, cpId } = await createReadyDraft();
+    await finaliseAndSignOnPaper(agreementId);
+    const first = tokenFromEmail();
+    await as(KAVYA);
+    const { link } = await api.cps.sendVerification(cpId);
+    expect(link).not.toBe(`/verify/${first}`);
+    await expect(api.verifyContact.session(first)).rejects.toThrow('This verification link is not valid. Ask your Apeejay contact to send you a new one.');
+
+    const token = tokenFromEmail();
+    await api.verifyContact.confirmEmail(token);
+    await api.verifyContact.sendCode(token);
+    await api.verifyContact.verifyCode(token, codeFromSms());
+    await expect(api.cps.sendVerification(cpId)).rejects.toThrow('This CP’s email and mobile are already verified.');
+
+    // A new mobile has not been verified, so it shows as not verified again and can be re-sent.
+    getDb().cps.find((c) => c.id === cpId)!.mobile = '9876543210';
+    expect((await contactOf(cpId))).toMatchObject({ email: 'verified', mobile: 'pending' });
+    await expect(api.cps.sendVerification(cpId)).resolves.toMatchObject({ link: expect.stringMatching(/^\/verify\//) });
+
+    await as(PRIYA);
+    await expect(api.cps.sendVerification(cpId)).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('sends the verification email through the relay with its own button', async () => {
+    const res = await handleSendEmail(
+      new Request('http://x', { method: 'POST', body: JSON.stringify({ to: 'ravi@sunrise.in', subject: 'Please verify your contact details for Apeejay', body: 'Hello', link: '/verify/abc', kind: 'verification' }) }),
+      { RESEND_API_KEY: 're_x', EMAIL_FROM: 'CP <n@example.com>', APP_URL: 'https://app.example.com' },
+      async (_u, init) => {
+        expect(String((init as RequestInit).body)).toContain('Verify my details');
+        return new Response(JSON.stringify({ id: 'em_9' }), { status: 200 });
+      },
+    );
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('leads and revenue from the CRM', () => {
+  const sync = async () => {
+    const { syncCrm } = await import('../api/leads');
+    return syncCrm('system');
+  };
+
+  it('pulls leads, matches them to CPs and institutions, keeps no personal data, and is repeatable', async () => {
+    await as(ARJUN);
+    const first = await sync();
+    expect(first.created).toBeGreaterThan(10);
+    expect(first.unmatched).toBe(1); // the demo CRM's unknown partner
+    const leads = getDb().leads!;
+    expect(leads.every((l) => getDb().cps.some((c) => c.id === l.cpId) && getDb().institutions.some((i) => i.id === l.institutionId))).toBe(true);
+    const allowed = ['id', 'crmId', 'cpId', 'institutionId', 'programme', 'academicYear', 'status', 'createdOn', 'appliedOn', 'admittedOn', 'droppedOn', 'feeInr', 'syncedAt', 'correction'];
+    for (const l of leads) expect(Object.keys(l).filter((k) => !allowed.includes(k))).toEqual([]);
+    // Same data again: nothing new, nothing changed, no duplicates.
+    const again = await sync();
+    expect(again).toMatchObject({ created: 0, updated: 0 });
+    expect(getDb().leads!.length).toBe(leads.length);
+  });
+
+  it('shows the funnel and revenue per institution for the CP, within the user’s scope', async () => {
+    await as(ARJUN);
+    await sync();
+    const cpId = getDb().leads![0]!.cpId;
+    const v = await api.leads.forCp(cpId);
+    const mine = getDb().leads!.filter((l) => l.cpId === cpId);
+    expect(v.totals.leads).toBe(mine.length);
+    expect(v.totals.admissions).toBe(mine.filter((l) => l.status === 'admitted').length);
+    expect(v.totals.revenueInr).toBe(mine.filter((l) => l.status === 'admitted').reduce((s, l) => s + l.feeInr!, 0));
+    expect(v.totals.applications).toBeGreaterThanOrEqual(v.totals.admissions);
+    expect(v.totals.conversion).toBe(Math.round((v.totals.admissions / v.totals.leads) * 1000) / 10);
+    expect(v.byInstitution.reduce((s, i) => s + i.leads, 0)).toBe(v.totals.leads);
+    expect(v.canEdit).toBe(true);
+    if (v.years.length) expect((await api.leads.forCp(cpId, v.years[0])).leads.every((l) => l.academicYear === v.years[0])).toBe(true);
+
+    // A BD Executive sees only the institutions they work for.
+    await as(KAVYA);
+    const kavya = getDb().users.find((u) => u.email === KAVYA)!;
+    const cpInScope = getDb().leads!.find((l) => kavya.institutionIds.includes(l.institutionId))!.cpId;
+    const bd = await api.leads.forCp(cpInScope);
+    expect(bd.leads.every((l) => kavya.institutionIds.includes(l.institutionId))).toBe(true);
+    expect(bd.canEdit).toBe(false);
+  });
+
+  it('only Admin corrects a lead; the correction survives the next sync and can be removed', async () => {
+    await as(ARJUN);
+    await sync();
+    const lead = getDb().leads!.find((l) => l.status === 'applied')!;
+    await expect(api.leads.correct(lead.id, { status: 'admitted', note: 'Admitted on 20 Oct' })).rejects.toThrow('Enter the fee for an admitted student.');
+    await expect(api.leads.correct(lead.id, { status: 'dropped', feeInr: 1000, note: 'Withdrew' })).rejects.toThrow(/Only admitted students bring fees/);
+    await expect(api.leads.correct(lead.id, { status: 'admitted', feeInr: 150000, note: 'ok' })).rejects.toThrow(/at least 5 characters/);
+    await api.leads.correct(lead.id, { status: 'admitted', feeInr: 150000, note: 'Admitted on 20 Oct; CRM not updated yet' });
+    const before = await api.leads.forCp(lead.cpId);
+    expect(before.leads.find((l) => l.id === lead.id)).toMatchObject({ effectiveStatus: 'admitted', effectiveFeeInr: 150000, status: 'applied' });
+
+    await sync();
+    expect(getDb().leads!.find((l) => l.id === lead.id)!.correction).toMatchObject({ status: 'admitted', feeInr: 150000 });
+    expect(getDb().audit.some((e) => e.entityType === 'lead' && e.entityId === lead.id)).toBe(true);
+
+    await api.leads.correct(lead.id, null);
+    expect((await api.leads.forCp(lead.cpId)).leads.find((l) => l.id === lead.id)!.effectiveStatus).toBe('applied');
+
+    await as(KAVYA);
+    await expect(api.leads.correct(lead.id, { status: 'dropped', note: 'Student withdrew' })).rejects.toMatchObject({ status: 403 });
+    await expect(api.leads.setPartnerCode(lead.cpId, 'X-1')).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('matches by the CP’s CRM partner code once Admin sets it', async () => {
+    await as(ARJUN);
+    await sync();
+    const cpId = getDb().leads![0]!.cpId;
+    await expect(api.leads.setPartnerCode(cpId, 'bad code!')).rejects.toThrow('Use 2–40 letters, digits, - or _.');
+    const other = getDb().cps.find((c) => c.id !== cpId)!;
+    await expect(api.leads.setPartnerCode(cpId, other.id)).rejects.toThrow(/already uses that CRM code/);
+    await api.leads.setPartnerCode(cpId, 'lsq-p-0042');
+    expect((await api.leads.forCp(cpId)).partnerCode).toBe('LSQ-P-0042');
   });
 });

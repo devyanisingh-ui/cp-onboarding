@@ -1,4 +1,4 @@
-import type { AppNotification, AuditEvent, EmailMessage, Task, TaskType } from '@/types';
+import type { AppNotification, AuditEvent, EmailMessage, SmsMessage, Task, TaskType } from '@/types';
 import { daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
 import { can } from '@/lib/permissions';
 import { taskLink } from '@/lib/links';
@@ -86,7 +86,7 @@ export interface LegalDeviationItem {
 export interface LegalDocsItem {
   agreement: AgreementSummary;
   /** Where the document request is now. */
-  stage: 'with_bd' | 'sent_to_cp' | 'cp_submitted';
+  stage: 'with_bd';
   items: number;
   since: string;
   days: number;
@@ -217,7 +217,7 @@ function legalDashboard(ags: ReturnType<typeof getDb>['agreements'], userId: str
     last30: {
       approved: mine.filter((e) => e.entityType === 'agreement' && e.action === 'approve' && e.summary.startsWith('Legal approved')).length,
       returned: mine.filter((e) => e.entityType === 'agreement' && e.action === 'reject' && e.summary.startsWith('Rejected by Legal')).length,
-      docsRequested: mine.filter((e) => e.entityType === 'agreement' && e.summary.startsWith('Legal asked for corrected documents')).length,
+      docsRequested: mine.filter((e) => e.entityType === 'agreement' && (e.summary.startsWith('Legal sent CP details back') || e.summary.startsWith('Legal asked for corrected documents'))).length,
       deviationsDecided: mine.filter((e) => e.entityType === 'deviation' && (e.action === 'approve' || e.action === 'reject')).length,
     },
     nonStandardLive: ags.filter((a) => a.nonStandard && (a.status === 'active' || a.status === 'notice_period')).length,
@@ -234,7 +234,6 @@ function bdDashboard(own: ReturnType<typeof getDb>['agreements']): BdDashboard {
   for (const a of own) {
     if (a.status === 'pending_approval') wait(a, 'legal', 'Legal is reviewing the signed agreement', a.updatedAt);
     else if (a.status === 'approved_for_signing' && a.esign?.status === 'in_progress') wait(a, 'signers', 'Out for e-signature', a.esign.sentAt ?? a.updatedAt);
-    else if (a.docRequest?.status === 'sent_to_cp') wait(a, 'cp', 'CP to upload corrected documents', a.docRequest.sentAt);
     else if (a.status === 'draft' && d.deviations.some((x) => x.agreementId === a.id && x.status === 'pending')) {
       const first = d.deviations.filter((x) => x.agreementId === a.id && x.status === 'pending').map((x) => x.requestedAt).sort()[0];
       wait(a, 'deviation', 'Legal is reviewing a deviation request', first);
@@ -322,4 +321,11 @@ export async function listEmails(): Promise<EmailMessage[]> {
   await delay();
   assertCan(ctx(), 'config.view');
   return getDb().emails.slice().reverse().slice(0, 200);
+}
+
+/** Text messages (verification codes), newest first. Admin → System, while no SMS provider is connected. */
+export async function listSms(): Promise<SmsMessage[]> {
+  await delay();
+  assertCan(ctx(), 'config.view');
+  return (getDb().sms ?? []).slice().reverse().slice(0, 200);
 }

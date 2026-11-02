@@ -3,17 +3,23 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, IdCard, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, ThumbsUp, Upload } from 'lucide-react';
-import type { DocRequest, DocumentRecord, ESigner, ESignRequest } from '@/types';
-import { api, type AgreementDetail as AgreementDetailData } from '@/services/mockApi';
+import { Ban, CalendarClock, CheckCircle2, FileSearch, FileSignature, FileWarning, Flag, History, IdCard, Link2, Mail, Pencil, PenLine, RefreshCw, Scale, Send, ShieldAlert, ShieldCheck, Upload } from 'lucide-react';
+import type { DocRequest, DocRequestItem, DocumentRecord, ESigner, ESignRequest } from '@/types';
+import { api, type AgreementDetail as AgreementDetailData, type CpDTO } from '@/services/mockApi';
+import { errorMessage } from '@/services/errors';
 import { useAction, useApi } from '@/hooks/useApi';
+import { combineToPdf } from '@/lib/pdf';
+import { cpCheck, cpCheckLabel } from '@/lib/cpChecks';
+import { kycLabel } from '@/lib/kyc';
+import { EditCpModal } from '@/components/EditCpModal';
 import { useDocumentTitle } from '@/hooks/misc';
 import { formatDate, formatDateTime, daysUntil } from '@/lib/dates';
 import { CP_TYPE_LABELS, formatInr } from '@/lib/format';
 import { rejectionTitle, STATUS_META, type StatusTone } from '@/lib/status';
-import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, ErrorState, Field, Input, PageSkeleton, StatusBadge } from '@/components/ui';
-import { AgreementLink, CommentDialog, DocumentList, PageHeader, StatusStepper, Timeline, WarningBanner, docLabel } from '@/components/common';
+import { Alert, Badge, Button, ButtonLink, Card, CardBody, CardHeader, DL, ErrorState, Field, PageSkeleton, StatusBadge, Textarea, useToast } from '@/components/ui';
+import { AgreementLink, CommentDialog, DocumentList, FileDrop, PageHeader, StatusStepper, Timeline, WarningBanner } from '@/components/common';
 import { DeviationCompare, DownloadMenu } from '@/components/agreement';
+import { ContactVerificationCard } from '@/components/contactVerification';
 
 export function AgreementDetail() {
   const { id = '' } = useParams<{ id: string }>();
@@ -103,7 +109,7 @@ export function AgreementDetail() {
           </Alert>
         )}
         {a.docRequest && a.docRequest.status !== 'closed' && (
-          <DocRequestPanel agreementId={a.id} req={a.docRequest} docs={d.cpDocuments} names={d.names} cpEmail={d.cp.email} canSend={act.sendDocLink} canAccept={act.reviewCpDocs} />
+          <DocRequestPanel agreementId={a.id} cp={d.cp} req={a.docRequest} docs={d.cpDocuments} names={d.names} canFix={act.fixCpDetails} />
         )}
         {act.uploadSigned && a.source === 'app' && a.status === 'approved_for_signing' && a.esign?.status !== 'in_progress' && (
           <SigningChoice agreementId={a.id} signatory={`${a.signatoryName}, ${a.signatoryDesignation}`} cpName={d.cp.legalName} />
@@ -214,6 +220,7 @@ export function AgreementDetail() {
         </div>
 
         <aside className="min-w-0 space-y-5">
+          <ContactVerificationCard cpId={d.cp.id} email={d.cp.email} mobile={d.cp.mobile} contact={d.cp.contact} />
           {d.openTasks.length > 0 && (
             <Card>
               <CardHeader title="Waiting on" icon={<ShieldAlert />} />
@@ -405,89 +412,159 @@ function SigningChoice({ agreementId, signatory, cpName }: { agreementId: string
   );
 }
 
-const DOC_REQUEST_STEPS: Record<DocRequest['status'], string> = {
-  with_bd: 'Send the CP their upload link',
-  sent_to_cp: 'Waiting for the CP to upload',
-  cp_submitted: 'CP sent corrected documents — check them',
-  closed: 'Done',
-};
-
-/** Legal → BD → CP → BD: the documents Legal flagged, the CP's link, and the BD's check. */
-function DocRequestPanel({ agreementId, req, docs, names, cpEmail, canSend, canAccept }: { agreementId: string; req: DocRequest; docs: DocumentRecord[]; names: Record<string, string>; cpEmail: string; canSend: boolean; canAccept: boolean }) {
-  const [email, setEmail] = useState(req.cpEmail ?? cpEmail);
-  const send = useAction(() => api.agreements.sendDocRequestLink(agreementId, email), { success: 'Upload link sent to the CP' });
-  const accept = useAction(() => api.agreements.acceptCpDocs(agreementId), { success: 'Documents checked — sent to Legal' });
+/** Legal → BD → Legal: the CP details Legal flagged. The BD corrects them or uploads corrected documents, then sends it back. */
+function DocRequestPanel({ agreementId, cp, req, docs, names, canFix }: { agreementId: string; cp: CpDTO; req: DocRequest; docs: DocumentRecord[]; names: Record<string, string>; canFix: boolean }) {
+  const [note, setNote] = useState('');
+  // The flagged item whose details the BD is correcting.
+  const [editing, setEditing] = useState<DocRequestItem | null>(null);
+  const send = useAction(() => api.agreements.resubmitCorrectedDocs(agreementId, note), { success: 'Corrected details sent to Legal' });
   const byId = (docId?: string) => docs.find((x) => x.id === docId);
+  const fixed = (it: DocRequestItem) => !!(it.detailsUpdatedAt || it.replacementId);
+  const missing = req.items.filter((it) => !fixed(it)).length;
   return (
     <Card>
       <CardHeader
-        title="Legal asked for corrected documents"
-        description={`${names[req.requestedById] ?? 'Legal'} · ${formatDateTime(req.requestedAt)} · ${DOC_REQUEST_STEPS[req.status]}`}
+        title="Legal sent CP details back"
+        description={`${names[req.requestedById] ?? 'Legal'} · ${formatDateTime(req.requestedAt)} · ${
+          missing ? `${req.items.length - missing} of ${req.items.length} fixed — correct the details or upload corrected documents, then send it back to Legal` : 'All fixed — send the agreement back to Legal'
+        }`}
         icon={<FileWarning />}
       />
       <CardBody className="space-y-4">
         {req.note && <p className="text-sm text-ink-soft">“{req.note}”</p>}
-        <ul className="divide-y divide-line rounded-lg border border-line">
-          {req.items.map((it) => {
-            const replacement = byId(it.replacementId);
-            return (
-              <li key={it.documentId} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold">{docLabel(it.documentType)}</p>
-                  <p className="text-sm text-danger-700">{it.remark}</p>
-                </div>
-                <p className="shrink-0 text-xs text-muted">
-                  {replacement ? (
-                    <span className="inline-flex items-center gap-1 text-success-700">
-                      <CheckCircle2 className="size-3.5" aria-hidden /> New file: {replacement.fileName}
-                    </span>
-                  ) : req.status === 'sent_to_cp' ? (
-                    'Waiting for the CP'
-                  ) : (
-                    'Not uploaded yet'
-                  )}
-                </p>
-              </li>
-            );
-          })}
-        </ul>
-        {req.status === 'cp_submitted' && req.cpNote && <p className="text-sm text-ink-soft">CP’s note: “{req.cpNote}”</p>}
-        {req.status === 'cp_submitted' && (
-          <div>
-            <p className="mb-2 text-sm text-muted">Check only these new files, then send the agreement back to Legal. Legal re-checks just these documents.</p>
-            <DocumentList docs={req.items.map((it) => byId(it.replacementId)).filter((x): x is DocumentRecord => !!x)} names={names} />
-          </div>
-        )}
-        {(canSend || canAccept) && (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            {canSend && (
-              <>
-                <Field label="CP’s email" className="sm:w-80">
-                  <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-                </Field>
-                <Button variant={canAccept ? 'secondary' : 'primary'} icon={<Send className="size-4" />} loading={send.loading} onClick={() => void send.run()}>
-                  {req.status === 'with_bd' ? 'Send upload link to CP' : req.status === 'cp_submitted' ? 'Ask the CP again' : 'Resend link'}
-                </Button>
-              </>
-            )}
-            {canAccept && (
-              <Button variant="success" icon={<ThumbsUp className="size-4" />} loading={accept.loading} onClick={() => void accept.run()}>
-                Documents are correct — send to Legal
-              </Button>
-            )}
-          </div>
-        )}
-        {req.status === 'sent_to_cp' && req.token && (
-          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
-            <Link2 className="size-4 shrink-0" aria-hidden />
-            Link emailed to {req.cpEmail} on {formatDateTime(req.sentAt)}.
-            {/* Prototype: emails aren't really sent, so open the CP's page from here. */}
-            <Link href={`/cp-documents/${req.token}`} className="hit-area font-medium text-primary-700 hover:underline">
-              Open the CP’s upload page
-            </Link>
+        {req.emailedTo && (
+          <p className="flex items-start gap-2 text-sm text-muted">
+            <Mail className="mt-0.5 size-4 shrink-0" aria-hidden />
+            <span>
+              The CP was emailed these issues at {req.emailedTo.cp}
+              {req.emailedTo.bd ? `, with the BD Executive (${req.emailedTo.bd}) in copy` : ''}, and told the BD Executive will get in touch about the corrected documents.
+            </span>
           </p>
         )}
+        <ul className="space-y-3">
+          {req.items.map((it) => (
+            <FlaggedItem key={it.key} agreementId={agreementId} label={cpCheckLabel(it.key, cp.type)} docName={it.documentType && kycLabel(cp.type, it.documentType)} item={it} previous={byId(it.documentId)} replacement={byId(it.replacementId)} canFix={canFix} onCorrect={() => setEditing(it)} />
+          ))}
+        </ul>
+        {canFix && (
+          <div className="space-y-3 border-t border-line pt-4">
+            <Field label="Note for Legal" optional>
+              <Textarea rows={2} value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Corrected the GSTIN; the CP sent a clear scan of the PAN card." />
+            </Field>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="success" icon={<Send className="size-4" />} disabled={missing > 0} loading={send.loading} onClick={() => void send.run()}>
+                Send to Legal
+              </Button>
+              {missing > 0 && <p className="text-sm text-muted">Fix {missing === 1 ? 'the last flagged item' : `the ${missing} flagged items`} first. Legal re-checks only these.</p>}
+            </div>
+          </div>
+        )}
       </CardBody>
+      {editing && (
+        <EditCpModal
+          cp={cp}
+          title={`Correct: ${cpCheckLabel(editing.key, cp.type)}`}
+          intro={
+            <Alert tone="warning" className="mb-4" title="Legal’s remark">
+              {editing.remark}
+            </Alert>
+          }
+          save={(v) => api.agreements.correctFlaggedDetails(agreementId, v)}
+          success={(r) => (r.fixed ? `CP details saved — ${r.fixed} flagged item${r.fixed === 1 ? '' : 's'} corrected` : 'CP details saved. None of the flagged details changed.')}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </Card>
+  );
+}
+
+/** One flagged CP detail: Legal's remark, what the BD has done, and an upload for its corrected document. */
+function FlaggedItem({
+  agreementId,
+  label,
+  docName,
+  item,
+  previous,
+  replacement,
+  canFix,
+  onCorrect,
+}: {
+  agreementId: string;
+  label: string;
+  docName?: string;
+  item: DocRequestItem;
+  previous?: DocumentRecord;
+  replacement?: DocumentRecord;
+  canFix: boolean;
+  /** Opens the CP details form to correct this item. */
+  onCorrect: () => void;
+}) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string>();
+  const docType = item.documentType;
+  const editable = !!cpCheck(item.key)?.fields.length;
+  const upload = async (files: File[]) => {
+    setBusy(true);
+    setErr(undefined);
+    try {
+      const f = await combineToPdf(files, docType!);
+      await api.agreements.uploadCorrectedDoc(agreementId, item.key, f.blob, f.fileName);
+      toast.success('Corrected document uploaded');
+    } catch (e) {
+      setErr(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const correctLabel = item.detailsUpdatedAt ? 'Correct again' : 'Correct details';
+  const done = [item.detailsUpdatedAt && 'Details corrected', replacement && `Corrected document: ${replacement.fileName}`].filter(Boolean);
+  return (
+    <li className="rounded-lg border border-line p-4">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{label}</p>
+          <p className="text-sm text-danger-700">{item.remark}</p>
+          {previous && <p className="mt-0.5 text-xs text-muted">Document Legal checked: {previous.fileName}</p>}
+        </div>
+        <div className="shrink-0 text-xs sm:text-right">
+          {done.length ? (
+            done.map((t) => (
+              <p key={t as string} className="inline-flex items-center gap-1 font-medium text-success-700 sm:flex sm:justify-end">
+                <CheckCircle2 className="size-3.5" aria-hidden /> {t}
+              </p>
+            ))
+          ) : (
+            <span className="text-muted">Not fixed yet</span>
+          )}
+        </div>
+      </div>
+      {canFix && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-muted">
+            {editable && docType
+              ? 'If the entered value is wrong, correct the details; if the document is wrong, upload a corrected copy.'
+              : editable
+                ? 'Correct the details the CP gave.'
+                : 'This detail can’t be edited; upload a corrected copy.'}
+          </p>
+          {editable && (
+            <Button variant="secondary" size="sm" icon={<Pencil className="size-4" />} onClick={onCorrect} aria-label={`${correctLabel}: ${label}`}>
+              {correctLabel}
+            </Button>
+          )}
+          {docType && (
+            <FileDrop
+              label={`${replacement ? 'Replace the corrected copy' : 'Upload a corrected copy'}: ${docName}`}
+              hint="One PDF, or photos of each page"
+              multiple
+              disabled={busy}
+              error={err}
+              onFiles={(files) => void upload(files)}
+            />
+          )}
+        </div>
+      )}
+    </li>
   );
 }
