@@ -83,7 +83,9 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
       )}
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <Card>
+        {/* On wide screens the right column sets the row's height; this card fills it and its list scrolls. */}
+        <div className="xl:relative">
+        <Card className="flex flex-col xl:absolute xl:inset-0">
           <CardHeader
             title="Needs your action"
             description="Grouped by what you need to do, most urgent first"
@@ -96,7 +98,7 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
           />
           {tasks.length ? (
             <>
-              <div className="flex flex-wrap gap-2 border-b border-line/70 px-5 py-3">
+              <div className="flex shrink-0 flex-wrap gap-2 border-b border-line/70 px-5 py-3">
                 <UrgencyChip tone="red" count={data.overdueCount} label="Overdue" to="/tasks?overdue=1" />
                 <UrgencyChip tone="amber" count={dueSoon} label="Due this week" />
                 <UrgencyChip tone="grey" count={later} label="Later" />
@@ -106,7 +108,7 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
                   </button>
                 )}
               </div>
-              <div className="divide-y divide-line">
+              <div className="min-h-0 flex-1 divide-y divide-line overflow-y-auto overscroll-contain rounded-b-xl" tabIndex={0} aria-label="Your tasks">
                 {groups.map((g) => {
                   const open = !collapsed.has(g.key);
                   return (
@@ -153,8 +155,9 @@ export function HomeBd({ data, greeting, firstName }: { data: Dashboard; greetin
             />
           )}
         </Card>
+        </div>
 
-        {/* The last card stretches so this column ends level with "Needs your action". */}
+        {/* "Needs your action" matches this column's height; the last card fills any spare space. */}
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader title="Waiting on others" description="Follow up if anything sits too long" icon={<Hourglass />} />
