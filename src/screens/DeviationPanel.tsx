@@ -8,10 +8,10 @@ import { api } from '@/services/mockApi';
 import type { DeviationRequestItem } from '@/services/api/agreements';
 import { useAction, useApi } from '@/hooks/useApi';
 import { useDocumentTitle } from '@/hooks/misc';
-import { clausesFor, effectiveRates } from '@/lib/agreementTemplate';
+import { BULK_MIN_FROM, BULK_REF, clausesFor, effectiveRates } from '@/lib/agreementTemplate';
 import { formatInr } from '@/lib/format';
 import { cn } from '@/lib/cn';
-import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Field, Input, PageSkeleton, Select, Table, TD, TH, Textarea } from '@/components/ui';
+import { Alert, Badge, Button, Card, CardBody, CardHeader, EmptyState, ErrorState, Field, Input, PageSkeleton, Select, Table, TD, TH, Textarea, Toggle } from '@/components/ui';
 import { ActionBar, FileDrop, PageHeader } from '@/components/common';
 import { DeviationCompare, RequestSummary, sharedRequest } from '@/components/agreement';
 
@@ -77,6 +77,11 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
   const [cells, setCells] = useState<Record<string, string>>({});
   const [rateReason, setRateReason] = useState('');
   const [rateFiles, setRateFiles] = useState<File[]>([]);
+  // A special rate per admission once the CP's admissions in the cycle reach a threshold.
+  const [bulkOn, setBulkOn] = useState(false);
+  const [bulkMin, setBulkMin] = useState('100');
+  const [bulkRate, setBulkRate] = useState('');
+  const pendingBulk = detail.deviations.find((x) => x.status === 'pending' && x.ref.startsWith(BULK_REF));
   const [changes, setChanges] = useState<ClauseChange[]>([]);
   const [nextKey, setNextKey] = useState(1);
   const [tried, setTried] = useState(false);
@@ -98,7 +103,8 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
   const rateItems = (): DeviationRequestItem[] =>
     Object.entries(cells)
       .filter(([, v]) => v !== '')
-      .map(([ref, v]) => ({ type: 'rate', ref, proposedValue: v }));
+      .map(([ref, v]): DeviationRequestItem => ({ type: 'rate', ref, proposedValue: v }))
+      .concat(bulkOn && bulkRate !== '' ? [{ type: 'rate', ref: `${BULK_REF}${bulkMin}`, proposedValue: bulkRate }] : []);
   const clauseItems = (): DeviationRequestItem[] =>
     changes
       .filter((c) => c.clauseId && c.text.trim() && c.text.trim() !== standardText(c.clauseId))
@@ -114,6 +120,11 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
   const validate = () => {
     const rItems = rateItems();
     const e: Record<string, string> = {};
+    if (bulkOn) {
+      const from = Number(bulkMin);
+      if (!Number.isInteger(from) || from < BULK_MIN_FROM) e.bulkMin = `Enter a whole number, ${BULK_MIN_FROM} or more (the top slab is 21+).`;
+      if (!(Number(bulkRate) > 0)) e.bulkRate = 'Enter the rate per admission.';
+    }
     if (rItems.length && rateReason.trim().length < 5) e.rates = 'Give a reason Legal can assess (at least 5 characters).';
     const used = new Set<string>();
     for (const c of changes) {
@@ -201,9 +212,39 @@ function RequestForm({ detail, hasPending }: { detail: Awaited<ReturnType<typeof
             ))}
           </tbody>
         </Table>
+        <CardBody className="space-y-4 border-t border-line">
+          <Toggle
+            checked={bulkOn}
+            onChange={setBulkOn}
+            label={rates.bulk ? 'Change the bulk admission rate' : 'Special rate for bulk admissions'}
+            description={
+              rates.bulk
+                ? `Agreed now: ${formatInr(rates.bulk.amountInr)} per admission from ${rates.bulk.minAdmissions} admissions in the cycle.`
+                : 'A different rate per admission once the CP’s admissions in the cycle reach a number you set, e.g. ₹3,00,000 each from 100 admissions.'
+            }
+          />
+          {pendingBulk && !bulkOn && <p className="text-xs text-muted">With Legal: {pendingBulk.label}, {formatInr(Number(pendingBulk.proposedValue))} per admission.</p>}
+          {bulkOn && (
+            <>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="From (admissions in the cycle)" required error={errs.bulkMin} hint="The rate applies once admissions reach this number.">
+                  <Input type="number" min={BULK_MIN_FROM} step={1} value={bulkMin} onChange={(e) => setBulkMin(e.target.value)} />
+                </Field>
+                <Field label="Rate per admission (INR)" required error={errs.bulkRate}>
+                  <Input type="number" min={0} step={500} value={bulkRate} onChange={(e) => setBulkRate(e.target.value)} placeholder="e.g. 300000" />
+                </Field>
+              </div>
+              {Number(bulkRate) > 0 && Number(bulkMin) >= BULK_MIN_FROM && (
+                <p className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-sm text-ink">
+                  Annexure-B will say: from <strong>{Number(bulkMin)} admissions</strong> in the cycle, <strong>{formatInr(Number(bulkRate))}</strong> per admitted student for every {detail.institution.type === 'school' ? 'class' : 'programme'}, in place of the slab rates.
+                </p>
+              )}
+            </>
+          )}
+        </CardBody>
         {rateCount > 0 && (
           <CardBody className="space-y-4 border-t border-line">
-            <Field label={`Reason for the rate change${rateCount === 1 ? '' : 's'}`} required error={errs.rates} hint={`Applies to the ${rateCount} changed cell${rateCount === 1 ? '' : 's'}.`}>
+            <Field label={`Reason for the rate change${rateCount === 1 ? '' : 's'}`} required error={errs.rates} hint={`Applies to the ${rateCount} changed rate${rateCount === 1 ? '' : 's'}.`}>
               <Textarea rows={3} value={rateReason} onChange={(e) => setRateReason(e.target.value)} placeholder="Why does this partner need different rates?" />
             </Field>
             <FileDrop
@@ -330,7 +371,7 @@ function LegalReview({ pending, names, docs }: { pending: Deviation[]; names: Re
           <li key={d.id} className={cn('space-y-3 pb-4', rejected[d.id] && 'bg-red-50/40')}>
             <DeviationCompare deviations={[d]} names={names} docs={docs} shared={shared} />
             <div className="grid items-end gap-3 px-5 sm:grid-cols-[1fr_auto]">
-              <Field label={d.type === 'rate' ? 'Agreed amount (INR)' : 'Agreed wording'} hint={d.type === 'rate' ? `Standard ${formatInr(Number(d.standardValue))}` : undefined}>
+              <Field label={d.type === 'rate' ? 'Agreed amount (INR)' : 'Agreed wording'} hint={d.type === 'rate' ? (d.standardValue ? `Standard ${formatInr(Number(d.standardValue))}` : 'The rate card has no bulk rate') : undefined}>
                 {d.type === 'rate' ? (
                   <Input type="number" value={agreed[d.id] ?? d.proposedValue} disabled={rejected[d.id]} onChange={(e) => setAgreed((m) => ({ ...m, [d.id]: e.target.value }))} />
                 ) : (

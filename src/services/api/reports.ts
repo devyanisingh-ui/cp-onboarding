@@ -1,6 +1,7 @@
 import type { Agreement, CpType } from '@/types';
 import { daysUntil, formatShortDate, today } from '@/lib/dates';
-import { CP_TYPE_LABELS, formatInr } from '@/lib/format';
+import { CP_TYPE_LABELS } from '@/lib/format';
+import { rateValueText } from '@/lib/agreementTemplate';
 import { STATUS_META, displayStatus } from '@/lib/status';
 import { assertCan, ctx, delay, getDb, inScope, userName } from './core';
 
@@ -110,7 +111,7 @@ export async function runReport(id: ReportId, f: ReportFilters = {}): Promise<Re
         columns: [{ key: 'agreement', label: 'Agreement' }, { key: 'cp', label: 'CP' }, { key: 'change', label: 'What changed' }, { key: 'standard', label: 'Standard' }, { key: 'agreed', label: 'Agreed' }, { key: 'by', label: 'Approved by' }, { key: 'on', label: 'On' }],
         rows: devs.map((x) => {
           const a = d.agreements.find((y) => y.id === x.agreementId)!;
-          const fmt = (v?: string) => (x.type === 'rate' ? formatInr(Number(v)) : `${(v ?? '').slice(0, 60)}…`);
+          const fmt = (v?: string) => (x.type === 'rate' ? rateValueText(v) : `${(v ?? '').slice(0, 60)}…`);
           return { agreement: a.id, cp: cp(a.cpId).legalName, change: x.label, standard: fmt(x.standardValue), agreed: fmt(x.agreedValue), by: userName(x.decidedById), on: formatShortDate(x.decidedAt) };
         }),
         summary: [{ label: 'Non-standard agreements', value: new Set(devs.map((x) => x.agreementId)).size }, { label: 'Approved deviations', value: devs.length }],

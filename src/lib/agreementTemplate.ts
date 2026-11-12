@@ -64,7 +64,21 @@ export function clausesFor(_institution: Institution, template?: Pick<TemplateVe
 export interface EffectiveRates {
   rows: (RateRow & { changed: Partial<Record<Slab, number>> })[];
   extras: (RateExtra & { changedAmount?: number })[];
+  /** A special rate Legal agreed for bulk admissions: from `minAdmissions` in the cycle, `amountInr` per admission. */
+  bulk?: { minAdmissions: number; amountInr: number };
 }
+
+/**
+ * A bulk-admissions rate is a rate deviation with ref `bulk:<admissions>`. The rate card has none, so
+ * its standard value is empty. It starts above the top slab (21+).
+ */
+export const BULK_REF = 'bulk:';
+export const BULK_MIN_FROM = 22;
+export const bulkFrom = (ref: string) => (ref.startsWith(BULK_REF) ? Number(ref.slice(BULK_REF.length)) : undefined);
+export const bulkLabel = (from: number) => `Bulk admissions · ${from}+ in the cycle`;
+
+/** A rate deviation's value for people: an amount, or "No bulk rate" for the empty standard of a bulk rate. */
+export const rateValueText = (v?: string) => (v ? formatInr(Number(v)) : 'No bulk rate');
 
 export function effectiveRates(rateCard: RateCard, deviations: Deviation[]): EffectiveRates {
   const approved = deviations.filter((d) => d.type === 'rate' && d.status === 'approved');
@@ -88,6 +102,11 @@ export function effectiveRates(rateCard: RateCard, deviations: Deviation[]): Eff
       const v = Number(dev.agreedValue ?? dev.proposedValue);
       return { ...ex, amountInr: v, changedAmount: v };
     }),
+    bulk: (() => {
+      // The latest approved bulk rate replaces any earlier one.
+      const dev = approved.filter((d) => d.ref.startsWith(BULK_REF)).sort((x, y) => (y.decidedAt ?? '').localeCompare(x.decidedAt ?? ''))[0];
+      return dev ? { minAdmissions: bulkFrom(dev.ref)!, amountInr: Number(dev.agreedValue ?? dev.proposedValue) } : undefined;
+    })(),
   };
 }
 
@@ -242,6 +261,9 @@ export function renderAgreementHtml(ctx: MergeContext): string {
         const extras = rates.extras
           .map((e) => `<p class="${e.changedAmount != null ? 'changed' : ''}">${esc(e.label)}: <strong>${formatInr(e.amountInr)}</strong> ${esc(e.unit)}.</p>`)
           .join('');
+        const bulk = rates.bulk
+          ? `<p class="changed">Bulk admissions: where the Channel Partner's admissions in the admission cycle reach <strong>${rates.bulk.minAdmissions} or more</strong>, the consideration is <strong>${formatInr(rates.bulk.amountInr)}</strong> per admitted student for every ${learners.toLowerCase()}, in place of the slab rates above.</p>`
+          : '';
         parts.push(`<section class="annexure">
     <h2>${richText(b.title, field)}</h2>
     <p class="muted">Rate card version ${ctx.rateCard.version}, effective ${esc(formatDate(ctx.rateCard.effectiveFrom))}.${b.note ? ` ${richText(b.note, field)}` : ''}</p>
@@ -250,6 +272,7 @@ export function renderAgreementHtml(ctx: MergeContext): string {
       <tbody>${rateRows}</tbody>
     </table>
     ${extras}
+    ${bulk}
   </section>`);
         break;
       }
