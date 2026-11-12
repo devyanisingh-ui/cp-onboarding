@@ -396,6 +396,26 @@ describe('deviations (PRD 6.2)', () => {
     expect((await api.inbox.dashboard()).legal!.deviations.some((x) => x.agreement.id === agreementId)).toBe(false);
   });
 
+  it('A special rate for bulk admissions goes to Legal and into Annexure-B', async () => {
+    const { agreementId } = await createReadyDraft();
+    // It starts above the top slab (21+), and an agreement asks for one at a time.
+    await expect(api.agreements.requestDeviation(agreementId, [{ type: 'rate', ref: 'bulk:21', proposedValue: '300000' }], 'Large partner')).rejects.toThrow(/22 or more/);
+    await expect(
+      api.agreements.requestDeviation(agreementId, [{ type: 'rate', ref: 'bulk:100', proposedValue: '300000' }, { type: 'rate', ref: 'bulk:150', proposedValue: '350000' }], 'Large partner'),
+    ).rejects.toThrow(/one bulk/);
+    await api.agreements.requestDeviation(agreementId, [{ type: 'rate', ref: 'bulk:120', proposedValue: '250000' }], 'Large partner');
+    // A second request replaces the pending one, even with another threshold.
+    await api.agreements.requestDeviation(agreementId, [{ type: 'rate', ref: 'bulk:100', proposedValue: '300000' }], 'Partner commits to 100+ admissions');
+    const pending = getDb().deviations.filter((d) => d.agreementId === agreementId && d.status === 'pending');
+    expect(pending.map((d) => [d.label, d.standardValue, d.proposedValue])).toEqual([['Bulk admissions · 100+ in the cycle', '', '300000']]);
+    await as(PRIYA);
+    await api.agreements.decideDeviations(agreementId, [{ id: pending[0]!.id, decision: 'approve', agreedValue: '280000' }]);
+    expect(getDb().agreements.find((a) => a.id === agreementId)!.nonStandard).toBe(true);
+    const html = (await api.agreements.render(agreementId)).html;
+    expect(html).toContain('reach <strong>100 or more</strong>');
+    expect(html).toMatch(/2,80,000<\/strong> per admitted student/);
+  });
+
   it('Several deviations in one request, each with its own reason and supporting documents', async () => {
     const { agreementId } = await createReadyDraft();
     const pdf = (name: string) => ({ file: new Blob(['x'], { type: 'application/pdf' }), name });

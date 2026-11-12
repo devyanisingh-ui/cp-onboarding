@@ -4,7 +4,7 @@ import { can } from '@/lib/permissions';
 import { CP_TYPES } from '@/lib/format';
 import { requiredKyc } from '@/lib/kyc';
 import { addWorkingDays, daysBetween, daysUntil, shiftDays, today } from '@/lib/dates';
-import { missingFields, mergeFields, renderAgreementHtml, clausesFor, type MergeField } from '@/lib/agreementTemplate';
+import { missingFields, mergeFields, renderAgreementHtml, clausesFor, BULK_MIN_FROM, BULK_REF, bulkFrom, bulkLabel, type MergeField } from '@/lib/agreementTemplate';
 import { agreementDateErrors } from '@/lib/validation';
 import { displayStatus, FINAL_STATUSES, LIVE_STATUSES, IN_PROGRESS_STATUSES } from '@/lib/status';
 import { signaturesToShow } from '@/lib/signatures';
@@ -563,6 +563,7 @@ export async function requestDeviation(id: string, items: DeviationRequestItem[]
   if (a.status !== 'draft') throw conflict('Deviations can only be requested on drafts.');
   if (!items.length) throw invalid('Change at least one rate or clause.');
   const refs = items.map((it) => it.ref);
+  if (refs.filter((r) => r.startsWith(BULK_REF)).length > 1) throw invalid('Request one bulk admission rate at a time.');
   if (new Set(refs).size !== refs.length) throw invalid('The same rate cell or clause is changed twice. Combine them into one change.');
   for (const f of [...files, ...items.flatMap((it) => it.files ?? [])]) assertUploadable(f.file, f.name);
   const d = getDb();
@@ -575,7 +576,12 @@ export async function requestDeviation(id: string, items: DeviationRequestItem[]
     if (it.type === 'rate') {
       const n = Number(it.proposedValue);
       if (!Number.isFinite(n) || n <= 0) throw invalid('Proposed rates must be positive amounts.');
-      if (it.ref.startsWith('extra:')) {
+      if (it.ref.startsWith(BULK_REF)) {
+        const from = bulkFrom(it.ref)!;
+        if (!Number.isInteger(from) || from < BULK_MIN_FROM) throw invalid(`A bulk rate starts above the top slab: enter ${BULK_MIN_FROM} or more admissions.`);
+        label = bulkLabel(from);
+        standard = '';
+      } else if (it.ref.startsWith('extra:')) {
         const ex = m.rateCard.extras.find((e) => `extra:${e.id}` === it.ref);
         if (!ex) throw invalid('Unknown rate line.');
         label = ex.label;
@@ -624,8 +630,9 @@ export async function requestDeviation(id: string, items: DeviationRequestItem[]
     const docIds = own === undefined ? shared : await store(own);
     dev.id = nextId('dev', 'DEV-');
     if (docIds.length) dev.documentIds = docIds;
-    // Replace any open request on the same cell/clause.
-    d.deviations = d.deviations.filter((x) => !(x.agreementId === id && x.ref === dev.ref && x.status === 'pending'));
+    // Replace any open request on the same cell/clause (an agreement has one bulk rate, whatever its threshold).
+    const same = (ref: string) => ref === dev.ref || (ref.startsWith(BULK_REF) && dev.ref.startsWith(BULK_REF));
+    d.deviations = d.deviations.filter((x) => !(x.agreementId === id && same(x.ref) && x.status === 'pending'));
     d.deviations.push(dev);
     audit(user, 'request', 'deviation', dev.id, `Requested ${dev.type} deviation on ${id}: ${dev.label}${docIds.length ? ` (${docIds.length} supporting document${docIds.length === 1 ? '' : 's'})` : ''}`, { value: dev.standardValue }, { value: dev.proposedValue });
   }

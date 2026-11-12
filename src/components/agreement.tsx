@@ -3,7 +3,7 @@ import { ArrowRight, Download, FileDown, Paperclip, Printer } from 'lucide-react
 import type { Deviation, DocumentRecord } from '@/types';
 import { api } from '@/services/mockApi';
 import { errorMessage } from '@/services/errors';
-import { formatInr } from '@/lib/format';
+import { rateValueText } from '@/lib/agreementTemplate';
 import { formatShortDate } from '@/lib/dates';
 import { isHostedViewer, printAgreement, saveFile } from '@/lib/download';
 import { buildDocx, buildPdf, toDocxSignatures, toPdfSignatures } from '@/lib/docExport';
@@ -42,7 +42,7 @@ export function DeviationCompare({
     <>
       <ul className="divide-y divide-line">
         {deviations.map((d) => {
-          const fmt = (v?: string) => (d.type === 'rate' ? formatInr(Number(v)) : v);
+          const fmt = (v?: string) => (d.type === 'rate' ? rateValueText(v) : v);
           const agreed = d.status === 'approved' ? d.agreedValue : d.proposedValue;
           const ownDocs = (d.documentIds ?? []).filter((id) => !docIds.includes(id));
           return (
